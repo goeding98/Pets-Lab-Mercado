@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("STAFF") // ADMIN | STAFF | CLINIC
+  clinicId  String?
+  clinic    Clinic?  @relation(fields: [clinicId], references: [id])
+  orders    Order[]  @relation("ProcessedBy")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Clinic {
+  id        String   @id @default(cuid())
+  name      String
+  nit       String?
+  address   String?
+  phone     String?
+  email     String?
+  users     User[]
+  orders    Order[]
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  patientName   String
+  species       String      // Canino | Felino | Otro
+  breed         String?
+  age           String?
+  sex           String?     // M | H | ND
+  ownerName     String?
+  clinicId      String?
+  clinic        Clinic?     @relation(fields: [clinicId], references: [id])
+  requestingVet String?
+  processedById String?
+  processedBy   User?       @relation("ProcessedBy", fields: [processedById], references: [id])
+  status        String      @default("RECIBIDA") // RECIBIDA | EN_PROCESO | COMPLETADA
+  notes         String?
+  exams         OrderExam[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model OrderExam {
+  id              String       @id @default(cuid())
+  orderId         String
+  order           Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  templateId      String
+  template        ExamTemplate @relation(fields: [templateId], references: [id])
+  status          String       @default("PENDIENTE") // PENDIENTE | COMPLETADO
+  results         ExamResult[]
+  uploadedPdfPath String?
+  uploadedPdfName String?
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+}
+
+model ExamTemplate {
+  id          String        @id @default(cuid())
+  name        String
+  area        String        // Hematología | Bioquímica | Citología | Uroanálisis | Coprología
+  turnaround  String        // "Mismo día" | "24h" | "48h"
+  sampleType  String
+  sections    ExamSection[]
+  orderExams  OrderExam[]
+}
+
+model ExamSection {
+  id         String      @id @default(cuid())
+  templateId String
+  template   ExamTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name       String
+  order      Int          @default(0)
+  fields     ExamField[]
+}
+
+model ExamField {
+  id          String       @id @default(cuid())
+  sectionId   String
+  section     ExamSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  name        String
+  unit        String?
+  refCanine   String?
+  refFeline   String?
+  technique   String?
+  fieldType   String       @default("number") // number | text | select | calculated
+  calcFormula String?      // e.g. "globulinas = proteinas_totales - albumina"
+  order       Int          @default(0)
+  results     ExamResult[]
+}
+
+model ExamResult {
+  id          String    @id @default(cuid())
+  orderExamId String
+  orderExam   OrderExam @relation(fields: [orderExamId], references: [id], onDelete: Cascade)
+  fieldId     String
+  field       ExamField @relation(fields: [fieldId], references: [id])
+  value       String
+  flagged     Boolean   @default(false) // out of reference range
+  createdAt   DateTime  @default(now())
+}

@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Next.js build
+.next/
+out/
+
+# Database (local only)
+prisma/dev.db
+prisma/dev.db-journal
+prisma/*.db
+
+# Environment variables
+.env
+.env.local
+.env*.local
+
+# Uploaded files (local only)
+public/uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

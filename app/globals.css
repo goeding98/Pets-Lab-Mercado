@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bone text-ink font-sans;
+  }
+
+  * {
+    @apply box-border;
+  }
+}
+
+@layer utilities {
+  .focus-ring {
+    @apply focus:outline-2 focus:outline-salvia-700 focus:outline-offset-2;
+  }
+}
