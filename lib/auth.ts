@@ -3,6 +3,18 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { prisma } from "./db"
 
+export function slugifyClinicName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+}
+
+export function clinicEmail(name: string): string {
+  return `${slugifyClinicName(name)}@portal.petslab`
+}
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: {
@@ -11,7 +23,8 @@ export const authOptions: NextAuthOptions = {
   },
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      id: "staff",
+      name: "Staff",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Contraseña", type: "password" },
@@ -23,7 +36,35 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
           include: { clinic: true },
         })
-        if (!user) return null
+        if (!user || user.role === "CLINIC") return null
+
+        const valid = await bcrypt.compare(credentials.password, user.password)
+        if (!valid) return null
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          clinicId: user.clinicId ?? undefined,
+        }
+      },
+    }),
+    CredentialsProvider({
+      id: "clinic",
+      name: "Clínica",
+      credentials: {
+        clinicName: { label: "Nombre de la clínica", type: "text" },
+        password: { label: "Contraseña", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.clinicName || !credentials?.password) return null
+
+        const email = clinicEmail(credentials.clinicName)
+        const user = await prisma.user.findUnique({
+          where: { email },
+        })
+        if (!user || user.role !== "CLINIC") return null
 
         const valid = await bcrypt.compare(credentials.password, user.password)
         if (!valid) return null

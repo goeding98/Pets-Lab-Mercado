@@ -3,452 +3,742 @@ import bcrypt from "bcryptjs"
 
 const prisma = new PrismaClient()
 
-const TEMPLATES = [
-  // ─── 1. Hemograma Completo ────────────────────────────────────────
+type FieldDef = {
+  name: string
+  unit?: string
+  refCanine?: string
+  refFeline?: string
+  technique?: string
+  fieldType?: string
+  calcFormula?: string
+}
+
+type SectionDef = { name: string; fields: FieldDef[] }
+type TemplateDef = {
+  name: string
+  area: string
+  turnaround: string
+  sampleType: string
+  sections: SectionDef[]
+}
+
+const TEMPLATES: TemplateDef[] = [
+  // ─── HEMATOLOGÍA ──────────────────────────────────────────────────
   {
     name: "Hemograma Completo",
     area: "Hematología",
     turnaround: "Mismo día",
     sampleType: "1 mL EDTA",
-    sections: [
-      {
-        name: "Serie Roja",
-        order: 0,
-        fields: [
-          { name: "Eritrocitos", unit: "x10⁶/µL", refCanine: "5.5 – 8.5", refFeline: "5.0 – 10.0", technique: "Contador automático", fieldType: "number", order: 0 },
-          { name: "Hemoglobina", unit: "g/dL", refCanine: "12.0 – 18.0", refFeline: "8.0 – 15.0", technique: "Cianometahemoglobina", fieldType: "number", order: 1 },
-          { name: "Hematocrito", unit: "%", refCanine: "37 – 55", refFeline: "24 – 45", technique: "Microhematocrito", fieldType: "number", order: 2 },
-          { name: "VCM", unit: "fL", refCanine: "60 – 77", refFeline: "39 – 55", technique: "Calculado", fieldType: "number", order: 3 },
-          { name: "HCM", unit: "pg", refCanine: "19.5 – 24.5", refFeline: "13.0 – 17.0", technique: "Calculado", fieldType: "number", order: 4 },
-          { name: "CHCM", unit: "g/dL", refCanine: "31.0 – 36.0", refFeline: "30.0 – 36.0", technique: "Calculado", fieldType: "number", order: 5 },
-          { name: "RDW", unit: "%", refCanine: "12.0 – 15.5", refFeline: "14.0 – 18.0", technique: "Contador automático", fieldType: "number", order: 6 },
-        ],
-      },
-      {
-        name: "Leucograma",
-        order: 1,
-        fields: [
-          { name: "Leucocitos totales", unit: "x10³/µL", refCanine: "6.0 – 17.0", refFeline: "5.5 – 19.5", technique: "Contador automático", fieldType: "number", order: 0 },
-          { name: "Neutrófilos segmentados", unit: "%", refCanine: "60 – 77", refFeline: "35 – 75", technique: "Recuento diferencial", fieldType: "number", order: 1 },
-          { name: "Neutrófilos en banda", unit: "%", refCanine: "0 – 3", refFeline: "0 – 3", technique: "Recuento diferencial", fieldType: "number", order: 2 },
-          { name: "Linfocitos", unit: "%", refCanine: "12 – 30", refFeline: "20 – 55", technique: "Recuento diferencial", fieldType: "number", order: 3 },
-          { name: "Monocitos", unit: "%", refCanine: "3 – 10", refFeline: "1 – 4", technique: "Recuento diferencial", fieldType: "number", order: 4 },
-          { name: "Eosinófilos", unit: "%", refCanine: "2 – 10", refFeline: "2 – 12", technique: "Recuento diferencial", fieldType: "number", order: 5 },
-          { name: "Basófilos", unit: "%", refCanine: "0 – 1", refFeline: "0 – 1", technique: "Recuento diferencial", fieldType: "number", order: 6 },
-        ],
-      },
-      {
-        name: "Plaquetas",
-        order: 2,
-        fields: [
-          { name: "Plaquetas", unit: "x10³/µL", refCanine: "200 – 500", refFeline: "200 – 500", technique: "Contador automático", fieldType: "number", order: 0 },
-          { name: "VPM", unit: "fL", refCanine: "6.1 – 10.1", refFeline: "12.0 – 17.5", technique: "Contador automático", fieldType: "number", order: 1 },
-        ],
-      },
-      {
-        name: "Morfología",
-        order: 3,
-        fields: [
-          { name: "Observaciones morfológicas", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 0 },
-        ],
-      },
-    ],
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Proteínas plasmáticas", unit: "g/dL", refCanine: "55 – 70", refFeline: "55 – 70", technique: "Refractometría", fieldType: "number" },
+        { name: "Reticulocitos", unit: "%", refCanine: "0.0 – 1.0", refFeline: "0.0 – 1.0", technique: "Azul brillante de cresilo", fieldType: "number" },
+        { name: "Hemoparásitos", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Observación", fieldType: "text" },
+      ],
+    }],
   },
-
-  // ─── 2. Control Hospitalario ─────────────────────────────────────
   {
-    name: "Control Hospitalario",
+    name: "Hematocrito",
     area: "Hematología",
     turnaround: "Mismo día",
     sampleType: "1 mL EDTA",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "Hematocrito", unit: "%", refCanine: "37 – 55", refFeline: "24 – 45", technique: "Microhematocrito", fieldType: "number", order: 0 },
-          { name: "Proteínas plasmáticas", unit: "g/dL", refCanine: "6.0 – 8.0", refFeline: "6.0 – 8.0", technique: "Refractometría", fieldType: "number", order: 1 },
-          { name: "Leucocitos estimados", unit: "x10³/µL", refCanine: "6.0 – 17.0", refFeline: "5.5 – 19.5", technique: "Estimación en frotis", fieldType: "number", order: 2 },
-          { name: "Observaciones", unit: "", refCanine: "", refFeline: "", technique: "Microscopía", fieldType: "text", order: 3 },
-        ],
-      },
-    ],
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Hematocrito", unit: "%", refCanine: "37 – 55", refFeline: "24 – 45", technique: "Microhematocrito", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
   },
-
-  // ─── 3. Reticulocitos ─────────────────────────────────────────────
   {
-    name: "Reticulocitos",
+    name: "Hemograma Sencillo",
     area: "Hematología",
     turnaround: "Mismo día",
     sampleType: "1 mL EDTA",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "Reticulocitos", unit: "%", refCanine: "0 – 1.5", refFeline: "0 – 0.4", technique: "Azul brillante de cresilo", fieldType: "number", order: 0 },
-          { name: "Reticulocitos absolutos", unit: "x10³/µL", refCanine: "< 80", refFeline: "< 50", technique: "Calculado", fieldType: "number", order: 1 },
-          { name: "Interpretación", unit: "", refCanine: "", refFeline: "", technique: "", fieldType: "text", order: 2 },
-        ],
-      },
-    ],
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Hematocrito", unit: "%", refCanine: "37 – 55", refFeline: "24 – 45", technique: "Microhematocrito", fieldType: "number" },
+        { name: "Proteínas plasmáticas", unit: "g/dL", refCanine: "55 – 70", refFeline: "55 – 70", technique: "Refractometría", fieldType: "number" },
+        { name: "Leucocitos estimados", unit: "x10³/µL", refCanine: "6.0 – 17.0", refFeline: "5.5 – 19.5", technique: "Estimación en frotis", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
   },
-
-  // ─── 4. Test Rápido FIV/FeLV ──────────────────────────────────────
   {
-    name: "Test Rápido FIV/FeLV",
+    name: "Recuento de Plaquetas",
     area: "Hematología",
     turnaround: "Mismo día",
-    sampleType: "0.5 mL suero",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "FIV (Anticuerpos)", unit: "", refCanine: "—", refFeline: "Negativo", technique: "Inmunocromatografía", fieldType: "select", order: 0 },
-          { name: "FeLV (Antígeno)", unit: "", refCanine: "—", refFeline: "Negativo", technique: "Inmunocromatografía", fieldType: "select", order: 1 },
-          { name: "Observaciones", unit: "", refCanine: "", refFeline: "", technique: "", fieldType: "text", order: 2 },
-        ],
-      },
-    ],
+    sampleType: "1 mL EDTA",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Plaquetas", unit: "x10³/µL", refCanine: "200 – 500", refFeline: "200 – 500", technique: "Contador automático", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
   },
-
-  // ─── 5. Perfil Renal ──────────────────────────────────────────────
   {
-    name: "Perfil Renal",
-    area: "Bioquímica",
-    turnaround: "24h",
-    sampleType: "2 mL suero (tubo seco)",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "BUN (Nitrógeno ureico)", unit: "mg/dL", refCanine: "7 – 27", refFeline: "14 – 36", technique: "Ureasa UV", fieldType: "number", order: 0 },
-          { name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.8 – 2.4", technique: "Jaffé cinético", fieldType: "number", order: 1 },
-          { name: "Fósforo", unit: "mg/dL", refCanine: "2.5 – 6.8", refFeline: "3.1 – 7.5", technique: "Fosfomolibdato UV", fieldType: "number", order: 2 },
-          { name: "Potasio", unit: "mEq/L", refCanine: "3.5 – 5.8", refFeline: "3.4 – 5.6", technique: "ISE", fieldType: "number", order: 3 },
-          { name: "SDMA", unit: "µg/dL", refCanine: "< 14", refFeline: "< 14", technique: "ELISA", fieldType: "number", order: 4 },
-        ],
-      },
-    ],
+    name: "Recuento de Reticulocitos",
+    area: "Hematología",
+    turnaround: "Mismo día",
+    sampleType: "1 mL EDTA",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Reticulocitos", unit: "%", refCanine: "0.0 – 1.5", refFeline: "0.0 – 0.4", technique: "Azul brillante de cresilo", fieldType: "number" },
+        { name: "Reticulocitos absolutos", unit: "x10³/µL", refCanine: "< 80", refFeline: "< 50", technique: "Calculado", fieldType: "number" },
+        { name: "Interpretación", fieldType: "text" },
+      ],
+    }],
   },
-
-  // ─── 6. Perfil Hepático ───────────────────────────────────────────
   {
-    name: "Perfil Hepático",
-    area: "Bioquímica",
-    turnaround: "24h",
-    sampleType: "2 mL suero (tubo seco)",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "ALT (GPT)", unit: "U/L", refCanine: "10 – 88", refFeline: "10 – 100", technique: "UV optimizado IFCC", fieldType: "number", order: 0 },
-          { name: "AST (GOT)", unit: "U/L", refCanine: "0 – 50", refFeline: "0 – 50", technique: "UV optimizado IFCC", fieldType: "number", order: 1 },
-          { name: "FA (Fosfatasa alcalina)", unit: "U/L", refCanine: "20 – 150", refFeline: "10 – 72", technique: "pNPP", fieldType: "number", order: 2 },
-          { name: "GGT", unit: "U/L", refCanine: "1 – 12", refFeline: "1 – 10", technique: "IFCC", fieldType: "number", order: 3 },
-          { name: "Bilirrubina total", unit: "mg/dL", refCanine: "0.1 – 0.6", refFeline: "0.1 – 0.6", technique: "Diazo", fieldType: "number", order: 4 },
-          { name: "Bilirrubina directa", unit: "mg/dL", refCanine: "0.0 – 0.2", refFeline: "0.0 – 0.2", technique: "Diazo", fieldType: "number", order: 5 },
-          { name: "Bilirrubina indirecta", unit: "mg/dL", refCanine: "0.0 – 0.4", refFeline: "0.0 – 0.4", technique: "Calculado", fieldType: "calculated", calcFormula: "bilirrubina_total - bilirrubina_directa", order: 6 },
-        ],
-      },
-    ],
+    name: "Hemoparásitos",
+    area: "Hematología",
+    turnaround: "Mismo día",
+    sampleType: "1 mL EDTA",
+    sections: [{
+      name: "Resultado",
+      fields: [
+        { name: "Hallazgos en frotis", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
   },
 
-  // ─── 7. Perfil Prequirúrgico ──────────────────────────────────────
+  // ─── COPROLOGÍA ───────────────────────────────────────────────────
   {
-    name: "Perfil Prequirúrgico",
-    area: "Bioquímica",
+    name: "Coprológico (flotación y directo)",
+    area: "Coprología",
     turnaround: "24h",
-    sampleType: "2 mL suero (tubo seco)",
+    sampleType: "Heces frescas",
     sections: [
       {
-        name: "Resultados",
-        order: 0,
+        name: "Análisis Macroscópico",
         fields: [
-          { name: "BUN", unit: "mg/dL", refCanine: "7 – 27", refFeline: "14 – 36", technique: "Ureasa UV", fieldType: "number", order: 0 },
-          { name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.8 – 2.4", technique: "Jaffé cinético", fieldType: "number", order: 1 },
-          { name: "ALT (GPT)", unit: "U/L", refCanine: "10 – 88", refFeline: "10 – 100", technique: "UV optimizado IFCC", fieldType: "number", order: 2 },
-          { name: "FA", unit: "U/L", refCanine: "20 – 150", refFeline: "10 – 72", technique: "pNPP", fieldType: "number", order: 3 },
-          { name: "Proteínas totales", unit: "g/dL", refCanine: "5.4 – 7.5", refFeline: "5.7 – 8.9", technique: "Biuret", fieldType: "number", order: 4 },
-          { name: "Glucosa", unit: "mg/dL", refCanine: "65 – 118", refFeline: "70 – 150", technique: "GOD-PAP", fieldType: "number", order: 5 },
-          { name: "Hematocrito", unit: "%", refCanine: "37 – 55", refFeline: "24 – 45", technique: "Microhematocrito", fieldType: "number", order: 6 },
+          { name: "Consistencia", fieldType: "text" },
+          { name: "Color", fieldType: "text" },
+          { name: "Sangre", refCanine: "No se observa", refFeline: "No se observa", fieldType: "text" },
+          { name: "Moco", refCanine: "No se observa", refFeline: "No se observa", fieldType: "text" },
+          { name: "Larvas", refCanine: "No se observa", refFeline: "No se observa", fieldType: "text" },
+          { name: "Gusanos redondos", refCanine: "No se observa", refFeline: "No se observa", fieldType: "text" },
+          { name: "Otros", fieldType: "text" },
         ],
+      },
+      {
+        name: "Análisis Microscópico",
+        fields: [
+          { name: "Formas parasitarias (frotis directo)", refCanine: "No se observa parásitos", refFeline: "No se observa parásitos", technique: "Frotis directo", fieldType: "text" },
+          { name: "Formas parasitarias (flotación)", refCanine: "No se observa parásitos", refFeline: "No se observa parásitos", technique: "Flotación", fieldType: "text" },
+          { name: "Reacción leucocitaria", fieldType: "text" },
+          { name: "Almidón", fieldType: "text" },
+          { name: "Eritrocitos", refCanine: "No se observa", refFeline: "No se observa", fieldType: "text" },
+          { name: "Fibra muscular", fieldType: "text" },
+          { name: "Fibra vegetal", fieldType: "text" },
+          { name: "Células vegetales", fieldType: "text" },
+          { name: "Microbiota", fieldType: "text" },
+          { name: "Pelos", fieldType: "text" },
+          { name: "Otros hallazgos", fieldType: "text" },
+        ],
+      },
+      {
+        name: "Observaciones",
+        fields: [{ name: "Observaciones generales", fieldType: "text" }],
       },
     ],
   },
-
-  // ─── 8. Proteínas + Albumina + Globulinas ─────────────────────────
   {
-    name: "Proteínas Totales, Albumina y Globulinas",
-    area: "Bioquímica",
-    turnaround: "24h",
-    sampleType: "2 mL suero (tubo seco)",
+    name: "Coprológico seriado (3 muestras)",
+    area: "Coprología",
+    turnaround: "48h",
+    sampleType: "Heces frescas (3 muestras en días distintos)",
     sections: [
       {
-        name: "Resultados",
-        order: 0,
+        name: "Muestra 1",
         fields: [
-          { name: "Proteínas totales", unit: "g/dL", refCanine: "5.4 – 7.5", refFeline: "5.7 – 8.9", technique: "Biuret", fieldType: "number", order: 0 },
-          { name: "Albumina", unit: "g/dL", refCanine: "2.6 – 4.0", refFeline: "2.1 – 3.3", technique: "Bromocresol verde", fieldType: "number", order: 1 },
-          { name: "Globulinas", unit: "g/dL", refCanine: "2.3 – 4.5", refFeline: "2.6 – 5.1", technique: "Calculado", fieldType: "calculated", calcFormula: "proteinas_totales - albumina", order: 2 },
-          { name: "Relación A/G", unit: "", refCanine: "0.7 – 1.5", refFeline: "0.5 – 1.0", technique: "Calculado", fieldType: "calculated", calcFormula: "albumina / globulinas", order: 3 },
+          { name: "Formas parasitarias (directo)", refCanine: "No se observa parásitos", refFeline: "No se observa parásitos", technique: "Frotis directo", fieldType: "text" },
+          { name: "Formas parasitarias (flotación)", refCanine: "No se observa parásitos", refFeline: "No se observa parásitos", technique: "Flotación", fieldType: "text" },
+          { name: "Hallazgos adicionales", fieldType: "text" },
         ],
+      },
+      {
+        name: "Muestra 2",
+        fields: [
+          { name: "Formas parasitarias (directo)", refCanine: "No se observa parásitos", refFeline: "No se observa parásitos", technique: "Frotis directo", fieldType: "text" },
+          { name: "Formas parasitarias (flotación)", refCanine: "No se observa parásitos", refFeline: "No se observa parásitos", technique: "Flotación", fieldType: "text" },
+          { name: "Hallazgos adicionales", fieldType: "text" },
+        ],
+      },
+      {
+        name: "Muestra 3",
+        fields: [
+          { name: "Formas parasitarias (directo)", refCanine: "No se observa parásitos", refFeline: "No se observa parásitos", technique: "Frotis directo", fieldType: "text" },
+          { name: "Formas parasitarias (flotación)", refCanine: "No se observa parásitos", refFeline: "No se observa parásitos", technique: "Flotación", fieldType: "text" },
+          { name: "Hallazgos adicionales", fieldType: "text" },
+        ],
+      },
+      {
+        name: "Conclusión",
+        fields: [{ name: "Observaciones finales", fieldType: "text" }],
       },
     ],
   },
-
-  // ─── 9. Panel Electrolítico ───────────────────────────────────────
   {
-    name: "Panel Electrolítico",
-    area: "Bioquímica",
+    name: "Coproscópico",
+    area: "Coprología",
     turnaround: "24h",
-    sampleType: "2 mL suero (tubo seco)",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "Sodio", unit: "mEq/L", refCanine: "141 – 152", refFeline: "147 – 156", technique: "ISE indirecto", fieldType: "number", order: 0 },
-          { name: "Potasio", unit: "mEq/L", refCanine: "3.5 – 5.8", refFeline: "3.4 – 5.6", technique: "ISE indirecto", fieldType: "number", order: 1 },
-          { name: "Cloro", unit: "mEq/L", refCanine: "105 – 122", refFeline: "107 – 120", technique: "ISE indirecto", fieldType: "number", order: 2 },
-          { name: "Calcio", unit: "mg/dL", refCanine: "9.3 – 11.5", refFeline: "8.2 – 10.8", technique: "Arsenazo III", fieldType: "number", order: 3 },
-          { name: "Fósforo", unit: "mg/dL", refCanine: "2.5 – 6.8", refFeline: "3.1 – 7.5", technique: "Fosfomolibdato UV", fieldType: "number", order: 4 },
-        ],
-      },
-    ],
+    sampleType: "Heces frescas",
+    sections: [{
+      name: "Resultado",
+      fields: [
+        { name: "Descripción macroscópica", fieldType: "text" },
+        { name: "Observaciones microscópicas", fieldType: "text" },
+        { name: "Conclusión", fieldType: "text" },
+      ],
+    }],
   },
-
-  // ─── 10. Glucosa ──────────────────────────────────────────────────
   {
-    name: "Glucosa",
-    area: "Bioquímica",
+    name: "Coloración Gram",
+    area: "Coprología",
     turnaround: "24h",
-    sampleType: "1 mL suero (tubo seco)",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "Glucosa", unit: "mg/dL", refCanine: "65 – 118", refFeline: "70 – 150", technique: "GOD-PAP", fieldType: "number", order: 0 },
-          { name: "Observaciones", unit: "", refCanine: "", refFeline: "", technique: "", fieldType: "text", order: 1 },
-        ],
-      },
-    ],
+    sampleType: "Heces frescas",
+    sections: [{
+      name: "Resultado",
+      fields: [
+        { name: "Flora Gram positiva", fieldType: "text" },
+        { name: "Flora Gram negativa", fieldType: "text" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Coloración Wright",
+    area: "Coprología",
+    turnaround: "24h",
+    sampleType: "Heces frescas",
+    sections: [{
+      name: "Resultado",
+      fields: [
+        { name: "Descripción celular", technique: "Tinción Wright", fieldType: "text" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
   },
 
-  // ─── 11. Citología Diagnóstica ────────────────────────────────────
+  // ─── CITOLOGÍAS REPRODUCTIVAS ──────────────────────────────────────
+  {
+    name: "Citología Vaginal Reproductiva",
+    area: "Citologías Reproductivas",
+    turnaround: "48h",
+    sampleType: "Hisopo vaginal en solución salina",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Células parabasales", unit: "%", technique: "Microscopía óptica", fieldType: "number" },
+        { name: "Células intermedias", unit: "%", technique: "Microscopía óptica", fieldType: "number" },
+        { name: "Células superficiales nucleadas", unit: "%", technique: "Microscopía óptica", fieldType: "number" },
+        { name: "Células superficiales anucleadas", unit: "%", technique: "Microscopía óptica", fieldType: "number" },
+        { name: "Eritrocitos", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Bacterias", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Fase del ciclo estral", technique: "Interpretación citológica", fieldType: "text" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
   {
     name: "Citología Diagnóstica",
-    area: "Citología",
+    area: "Citologías Reproductivas",
     turnaround: "48h",
-    sampleType: "Placa fijada con alcohol / tinción Diff-Quick",
+    sampleType: "Placa fijada / tinción Diff-Quick",
     sections: [
       {
         name: "Datos de la muestra",
-        order: 0,
         fields: [
-          { name: "Sitio de toma", unit: "", refCanine: "", refFeline: "", technique: "", fieldType: "text", order: 0 },
-          { name: "Tipo de muestra", unit: "", refCanine: "", refFeline: "", technique: "", fieldType: "text", order: 1 },
-          { name: "Calidad de la muestra", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "select", order: 2 },
+          { name: "Sitio de toma", fieldType: "text" },
+          { name: "Tipo de muestra", fieldType: "text" },
+          { name: "Calidad de la muestra", technique: "Microscopía óptica", fieldType: "select" },
         ],
       },
       {
         name: "Hallazgos",
-        order: 1,
         fields: [
-          { name: "Tipo celular predominante", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 0 },
-          { name: "Descripción microscópica", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 1 },
-          { name: "Microorganismos observados", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 2 },
-          { name: "Diagnóstico citológico", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 3 },
-          { name: "Recomendaciones", unit: "", refCanine: "", refFeline: "", technique: "", fieldType: "text", order: 4 },
+          { name: "Tipo celular predominante", technique: "Microscopía óptica", fieldType: "text" },
+          { name: "Descripción microscópica", technique: "Microscopía óptica", fieldType: "text" },
+          { name: "Microorganismos observados", technique: "Microscopía óptica", fieldType: "text" },
+          { name: "Diagnóstico citológico", technique: "Microscopía óptica", fieldType: "text" },
+          { name: "Recomendaciones", fieldType: "text" },
         ],
       },
     ],
   },
 
-  // ─── 12. Citología de Oído ────────────────────────────────────────
+  // ─── UROANÁLISIS ──────────────────────────────────────────────────
   {
-    name: "Citología de Oído",
-    area: "Citología",
-    turnaround: "48h",
-    sampleType: "Hisopo con material de oído",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "Oído derecho / izquierdo", unit: "", refCanine: "", refFeline: "", technique: "", fieldType: "select", order: 0 },
-          { name: "Células epiteliales", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 1 },
-          { name: "Neutrófilos", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 2 },
-          { name: "Cocos", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 3 },
-          { name: "Bacilos", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 4 },
-          { name: "Malassezia", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 5 },
-          { name: "Diagnóstico", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 6 },
-        ],
-      },
-    ],
-  },
-
-  // ─── 13. Citología Vaginal ────────────────────────────────────────
-  {
-    name: "Citología Vaginal",
-    area: "Citología",
-    turnaround: "48h",
-    sampleType: "Hisopo vaginal en solución salina",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "Células parabasales", unit: "%", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "number", order: 0 },
-          { name: "Células intermedias", unit: "%", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "number", order: 1 },
-          { name: "Células superficiales nucleadas", unit: "%", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "number", order: 2 },
-          { name: "Células superficiales anucleadas", unit: "%", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "number", order: 3 },
-          { name: "Eritrocitos", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 4 },
-          { name: "Bacterias", unit: "", refCanine: "", refFeline: "", technique: "Microscopía óptica", fieldType: "text", order: 5 },
-          { name: "Fase del ciclo estral", unit: "", refCanine: "", refFeline: "", technique: "Interpretación citológica", fieldType: "text", order: 6 },
-        ],
-      },
-    ],
-  },
-
-  // ─── 14. Uroanálisis Completo ─────────────────────────────────────
-  {
-    name: "Uroanálisis Completo",
+    name: "Parcial de Orina",
     area: "Uroanálisis",
     turnaround: "Mismo día",
     sampleType: "5 mL orina fresca (máx 2h)",
     sections: [
       {
-        name: "Propiedades físicas",
-        order: 0,
+        name: "Examen Físico",
         fields: [
-          { name: "Color", unit: "", refCanine: "Amarillo", refFeline: "Amarillo", technique: "Observación directa", fieldType: "text", order: 0 },
-          { name: "Aspecto", unit: "", refCanine: "Claro", refFeline: "Claro", technique: "Observación directa", fieldType: "select", order: 1 },
-          { name: "Densidad", unit: "", refCanine: "1.015 – 1.045", refFeline: "1.020 – 1.060", technique: "Refractometría", fieldType: "number", order: 2 },
+          { name: "Aspecto", refCanine: "Claro", refFeline: "Claro", technique: "Observación directa", fieldType: "text" },
+          { name: "Color", refCanine: "Amarillo", refFeline: "Amarillo", technique: "Observación directa", fieldType: "text" },
         ],
       },
       {
-        name: "Propiedades químicas (tira reactiva)",
-        order: 1,
+        name: "Examen Químico",
         fields: [
-          { name: "pH", unit: "", refCanine: "5.5 – 7.5", refFeline: "5.5 – 7.5", technique: "Tira reactiva", fieldType: "number", order: 0 },
-          { name: "Proteínas", unit: "", refCanine: "Negativo", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select", order: 1 },
-          { name: "Glucosa", unit: "", refCanine: "Negativo", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select", order: 2 },
-          { name: "Cetonas", unit: "", refCanine: "Negativo", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select", order: 3 },
-          { name: "Bilirrubina", unit: "", refCanine: "Negativo / trazas", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select", order: 4 },
-          { name: "Sangre oculta", unit: "", refCanine: "Negativo", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select", order: 5 },
-          { name: "Urobilinógeno", unit: "", refCanine: "0.1 – 1.0 EU/dL", refFeline: "0.1 – 1.0 EU/dL", technique: "Tira reactiva", fieldType: "text", order: 6 },
+          { name: "Densidad específica", refCanine: "1.015 – 1.045", refFeline: "1.020 – 1.060", technique: "Refractometría", fieldType: "number" },
+          { name: "pH", refCanine: "5.5 – 7.5", refFeline: "5.5 – 7.5", technique: "Tira reactiva", fieldType: "number" },
+          { name: "Proteínas", refCanine: "Negativo", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select" },
+          { name: "Leucocitos", technique: "Tira reactiva", fieldType: "text" },
+          { name: "Glucosa", refCanine: "Negativo", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select" },
+          { name: "Cetónicos", refCanine: "Negativo", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select" },
+          { name: "Urobilinógeno", refCanine: "0.1 – 1.0 EU/dL", refFeline: "0.1 – 1.0 EU/dL", technique: "Tira reactiva", fieldType: "text" },
+          { name: "Bilirrubina", refCanine: "Negativo / trazas", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select" },
+          { name: "Sangre", refCanine: "Negativo", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select" },
+          { name: "Nitritos", refCanine: "Negativo", refFeline: "Negativo", technique: "Tira reactiva", fieldType: "select" },
         ],
       },
       {
-        name: "Sedimento urinario",
-        order: 2,
+        name: "Examen Microscópico",
         fields: [
-          { name: "Leucocitos", unit: "/campo", refCanine: "0 – 5", refFeline: "0 – 5", technique: "Microscopía óptica x40", fieldType: "number", order: 0 },
-          { name: "Eritrocitos", unit: "/campo", refCanine: "0 – 5", refFeline: "0 – 5", technique: "Microscopía óptica x40", fieldType: "number", order: 1 },
-          { name: "Células epiteliales", unit: "/campo", refCanine: "Escasas", refFeline: "Escasas", technique: "Microscopía óptica x40", fieldType: "text", order: 2 },
-          { name: "Cilindros", unit: "", refCanine: "Ninguno", refFeline: "Ninguno", technique: "Microscopía óptica x10", fieldType: "text", order: 3 },
-          { name: "Bacterias", unit: "", refCanine: "Ninguna", refFeline: "Ninguna", technique: "Microscopía óptica x40", fieldType: "text", order: 4 },
-          { name: "Cristales", unit: "", refCanine: "Escasos", refFeline: "Escasos", technique: "Microscopía óptica x40", fieldType: "text", order: 5 },
+          { name: "Eritrocitos", unit: "/campo", refCanine: "0 – 5", refFeline: "0 – 5", technique: "Microscopía x40", fieldType: "text" },
+          { name: "Leucocitos", unit: "/campo", refCanine: "0 – 5", refFeline: "0 – 5", technique: "Microscopía x40", fieldType: "text" },
+          { name: "C. Epiteliales Altas", technique: "Microscopía x40", fieldType: "text" },
+          { name: "C. Epiteliales Superficiales", technique: "Microscopía x40", fieldType: "text" },
+          { name: "C. Epiteliales de Transición", technique: "Microscopía x40", fieldType: "text" },
+          { name: "Bacterias", refCanine: "Ninguna", refFeline: "Ninguna", technique: "Microscopía x40", fieldType: "text" },
+          { name: "Hongos", technique: "Microscopía x40", fieldType: "text" },
+          { name: "Espermatozoides", technique: "Microscopía x40", fieldType: "text" },
+          { name: "Cilindros", refCanine: "Ninguno", refFeline: "Ninguno", technique: "Microscopía x10", fieldType: "text" },
+          { name: "Cristales", refCanine: "Escasos", refFeline: "Escasos", technique: "Microscopía x40", fieldType: "text" },
+          { name: "Moco", technique: "Microscopía x10", fieldType: "text" },
+          { name: "Otros", fieldType: "text" },
         ],
       },
     ],
   },
-
-  // ─── 15. Relación UPC ─────────────────────────────────────────────
   {
-    name: "Relación Proteína/Creatinina Urinaria (UPC)",
+    name: "Relación UPC (Proteína/Creatinina Urinaria)",
     area: "Uroanálisis",
     turnaround: "Mismo día",
     sampleType: "5 mL orina fresca",
-    sections: [
-      {
-        name: "Resultados",
-        order: 0,
-        fields: [
-          { name: "Proteínas urinarias", unit: "mg/dL", refCanine: "", refFeline: "", technique: "Biuret / tira reactiva cuantitativa", fieldType: "number", order: 0 },
-          { name: "Creatinina urinaria", unit: "mg/dL", refCanine: "", refFeline: "", technique: "Jaffé cinético", fieldType: "number", order: 1 },
-          { name: "Relación UPC", unit: "", refCanine: "< 0.2 (normal), 0.2–0.5 (borderline), > 0.5 (proteinuria)", refFeline: "< 0.2 (normal), 0.2–0.4 (borderline), > 0.4 (proteinuria)", technique: "Calculado", fieldType: "calculated", calcFormula: "proteinas_urinarias / creatinina_urinaria", order: 2 },
-          { name: "Interpretación", unit: "", refCanine: "", refFeline: "", technique: "", fieldType: "text", order: 3 },
-        ],
-      },
-    ],
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Proteínas urinarias", unit: "mg/dL", technique: "Biuret", fieldType: "number" },
+        { name: "Creatinina urinaria", unit: "mg/dL", technique: "Jaffé cinético", fieldType: "number" },
+        { name: "Relación UPC", refCanine: "< 0.2 normal · 0.2–0.5 borderline · > 0.5 proteinuria", refFeline: "< 0.2 normal · 0.2–0.4 borderline · > 0.4 proteinuria", technique: "Calculado", fieldType: "calculated", calcFormula: "proteinas_urinarias / creatinina_urinaria" },
+        { name: "Interpretación", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Coloración Gram (Orina)",
+    area: "Uroanálisis",
+    turnaround: "Mismo día",
+    sampleType: "5 mL orina fresca",
+    sections: [{
+      name: "Resultado",
+      fields: [
+        { name: "Flora Gram positiva", fieldType: "text" },
+        { name: "Flora Gram negativa", fieldType: "text" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+
+  // ─── CITOLOGÍAS DE PIEL ───────────────────────────────────────────
+  {
+    name: "Citología de Oído",
+    area: "Citologías de Piel",
+    turnaround: "48h",
+    sampleType: "Hisopo con material de oído",
+    sections: [{
+      name: "Resultado",
+      fields: [
+        { name: "Oído evaluado", fieldType: "select" },
+        { name: "Resultado / Descripción", technique: "Microscopía óptica + Gram", fieldType: "text" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Tricograma",
+    area: "Citologías de Piel",
+    turnaround: "48h",
+    sampleType: "Pelos con raíz",
+    sections: [{
+      name: "Resultado",
+      fields: [
+        { name: "Fase del ciclo piloso", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Morfología de la cutícula", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Hongos observados", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Parásitos observados", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Raspado de Piel (KOH + Ácaros)",
+    area: "Citologías de Piel",
+    turnaround: "48h",
+    sampleType: "Raspado profundo de piel",
+    sections: [{
+      name: "Resultado",
+      fields: [
+        { name: "Ácaros Demodex", refCanine: "No ácaros", refFeline: "No ácaros", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Ácaros Sarcoptes", refCanine: "No ácaros", refFeline: "No ácaros", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Hongos (observación directa)", technique: "Microscopía óptica", fieldType: "text" },
+        { name: "Microscópico directo", refCanine: "Negativo", refFeline: "Negativo", technique: "Frotis directo", fieldType: "select" },
+        { name: "Hidróxido de potasio (KOH)", technique: "KOH 10%", fieldType: "select" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+
+  // ─── PERFILES QUÍMICA SANGUÍNEA ───────────────────────────────────
+  {
+    name: "Perfil Básico",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Glucosa", unit: "mg/dL", refCanine: "60 – 120", refFeline: "60 – 175", technique: "Trinder (punto final)", fieldType: "number" },
+        { name: "Proteínas totales", unit: "g/dL", refCanine: "5.3 – 7.6", refFeline: "6.5 – 8.9", technique: "Biuret (punto final)", fieldType: "number" },
+        { name: "Albumina", unit: "g/dL", refCanine: "2.4 – 3.9", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+        { name: "Globulinas", unit: "g/dL", refCanine: "2.0 – 4.0", refFeline: "2.6 – 4.5", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "proteinas_totales - albumina" },
+        { name: "ALT/GPT", unit: "ul/L", refCanine: "10.0 – 100.0", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Fosfatasa alcalina", unit: "ul/L", refCanine: "1.0 – 212.0", refFeline: "1.0 – 112.0", technique: "FSR (Cinética)", fieldType: "number" },
+        { name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.7 – 1.9", technique: "Colorimétrico (Tiempo fijo)", fieldType: "number" },
+        { name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refCanine: "7.0 – 21.5", refFeline: "20.0 – 50.0", technique: "GLDH (Tiempo fijo)", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Completo",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Glucosa", unit: "mg/dL", refCanine: "60 – 120", refFeline: "60 – 175", technique: "Trinder (punto final)", fieldType: "number" },
+        { name: "Proteínas totales", unit: "g/dL", refCanine: "5.3 – 7.6", refFeline: "6.5 – 8.9", technique: "Biuret (punto final)", fieldType: "number" },
+        { name: "Albumina", unit: "g/dL", refCanine: "2.4 – 3.9", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+        { name: "Globulinas", unit: "g/dL", refCanine: "2.0 – 4.0", refFeline: "2.6 – 4.5", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "proteinas_totales - albumina" },
+        { name: "ALT/GPT", unit: "ul/L", refCanine: "10.0 – 100.0", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Fosfatasa alcalina", unit: "ul/L", refCanine: "1.0 – 212.0", refFeline: "1.0 – 112.0", technique: "FSR (Cinética)", fieldType: "number" },
+        { name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.7 – 1.9", technique: "Colorimétrico (Tiempo fijo)", fieldType: "number" },
+        { name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refCanine: "7.0 – 21.5", refFeline: "20.0 – 50.0", technique: "GLDH (Tiempo fijo)", fieldType: "number" },
+        { name: "AST", unit: "Ul/L", refCanine: "10.0 – 62.0", refFeline: "9.0 – 50.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "GGT", unit: "Ul/L", refCanine: "1.0 – 9.0", refFeline: "0.0 – 10.0", technique: "Glupa-C", fieldType: "number" },
+        { name: "Triglicéridos", unit: "mg/dL", refCanine: "< 150", refFeline: "25.0 – 120.0", technique: "Trinder (Punto final)", fieldType: "number" },
+        { name: "Colesterol", unit: "mg/dL", refCanine: "120 – 255", refFeline: "97.0 – 207.0", technique: "Trinder (Punto final)", fieldType: "number" },
+        { name: "Bilirrubina total", unit: "mg/dL", refCanine: "0.10 – 0.60", refFeline: "0.10 – 0.70", technique: "DCA", fieldType: "number" },
+        { name: "Bilirrubina directa", unit: "mg/dL", refCanine: "< 0.14", refFeline: "< 0.14", technique: "DCA", fieldType: "number" },
+        { name: "Bilirrubina indirecta", unit: "mg/dL", refCanine: "< 0.56", refFeline: "< 0.56", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "bilirrubina_total - bilirrubina_directa" },
+        { name: "Calcio", unit: "mg/dL", refCanine: "7.4 – 11.2", refFeline: "7.4 – 11.2", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Fósforo", unit: "mEq/L", refCanine: "3.1 – 8.3", refFeline: "3.1 – 8.3", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Diabético",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Glucosa", unit: "mg/dL", refCanine: "60 – 120", refFeline: "60 – 175", technique: "Trinder (punto final)", fieldType: "number" },
+        { name: "Fructosamina", unit: "µmol/L", refCanine: "190 – 365", refFeline: "190 – 365", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Proteínas totales", unit: "g/dL", refCanine: "5.3 – 7.6", refFeline: "6.5 – 8.9", technique: "Biuret", fieldType: "number" },
+        { name: "Albumina", unit: "g/dL", refCanine: "2.4 – 3.9", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+        { name: "ALT/GPT", unit: "ul/L", refCanine: "10.0 – 100.0", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.7 – 1.9", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refCanine: "7.0 – 21.5", refFeline: "20.0 – 50.0", technique: "GLDH", fieldType: "number" },
+        { name: "Triglicéridos", unit: "mg/dL", refCanine: "< 150", refFeline: "25.0 – 120.0", technique: "Trinder", fieldType: "number" },
+        { name: "Colesterol", unit: "mg/dL", refCanine: "120 – 255", refFeline: "97.0 – 207.0", technique: "Trinder", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Gato Adulto",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Glucosa", unit: "mg/dL", refFeline: "60 – 175", technique: "Trinder (punto final)", fieldType: "number" },
+        { name: "Proteínas totales", unit: "g/dL", refFeline: "6.5 – 8.9", technique: "Biuret (punto final)", fieldType: "number" },
+        { name: "Albumina", unit: "g/dL", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+        { name: "Globulinas", unit: "g/dL", refFeline: "2.6 – 4.5", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "proteinas_totales - albumina" },
+        { name: "ALT/GPT", unit: "ul/L", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Fosfatasa alcalina", unit: "ul/L", refFeline: "1.0 – 112.0", technique: "FSR (Cinética)", fieldType: "number" },
+        { name: "Creatinina", unit: "mg/dL", refFeline: "0.7 – 1.9", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refFeline: "20.0 – 50.0", technique: "GLDH", fieldType: "number" },
+        { name: "AST", unit: "Ul/L", refFeline: "9.0 – 50.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "GGT", unit: "Ul/L", refFeline: "0.0 – 10.0", technique: "Glupa-C", fieldType: "number" },
+        { name: "Triglicéridos", unit: "mg/dL", refFeline: "25.0 – 120.0", technique: "Trinder", fieldType: "number" },
+        { name: "Colesterol", unit: "mg/dL", refFeline: "97.0 – 207.0", technique: "Trinder", fieldType: "number" },
+        { name: "Bilirrubina total", unit: "mg/dL", refFeline: "0.10 – 0.70", technique: "DCA", fieldType: "number" },
+        { name: "Bilirrubina directa", unit: "mg/dL", refFeline: "< 0.14", technique: "DCA", fieldType: "number" },
+        { name: "Calcio", unit: "mg/dL", refFeline: "7.4 – 11.2", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Fósforo", unit: "mEq/L", refFeline: "3.1 – 8.3", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Gato",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Glucosa", unit: "mg/dL", refFeline: "60 – 175", technique: "Trinder (punto final)", fieldType: "number" },
+        { name: "Proteínas totales", unit: "g/dL", refFeline: "6.5 – 8.9", technique: "Biuret (punto final)", fieldType: "number" },
+        { name: "Albumina", unit: "g/dL", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+        { name: "Globulinas", unit: "g/dL", refFeline: "2.6 – 4.5", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "proteinas_totales - albumina" },
+        { name: "ALT/GPT", unit: "ul/L", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Fosfatasa alcalina", unit: "ul/L", refFeline: "1.0 – 112.0", technique: "FSR (Cinética)", fieldType: "number" },
+        { name: "Creatinina", unit: "mg/dL", refFeline: "0.7 – 1.9", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refFeline: "20.0 – 50.0", technique: "GLDH", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Hepático Sencillo",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "ALT/GPT", unit: "ul/L", refCanine: "10.0 – 100.0", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Fosfatasa alcalina", unit: "ul/L", refCanine: "1.0 – 212.0", refFeline: "1.0 – 112.0", technique: "FSR (Cinética)", fieldType: "number" },
+        { name: "AST", unit: "Ul/L", refCanine: "10.0 – 62.0", refFeline: "9.0 – 50.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "GGT", unit: "Ul/L", refCanine: "1.0 – 9.0", refFeline: "0.0 – 10.0", technique: "Glupa-C", fieldType: "number" },
+        { name: "Bilirrubina total", unit: "mg/dL", refCanine: "0.10 – 0.60", refFeline: "0.10 – 0.70", technique: "DCA", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Hepático Completo",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "ALT/GPT", unit: "ul/L", refCanine: "10.0 – 100.0", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Fosfatasa alcalina", unit: "ul/L", refCanine: "1.0 – 212.0", refFeline: "1.0 – 112.0", technique: "FSR (Cinética)", fieldType: "number" },
+        { name: "AST", unit: "Ul/L", refCanine: "10.0 – 62.0", refFeline: "9.0 – 50.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "GGT", unit: "Ul/L", refCanine: "1.0 – 9.0", refFeline: "0.0 – 10.0", technique: "Glupa-C", fieldType: "number" },
+        { name: "Bilirrubina total", unit: "mg/dL", refCanine: "0.10 – 0.60", refFeline: "0.10 – 0.70", technique: "DCA", fieldType: "number" },
+        { name: "Bilirrubina directa", unit: "mg/dL", refCanine: "< 0.14", refFeline: "< 0.14", technique: "DCA", fieldType: "number" },
+        { name: "Bilirrubina indirecta", unit: "mg/dL", refCanine: "< 0.56", refFeline: "< 0.56", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "bilirrubina_total - bilirrubina_directa" },
+        { name: "Proteínas totales", unit: "g/dL", refCanine: "5.3 – 7.6", refFeline: "6.5 – 8.9", technique: "Biuret", fieldType: "number" },
+        { name: "Albumina", unit: "g/dL", refCanine: "2.4 – 3.9", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+        { name: "Globulinas", unit: "g/dL", refCanine: "2.0 – 4.0", refFeline: "2.6 – 4.5", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "proteinas_totales - albumina" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Renal + Electrolitos",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.7 – 1.9", technique: "Colorimétrico (Tiempo fijo)", fieldType: "number" },
+        { name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refCanine: "7.0 – 21.5", refFeline: "20.0 – 50.0", technique: "GLDH (Tiempo fijo)", fieldType: "number" },
+        { name: "Albumina", unit: "g/dL", refCanine: "2.4 – 3.9", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+        { name: "Calcio", unit: "mg/dL", refCanine: "7.4 – 11.2", refFeline: "7.4 – 11.2", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Fósforo", unit: "mEq/L", refCanine: "3.1 – 8.3", refFeline: "3.1 – 8.3", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Sodio", unit: "mEq/L", refCanine: "141 – 152", refFeline: "147 – 156", technique: "ISE indirecto", fieldType: "number" },
+        { name: "Potasio", unit: "mEq/L", refCanine: "3.5 – 5.8", refFeline: "3.4 – 5.6", technique: "ISE indirecto", fieldType: "number" },
+        { name: "Cloro", unit: "mEq/L", refCanine: "105 – 122", refFeline: "107 – 120", technique: "ISE indirecto", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Prequirúrgico",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco) + 1 mL EDTA",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Glucosa", unit: "mg/dL", refCanine: "60 – 120", refFeline: "60 – 175", technique: "Trinder (punto final)", fieldType: "number" },
+        { name: "Proteínas totales", unit: "g/dL", refCanine: "5.3 – 7.6", refFeline: "6.5 – 8.9", technique: "Biuret", fieldType: "number" },
+        { name: "ALT/GPT", unit: "ul/L", refCanine: "10.0 – 100.0", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Fosfatasa alcalina", unit: "ul/L", refCanine: "1.0 – 212.0", refFeline: "1.0 – 112.0", technique: "FSR (Cinética)", fieldType: "number" },
+        { name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.7 – 1.9", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refCanine: "7.0 – 21.5", refFeline: "20.0 – 50.0", technique: "GLDH", fieldType: "number" },
+        { name: "Hematocrito", unit: "%", refCanine: "37 – 55", refFeline: "24 – 45", technique: "Microhematocrito", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Profilaxis",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Glucosa", unit: "mg/dL", refCanine: "60 – 120", refFeline: "60 – 175", technique: "Trinder (punto final)", fieldType: "number" },
+        { name: "Proteínas totales", unit: "g/dL", refCanine: "5.3 – 7.6", refFeline: "6.5 – 8.9", technique: "Biuret", fieldType: "number" },
+        { name: "Albumina", unit: "g/dL", refCanine: "2.4 – 3.9", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+        { name: "ALT/GPT", unit: "ul/L", refCanine: "10.0 – 100.0", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.7 – 1.9", technique: "Colorimétrico", fieldType: "number" },
+        { name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refCanine: "7.0 – 21.5", refFeline: "20.0 – 50.0", technique: "GLDH", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+  {
+    name: "Perfil Geriátrico",
+    area: "Perfiles Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "2 mL suero (tubo seco)",
+    sections: [{
+      name: "Resultados",
+      fields: [
+        { name: "Glucosa", unit: "mg/dL", refCanine: "60 – 120", refFeline: "60 – 175", technique: "Trinder (punto final)", fieldType: "number" },
+        { name: "Proteínas totales", unit: "g/dL", refCanine: "5.3 – 7.6", refFeline: "6.5 – 8.9", technique: "Biuret (punto final)", fieldType: "number" },
+        { name: "Albumina", unit: "g/dL", refCanine: "2.4 – 3.9", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+        { name: "Globulinas", unit: "g/dL", refCanine: "2.0 – 4.0", refFeline: "2.6 – 4.5", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "proteinas_totales - albumina" },
+        { name: "ALT/GPT", unit: "ul/L", refCanine: "10.0 – 100.0", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.7 – 1.9", technique: "Colorimétrico (Tiempo fijo)", fieldType: "number" },
+        { name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refCanine: "7.0 – 21.5", refFeline: "20.0 – 50.0", technique: "GLDH (Tiempo fijo)", fieldType: "number" },
+        { name: "AST", unit: "Ul/L", refCanine: "10.0 – 62.0", refFeline: "9.0 – 50.0", technique: "FSRIFCC (Cinético)", fieldType: "number" },
+        { name: "Triglicéridos", unit: "mg/dL", refCanine: "< 150", refFeline: "25.0 – 120.0", technique: "Trinder (Punto final)", fieldType: "number" },
+        { name: "Colesterol", unit: "mg/dL", refCanine: "120 – 255", refFeline: "97.0 – 207.0", technique: "Trinder (Punto final)", fieldType: "number" },
+        { name: "Observaciones", fieldType: "text" },
+      ],
+    }],
+  },
+
+  // ─── QUÍMICA SANGUÍNEA (pruebas individuales) ─────────────────────
+  { name: "Creatinina", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Creatinina", unit: "mg/dL", refCanine: "0.5 – 1.5", refFeline: "0.7 – 1.9", technique: "Colorimétrico (Tiempo fijo)", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Albúmina", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Albumina", unit: "g/dL", refCanine: "2.4 – 3.9", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Bilirrubina total y directa", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Bilirrubina total", unit: "mg/dL", refCanine: "0.10 – 0.60", refFeline: "0.10 – 0.70", technique: "DCA", fieldType: "number" }, { name: "Bilirrubina directa", unit: "mg/dL", refCanine: "< 0.14", refFeline: "< 0.14", technique: "DCA", fieldType: "number" }, { name: "Bilirrubina indirecta", unit: "mg/dL", refCanine: "< 0.56", refFeline: "< 0.56", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "bilirrubina_total - bilirrubina_directa" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "BUN (Nitrógeno ureico)", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Nitrógeno ureico (BUN)", unit: "mg/dL", refCanine: "7.0 – 21.5", refFeline: "20.0 – 50.0", technique: "GLDH (Tiempo fijo)", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Calcio", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Calcio", unit: "mg/dL", refCanine: "7.4 – 11.2", refFeline: "7.4 – 11.2", technique: "Colorimétrico", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Cloro", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Cloro", unit: "mEq/L", refCanine: "105 – 122", refFeline: "107 – 120", technique: "ISE indirecto", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Colesterol total", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Colesterol", unit: "mg/dL", refCanine: "120 – 255", refFeline: "97.0 – 207.0", technique: "Trinder (Punto final)", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Creatinfosfoquinasa (CPK)", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "CPK total", unit: "U/L", refCanine: "10 – 200", refFeline: "10 – 200", technique: "Cinético IFCC", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Fosfatasa alcalina", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Fosfatasa alcalina", unit: "ul/L", refCanine: "1.0 – 212.0", refFeline: "1.0 – 112.0", technique: "FSR (Cinética)", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Fósforo", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Fósforo", unit: "mEq/L", refCanine: "3.1 – 8.3", refFeline: "3.1 – 8.3", technique: "Colorimétrico", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Gamma glutamil transferasa (GGT)", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "GGT", unit: "Ul/L", refCanine: "1.0 – 9.0", refFeline: "0.0 – 10.0", technique: "Glupa-C", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Glucosa", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Glucosa", unit: "mg/dL", refCanine: "60 – 120", refFeline: "60 – 175", technique: "Trinder (punto final)", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Lipasa", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Lipasa", unit: "U/L", refCanine: "0 – 250", refFeline: "0 – 200", technique: "Colorimétrico", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Proteínas plasmáticas", area: "Química Sanguínea", turnaround: "Mismo día", sampleType: "1 mL EDTA", sections: [{ name: "Resultados", fields: [{ name: "Proteínas plasmáticas", unit: "g/dL", refCanine: "55 – 70", refFeline: "55 – 70", technique: "Refractometría", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Proteínas totales", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Proteínas totales", unit: "g/dL", refCanine: "5.3 – 7.6", refFeline: "6.5 – 8.9", technique: "Biuret (punto final)", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  {
+    name: "Proteínas totales y relación A/G",
+    area: "Química Sanguínea",
+    turnaround: "24h",
+    sampleType: "1 mL suero (tubo seco)",
+    sections: [{ name: "Resultados", fields: [
+      { name: "Proteínas totales", unit: "g/dL", refCanine: "5.3 – 7.6", refFeline: "6.5 – 8.9", technique: "Biuret", fieldType: "number" },
+      { name: "Albumina", unit: "g/dL", refCanine: "2.4 – 3.9", refFeline: "2.3 – 3.6", technique: "Tinción BCG", fieldType: "number" },
+      { name: "Globulinas", unit: "g/dL", refCanine: "2.0 – 4.0", refFeline: "2.6 – 4.5", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "proteinas_totales - albumina" },
+      { name: "Relación A/G", refCanine: "0.7 – 1.5", refFeline: "0.5 – 1.0", technique: "Parámetro calculado", fieldType: "calculated", calcFormula: "albumina / globulinas" },
+      { name: "Observaciones", fieldType: "text" },
+    ]}],
+  },
+  { name: "Sodio", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Sodio", unit: "mEq/L", refCanine: "141 – 152", refFeline: "147 – 156", technique: "ISE indirecto", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Transaminasa AST", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "AST (GOT)", unit: "Ul/L", refCanine: "10.0 – 62.0", refFeline: "9.0 – 50.0", technique: "FSRIFCC (Cinético)", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Transaminasa ALT", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "ALT (GPT)", unit: "ul/L", refCanine: "10.0 – 100.0", refFeline: "10.0 – 100.0", technique: "FSRIFCC (Cinético)", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+  { name: "Triglicéridos", area: "Química Sanguínea", turnaround: "24h", sampleType: "1 mL suero (tubo seco)", sections: [{ name: "Resultados", fields: [{ name: "Triglicéridos", unit: "mg/dL", refCanine: "< 150", refFeline: "25.0 – 120.0", technique: "Trinder (Punto final)", fieldType: "number" }, { name: "Observaciones", fieldType: "text" }] }] },
+
+  // ─── OTROS ────────────────────────────────────────────────────────
+  {
+    name: "Tiempos de Coagulación",
+    area: "Otros",
+    turnaround: "24h",
+    sampleType: "Plasma con citrato de sodio",
+    sections: [{ name: "Resultados", fields: [
+      { name: "Tiempo de Protrombina (TP)", unit: "Segundos", refCanine: "7.5 – 13.0", refFeline: "7.5 – 13.0", technique: "Viscosimetría", fieldType: "number" },
+      { name: "Tiempo de tromboplastina parcial (PTT)", unit: "Segundos", refCanine: "13.1 – 25.0", refFeline: "13.1 – 25.0", technique: "Viscosimetría", fieldType: "number" },
+      { name: "Observaciones", fieldType: "text" },
+    ]}],
   },
 ]
 
 async function main() {
   console.log("Seeding database...")
 
+  // Clean slate — order matters for FK constraints
+  await prisma.examResult.deleteMany({})
+  await prisma.orderExam.deleteMany({})
+  await prisma.order.deleteMany({})
+  await prisma.examField.deleteMany({})
+  await prisma.examSection.deleteMany({})
+  await prisma.examTemplate.deleteMany({})
+  await prisma.user.deleteMany({})
+
   // Admin user
-  const adminPassword = await bcrypt.hash("admin1234", 10)
-  await prisma.user.upsert({
-    where: { email: "admin@petslab.co" },
-    update: {},
-    create: {
-      name: "Admin",
-      email: "admin@petslab.co",
+  const adminPassword = await bcrypt.hash("petspets123", 10)
+  await prisma.user.create({
+    data: {
+      name: "Guillermo",
+      email: "guillermo@petspets.co",
       password: adminPassword,
       role: "ADMIN",
     },
   })
 
-  // Default staff user
-  const staffPassword = await bcrypt.hash("staff1234", 10)
-  await prisma.user.upsert({
-    where: { email: "anderson@petslab.co" },
-    update: {},
-    create: {
-      name: "Anderson Valencia",
-      email: "anderson@petslab.co",
-      password: staffPassword,
-      role: "STAFF",
-    },
-  })
-
-  // Seed exam templates
-  for (const t of TEMPLATES) {
-    const template = await prisma.examTemplate.upsert({
-      where: { id: t.name.toLowerCase().replace(/\s+/g, "-") },
-      update: {},
-      create: {
-        id: t.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-        name: t.name,
-        area: t.area,
-        turnaround: t.turnaround,
-        sampleType: t.sampleType,
-      },
+  // Templates
+  for (const [si, t] of TEMPLATES.entries()) {
+    const template = await prisma.examTemplate.create({
+      data: { name: t.name, area: t.area, turnaround: t.turnaround, sampleType: t.sampleType },
     })
 
-    for (const s of t.sections) {
+    for (const [sIdx, s] of t.sections.entries()) {
       const section = await prisma.examSection.create({
-        data: {
-          templateId: template.id,
-          name: s.name,
-          order: s.order,
-        },
+        data: { templateId: template.id, name: s.name, order: sIdx },
       })
 
-      for (const f of s.fields) {
+      for (const [fIdx, f] of s.fields.entries()) {
         await prisma.examField.create({
           data: {
             sectionId: section.id,
             name: f.name,
-            unit: f.unit || null,
-            refCanine: f.refCanine || null,
-            refFeline: f.refFeline || null,
-            technique: f.technique || null,
-            fieldType: f.fieldType,
-            calcFormula: (f as { calcFormula?: string }).calcFormula || null,
-            order: f.order,
+            unit: f.unit ?? null,
+            refCanine: f.refCanine ?? null,
+            refFeline: f.refFeline ?? null,
+            technique: f.technique ?? null,
+            fieldType: f.fieldType ?? "number",
+            calcFormula: f.calcFormula ?? null,
+            order: fIdx,
           },
         })
       }
     }
-    console.log(`  ✓ ${t.name}`)
+
+    console.log(`  ✓ [${si + 1}/${TEMPLATES.length}] ${t.name}`)
   }
 
   console.log("Done.")

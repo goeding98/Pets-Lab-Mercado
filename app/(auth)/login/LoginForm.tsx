@@ -13,7 +13,7 @@ export default function LoginForm() {
     setError("")
     setLoading(true)
     const fd = new FormData(e.currentTarget)
-    const res = await signIn("credentials", {
+    const res = await signIn("staff", {
       email: fd.get("email"),
       password: fd.get("password"),
       redirect: false,

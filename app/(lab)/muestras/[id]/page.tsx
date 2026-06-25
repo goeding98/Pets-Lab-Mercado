@@ -26,8 +26,6 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
             },
           },
           results: true,
-          uploadedPdfPath: true,
-          uploadedPdfName: true,
         },
       },
     },

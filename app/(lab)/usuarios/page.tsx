@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import Link from "next/link"
+import UserRowActions from "./UserRowActions"
 
 export const metadata: Metadata = { title: "Usuarios" }
 
@@ -35,7 +36,7 @@ export default async function UsuariosPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-salvia-50 border-b border-black/10">
-              {["Nombre", "Email", "Rol", "Clínica", "Creado"].map(h => (
+              {["Nombre", "Email", "Rol", "Clínica", "Creado", ""].map(h => (
                 <th key={h} className="text-left px-4 py-2.5 font-mono text-[8px] tracking-[0.18em] uppercase text-salvia-700">{h}</th>
               ))}
             </tr>
@@ -55,6 +56,9 @@ export default async function UsuariosPage() {
                 <td className="px-4 py-3 font-sans text-xs text-ink-2">{user.clinic?.name ?? "—"}</td>
                 <td className="px-4 py-3 font-mono text-[10px] text-ink-2">
                   {new Date(user.createdAt).toLocaleDateString("es-CO")}
+                </td>
+                <td className="px-4 py-3">
+                  <UserRowActions userId={user.id} isSelf={session!.user.id === user.id} />
                 </td>
               </tr>
             ))}
