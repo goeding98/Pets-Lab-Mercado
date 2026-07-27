@@ -14,11 +14,11 @@ const VALUES = [
   ["Cercanía", "WhatsApp directo. No hay menús ni filas. Atendemos personas."],
 ] as const
 
-const TEAM: { name: string; role: string; title: string }[] = [
+const TEAM: { name: string; role: string; title: string; photo?: string }[] = [
   { name: "Dr. Marcelo Valencia", role: "Director del Laboratorio", title: "Médico Veterinario · Esp. Laboratorio Clínico" },
   { name: "Anderson Valencia", role: "Analista del Laboratorio", title: "Microbiólogo" },
-  { name: "Dr. Jacobo Hernández", role: "Líder Comercial", title: "Médico Veterinario" },
-  { name: "Juan Carlos Vélez", role: "Líder de Mensajería", title: "" },
+  { name: "Dr. Jacobo Hernández", role: "Líder Comercial", title: "Médico Veterinario", photo: "/team/jacobo-hernandez.jpg" },
+  { name: "Juan Carlos Vélez", role: "Líder de Mensajería", title: "", photo: "/team/juan-carlos-velez.jpg" },
 ]
 
 export default function NosotrosPage() {
@@ -81,8 +81,12 @@ export default function NosotrosPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mt-6">
           {TEAM.map((m) => (
             <div key={m.name}>
-              <div className="aspect-[3/4] bg-salvia-300 mb-3 flex items-start p-4">
-                <span className="font-mono text-[9px] tracking-[0.22em] text-salvia-700">FOTO</span>
+              <div className="aspect-[3/4] bg-salvia-300 mb-3 relative overflow-hidden">
+                {m.photo ? (
+                  <Image src={m.photo} alt={m.name} fill className="object-cover object-top" />
+                ) : (
+                  <span className="absolute top-4 left-4 font-mono text-[9px] tracking-[0.22em] text-salvia-700">FOTO</span>
+                )}
               </div>
               <p className="font-serif text-[17px] font-medium tracking-[-0.01em]">{m.name}</p>
               <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 mt-1 uppercase">{m.role}</p>
