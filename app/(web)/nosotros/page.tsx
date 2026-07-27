@@ -14,12 +14,12 @@ const VALUES = [
   ["Cercanía", "WhatsApp directo. No hay menús ni filas. Atendemos personas."],
 ] as const
 
-const TEAM = [
-  ["Dra. ___", "Dirección técnica"],
-  ["MV ___", "Hematología"],
-  ["MV ___", "Bioquímica"],
-  ["___", "Operaciones"],
-] as const
+const TEAM: { name: string; role: string; title: string }[] = [
+  { name: "Dr. Marcelo Valencia", role: "Director del Laboratorio", title: "Médico Veterinario · Esp. Laboratorio Clínico" },
+  { name: "Anderson Valencia", role: "Analista del Laboratorio", title: "Microbiólogo" },
+  { name: "Dr. Jacobo Hernández", role: "Líder Comercial", title: "Médico Veterinario" },
+  { name: "Juan Carlos Vélez", role: "Líder de Mensajería", title: "" },
+]
 
 export default function NosotrosPage() {
   return (
@@ -79,15 +79,16 @@ export default function NosotrosPage() {
       <section className="max-w-wrap mx-auto px-6 lg:px-10 py-14">
         <Eyebrow>Equipo</Eyebrow>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mt-6">
-          {TEAM.map(([n, r]) => (
-            <div key={n}>
+          {TEAM.map((m) => (
+            <div key={m.name}>
               <div className="aspect-[3/4] bg-salvia-300 mb-3 flex items-start p-4">
                 <span className="font-mono text-[9px] tracking-[0.22em] text-salvia-700">FOTO</span>
               </div>
-              <p className="font-serif text-[17px] font-medium tracking-[-0.01em]">{n}</p>
-              <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 mt-1">
-                {r.toUpperCase()}
-              </p>
+              <p className="font-serif text-[17px] font-medium tracking-[-0.01em]">{m.name}</p>
+              <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 mt-1 uppercase">{m.role}</p>
+              {m.title && (
+                <p className="font-sans text-[11px] text-ink-2 mt-0.5 leading-[1.4]">{m.title}</p>
+              )}
             </div>
           ))}
         </div>

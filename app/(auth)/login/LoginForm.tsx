@@ -23,7 +23,6 @@ export default function LoginForm() {
       setError("Credenciales incorrectas. Verifica tu email y contraseña.")
     } else {
       router.push("/dashboard")
-      router.refresh()
     }
   }
 
