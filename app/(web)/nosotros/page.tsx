@@ -16,7 +16,7 @@ const VALUES = [
 
 const TEAM: { name: string; role: string; title: string; photo?: string }[] = [
   { name: "Dr. Marcelo Valencia", role: "Director del Laboratorio", title: "Médico Veterinario · Esp. Laboratorio Clínico" },
-  { name: "Anderson Valencia", role: "Analista del Laboratorio", title: "Microbiólogo" },
+  { name: "Anderson Valencia", role: "Analista del Laboratorio", title: "Microbiólogo", photo: "/team/anderson-valencia.jpg" },
   { name: "Dr. Jacobo Hernández", role: "Líder Comercial", title: "Médico Veterinario", photo: "/team/jacobo-hernandez.jpg" },
   { name: "Juan Carlos Vélez", role: "Líder de Mensajería", title: "", photo: "/team/juan-carlos-velez.jpg" },
 ]
