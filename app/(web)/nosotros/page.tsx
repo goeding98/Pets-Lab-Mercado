@@ -15,9 +15,10 @@ const VALUES = [
 ] as const
 
 const TEAM: { name: string; role: string; title: string; photo?: string }[] = [
-  { name: "Dr. Marcelo Valencia", role: "Director del Laboratorio", title: "Médico Veterinario · Esp. Laboratorio Clínico", photo: "/team/marcelo-valencia.png" },
-  { name: "Anderson Valencia", role: "Analista del Laboratorio", title: "Microbiólogo", photo: "/team/anderson-valencia.png" },
-  { name: "Juan Carlos Vélez", role: "Líder de Mensajería", title: "", photo: "/team/juan-carlos-velez.png" },
+  { name: "Dr. Marcelo Valencia", role: "Director del Laboratorio", title: "Médico Veterinario · Esp. Laboratorio Clínico", photo: "/team/marcelo-valencia.jpg" },
+  { name: "Anderson Valencia", role: "Analista del Laboratorio", title: "Microbiólogo", photo: "/team/anderson-valencia.jpg" },
+  { name: "Germán Tapia", role: "Líder Comercial", title: "", photo: "/team/german-tapia.jpg" },
+  { name: "Juan Carlos Vélez", role: "Líder de Mensajería", title: "", photo: "/team/juan-carlos-velez.jpg" },
 ]
 
 export default function NosotrosPage() {
