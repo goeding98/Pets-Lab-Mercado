@@ -5,8 +5,6 @@ import { prisma } from "@/lib/db"
 import { renderToBuffer } from "@react-pdf/renderer"
 import { PdfReport } from "@/components/PdfReport"
 import React from "react"
-import path from "path"
-import fs from "fs"
 
 export async function GET(
   req: Request,
@@ -33,12 +31,12 @@ export async function GET(
 
   if (!orderExam) return new NextResponse("No encontrado", { status: 404 })
 
-  // Serve uploaded PDF directly
-  if (orderExam.uploadedPdfPath) {
-    const filePath = path.join(process.cwd(), "public", orderExam.uploadedPdfPath)
-    if (fs.existsSync(filePath)) {
-      const buffer = fs.readFileSync(filePath)
-      return new NextResponse(buffer as unknown as BodyInit, {
+  // Serve uploaded PDF directly (proxied from Blob storage so the download keeps its filename)
+  if (orderExam.uploadedPdfPath?.startsWith("http")) {
+    const blobRes = await fetch(orderExam.uploadedPdfPath)
+    if (blobRes.ok) {
+      const buffer = await blobRes.arrayBuffer()
+      return new NextResponse(buffer, {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",

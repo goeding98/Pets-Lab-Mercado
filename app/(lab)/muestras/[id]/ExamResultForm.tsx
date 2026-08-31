@@ -71,23 +71,35 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
 
   async function handleUpload(file: File) {
     setUploading(true)
-    const fd = new FormData()
-    fd.append("file", file)
-    const res = await fetch(`/api/upload/${exam.id}`, { method: "POST", body: fd })
-    const data = await res.json()
-    setUploadedPath(data.path)
-    setUploadedName(data.name)
-    setUploading(false)
-    router.refresh()
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch(`/api/upload/${exam.id}`, { method: "POST", body: fd })
+      if (!res.ok) throw new Error(await res.text())
+      const data = await res.json()
+      setUploadedPath(data.path)
+      setUploadedName(data.name)
+      router.refresh()
+    } catch {
+      alert("No se pudo subir el PDF. Intenta de nuevo.")
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function handleRemoveUpload() {
     setUploading(true)
-    await fetch(`/api/upload/${exam.id}`, { method: "DELETE" })
-    setUploadedPath(null)
-    setUploadedName(null)
-    setUploading(false)
-    router.refresh()
+    try {
+      const res = await fetch(`/api/upload/${exam.id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error(await res.text())
+      setUploadedPath(null)
+      setUploadedName(null)
+      router.refresh()
+    } catch {
+      alert("No se pudo eliminar el PDF. Intenta de nuevo.")
+    } finally {
+      setUploading(false)
+    }
   }
 
   function getValue(fieldId: string) {

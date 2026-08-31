@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import path from "path"
-import fs from "fs"
+import { put, del } from "@vercel/blob"
 import { randomUUID } from "crypto"
 
 export async function POST(
@@ -18,26 +17,21 @@ export async function POST(
   const file = formData.get("file") as File | null
   if (!file) return new NextResponse("Sin archivo", { status: 400 })
 
-  const bytes = await file.arrayBuffer()
-  const buffer = Buffer.from(bytes)
-
-  const uploadsDir = path.join(process.cwd(), "public", "uploads")
-  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true })
-
   // Remove old uploaded file if exists
   const existing = await prisma.orderExam.findUnique({ where: { id: params.examId } })
-  if (existing?.uploadedPdfPath) {
-    const oldPath = path.join(process.cwd(), "public", existing.uploadedPdfPath)
-    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath)
+  if (existing?.uploadedPdfPath?.startsWith("http")) {
+    await del(existing.uploadedPdfPath).catch(() => {})
   }
 
-  const filename = `${randomUUID()}.pdf`
-  fs.writeFileSync(path.join(uploadsDir, filename), buffer)
+  const blob = await put(`uploads/${randomUUID()}.pdf`, file, {
+    access: "public",
+    contentType: "application/pdf",
+  })
 
   await prisma.orderExam.update({
     where: { id: params.examId },
     data: {
-      uploadedPdfPath: `/uploads/${filename}`,
+      uploadedPdfPath: blob.url,
       uploadedPdfName: file.name,
       status: "COMPLETADO",
       completedAt: new Date(),
@@ -61,7 +55,7 @@ export async function POST(
     })
   }
 
-  return NextResponse.json({ path: `/uploads/${filename}`, name: file.name })
+  return NextResponse.json({ path: blob.url, name: file.name })
 }
 
 export async function DELETE(
@@ -73,9 +67,8 @@ export async function DELETE(
     return new NextResponse("No autorizado", { status: 401 })
 
   const exam = await prisma.orderExam.findUnique({ where: { id: params.examId } })
-  if (exam?.uploadedPdfPath) {
-    const filePath = path.join(process.cwd(), "public", exam.uploadedPdfPath)
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+  if (exam?.uploadedPdfPath?.startsWith("http")) {
+    await del(exam.uploadedPdfPath).catch(() => {})
   }
 
   await prisma.orderExam.update({
