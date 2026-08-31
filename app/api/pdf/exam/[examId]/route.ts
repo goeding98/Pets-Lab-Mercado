@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db"
 import { renderToBuffer } from "@react-pdf/renderer"
 import { PdfReport } from "@/components/PdfReport"
 import React from "react"
+import { get } from "@vercel/blob"
 
 export async function GET(
   req: Request,
@@ -33,10 +34,9 @@ export async function GET(
 
   // Serve uploaded PDF directly (proxied from Blob storage so the download keeps its filename)
   if (orderExam.uploadedPdfPath?.startsWith("http")) {
-    const blobRes = await fetch(orderExam.uploadedPdfPath)
-    if (blobRes.ok) {
-      const buffer = await blobRes.arrayBuffer()
-      return new NextResponse(buffer, {
+    const blob = await get(orderExam.uploadedPdfPath, { access: "private" })
+    if (blob?.stream) {
+      return new NextResponse(blob.stream as unknown as BodyInit, {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",

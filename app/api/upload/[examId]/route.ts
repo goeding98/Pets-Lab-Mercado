@@ -24,7 +24,7 @@ export async function POST(
   }
 
   const blob = await put(`uploads/${randomUUID()}.pdf`, file, {
-    access: "public",
+    access: "private",
     contentType: "application/pdf",
   })
 
