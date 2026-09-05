@@ -31,9 +31,14 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   hecho externamente. El botón "PDF" de la orden genera un reporte combinado que fusiona
   (con `pdf-lib`) el reporte generado de los exámenes con resultados capturados + las
   páginas de cada PDF subido.
-- `OrderExam.paid` marca si ese examen fue pagado (default `false`). Se alterna desde
-  `ExamResultForm.tsx`; en el listado de `/muestras` se agrega por orden (Pagado/Parcial/No
-  pagado).
+- Caja (`app/(lab)/caja/`, `actions/billing.ts`, `lib/billing.ts`): cada `OrderExam` tiene
+  `price`, `discountType` (VALOR | PORCENTAJE), `discountValue`, `paymentTerm` (CONTADO |
+  CREDITO), `paymentMethod` (EFECTIVO | TRANSFERENCIA) y `amountPaid`. `/caja` lista todos
+  los exámenes solo con su parte de cobro, editable en línea, con totales en vivo. El
+  estado Pagado/Parcial/No pagado que se ve en `ExamResultForm.tsx` y en el listado de
+  `/muestras` **no se guarda**: se calcula siempre en el momento con
+  `lib/billing.ts: computeNetPrice` + `getPaymentStatus` (precio neto vs. `amountPaid`). No
+  reintroduzcas un booleano `paid` manual — ya se quitó a propósito a favor de este cálculo.
 - Inventario (`InventoryItem`, `RecipeItem`, `InventoryMovement`, rutas
   `app/(lab)/inventario/`): cada `ExamTemplate` puede tener una "receta" (`RecipeItem`) que
   define qué insumos y en qué cantidad consume. Al completarse un `OrderExam` (por
