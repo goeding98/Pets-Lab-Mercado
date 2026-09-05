@@ -53,6 +53,15 @@ export default function Nav() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <a
+            href={SITE.whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:inline-block font-mono text-[10px] tracking-[0.22em] uppercase bg-salvia-700 text-bone px-4 py-2.5 hover:opacity-90 transition-opacity focus:outline-2 focus:outline-salvia-700"
+          >
+            WhatsApp ↗
+          </a>
+
           <button
             onClick={() => setOpen(!open)}
             className="md:hidden p-1 text-ink focus:outline-2 focus:outline-salvia-700"
