@@ -60,7 +60,12 @@ model OrderExam {
   templateId      String
   template        ExamTemplate @relation(fields: [templateId], references: [id])
   status          String       @default("PENDIENTE") // PENDIENTE | COMPLETADO
-  paid            Boolean      @default(false)
+  price           Float        @default(0)
+  discountType    String       @default("VALOR") // VALOR | PORCENTAJE
+  discountValue   Float        @default(0)
+  paymentTerm     String       @default("CONTADO") // CONTADO | CREDITO
+  paymentMethod   String       @default("EFECTIVO") // EFECTIVO | TRANSFERENCIA
+  amountPaid      Float        @default(0)
   results         ExamResult[]
   movements       InventoryMovement[]
   uploadedPdfPath String?

@@ -1,7 +1,8 @@
 "use client"
 import { useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { saveExamResults, toggleExamPayment } from "@/actions/orders"
+import { saveExamResults } from "@/actions/orders"
+import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
 
 type Field = {
   id: string
@@ -25,7 +26,10 @@ type Section = {
 type ExamProp = {
   id: string
   status: string
-  paid: boolean
+  price: number
+  discountType: string
+  discountValue: number
+  amountPaid: number
   uploadedPdfPath: string | null
   uploadedPdfName: string | null
   template: {
@@ -67,17 +71,11 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
   const [uploadedPath, setUploadedPath] = useState<string | null>(exam.uploadedPdfPath)
   const [uploadedName, setUploadedName] = useState<string | null>(exam.uploadedPdfName)
   const [uploading, setUploading] = useState(false)
-  const [paid, setPaid] = useState(exam.paid)
   const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  function handleTogglePayment() {
-    const next = !paid
-    setPaid(next)
-    startTransition(async () => {
-      await toggleExamPayment(exam.id, next)
-    })
-  }
+  const netPrice = computeNetPrice(exam.price, exam.discountType, exam.discountValue)
+  const paymentStatus = getPaymentStatus(netPrice, exam.amountPaid)
 
   async function handleUpload(file: File) {
     setUploading(true)
@@ -192,14 +190,12 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
           <p className="font-mono text-[8px] tracking-[0.18em] text-salvia-700 uppercase mt-0.5">{exam.template.area}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleTogglePayment}
-            className={`font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 transition-colors ${
-              paid ? "bg-azul-700 text-bone" : "bg-black/10 text-ink hover:bg-black/20"
-            }`}
+          <span
+            title="Se calcula desde Caja según precio, descuento y valor pagado"
+            className={`font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 ${paymentStatus.className}`}
           >
-            {paid ? "Pagado" : "No pagado"}
-          </button>
+            {paymentStatus.label}
+          </span>
           <span className={`font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 ${
             isComplete ? "bg-salvia-700 text-bone" : "bg-black/10 text-ink"
           }`}>

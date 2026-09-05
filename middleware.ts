@@ -20,7 +20,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Staff routes — non-CLINIC only
-  const staffRoutes = ["/dashboard", "/muestras", "/usuarios", "/clientes", "/inventario"]
+  const staffRoutes = ["/dashboard", "/muestras", "/usuarios", "/clientes", "/inventario", "/caja"]
   if (staffRoutes.some(r => pathname.startsWith(r))) {
     if (!token) return NextResponse.redirect(new URL("/login", req.url))
     if (token.role === "CLINIC") return NextResponse.redirect(new URL("/resultados/dashboard", req.url))
@@ -38,6 +38,7 @@ export const config = {
     "/usuarios/:path*",
     "/clientes/:path*",
     "/inventario/:path*",
+    "/caja/:path*",
     "/resultados/dashboard/:path*",
   ],
 }

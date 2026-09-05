@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { prisma } from "@/lib/db"
+import { computeNetPrice, getPaymentStatus as getExamPaymentStatus } from "@/lib/billing"
 
 export const metadata: Metadata = { title: "Muestras" }
 
@@ -10,11 +11,15 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   COMPLETADA: { label: "Completada", className: "bg-salvia-700 text-bone" },
 }
 
-function getPaymentStatus(exams: { paid: boolean }[]) {
+function getOrderPaymentStatus(
+  exams: { price: number; discountType: string; discountValue: number; amountPaid: number }[]
+) {
   if (exams.length === 0) return { label: "—", className: "bg-black/10 text-ink" }
-  const paidCount = exams.filter(e => e.paid).length
-  if (paidCount === 0) return { label: "No pagado", className: "bg-black/10 text-ink" }
-  if (paidCount === exams.length) return { label: "Pagado", className: "bg-azul-700 text-bone" }
+  const labels = exams.map(e => getExamPaymentStatus(computeNetPrice(e.price, e.discountType, e.discountValue), e.amountPaid).label)
+  const paidCount = labels.filter(l => l === "Pagado").length
+  const unpaidCount = labels.filter(l => l === "No pagado" || l === "—").length
+  if (paidCount === labels.length) return { label: "Pagado", className: "bg-azul-700 text-bone" }
+  if (unpaidCount === labels.length) return { label: "No pagado", className: "bg-black/10 text-ink" }
   return { label: "Parcial", className: "bg-azul-100 text-azul-800" }
 }
 
@@ -92,7 +97,7 @@ export default async function MuestrasPage({
           <tbody>
             {orders.map((order, i) => {
               const s = STATUS_LABELS[order.status] ?? { label: order.status, className: "bg-black/10 text-ink" }
-              const p = getPaymentStatus(order.exams)
+              const p = getOrderPaymentStatus(order.exams)
               return (
                 <tr key={order.id} className={`border-b border-black/[0.06] hover:bg-salvia-50/50 transition-colors ${i % 2 !== 0 ? "bg-black/[0.015]" : ""}`}>
                   <td className="px-4 py-3">
