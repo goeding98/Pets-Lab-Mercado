@@ -31,6 +31,17 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   hecho externamente. El botón "PDF" de la orden genera un reporte combinado que fusiona
   (con `pdf-lib`) el reporte generado de los exámenes con resultados capturados + las
   páginas de cada PDF subido.
+- `OrderExam.paid` marca si ese examen fue pagado (default `false`). Se alterna desde
+  `ExamResultForm.tsx`; en el listado de `/muestras` se agrega por orden (Pagado/Parcial/No
+  pagado).
+- Inventario (`InventoryItem`, `RecipeItem`, `InventoryMovement`, rutas
+  `app/(lab)/inventario/`): cada `ExamTemplate` puede tener una "receta" (`RecipeItem`) que
+  define qué insumos y en qué cantidad consume. Al completarse un `OrderExam` (por
+  cualquiera de las dos vías de arriba) se descuenta automáticamente el stock según la
+  receta (`lib/inventory.ts: consumeInventoryForExam`, ejecutado dentro de la misma
+  transacción que marca el examen como completado). Si se revierte un PDF subido (vuelve a
+  PENDIENTE), el consumo se restaura (`restoreInventoryForExam`). `InventoryItem.unit` es
+  texto libre (ML, GR, MG, unidades, etc.) para admitir cualquier presentación.
 
 ## Almacenamiento de archivos — usar SIEMPRE Vercel Blob, nunca fs local
 
@@ -72,6 +83,16 @@ node "node_modules\next\dist\bin\next" dev
 ```
 
 `npm install` normal sí funciona bien (el problema es solo con los shims ya generados).
+
+### Gotcha de `db:push` colgado indefinidamente
+
+`prisma db push` (y por lo tanto `npm run build` en frío tras cambiar el schema) se queda
+colgado sin avanzar cuando `DATABASE_URL` apunta al pooler en modo transacción (puerto
+6543): ese modo no soporta el advisory lock que Prisma usa para aplicar cambios de schema.
+Solución: cambiar temporalmente el puerto de `DATABASE_URL` a **5432** (modo sesión, mismo
+host y credenciales, sin `?pgbouncer=true&connection_limit=1`), correr `npx prisma db
+push`, y devolver el `.env` a 6543 apenas termine. No lo dejes en 5432 — ver nota del
+pooler arriba.
 
 ### Gotcha de OneDrive: error transitorio de webpack en globals.css
 
