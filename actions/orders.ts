@@ -56,6 +56,20 @@ export async function updateOrderStatus(orderId: string, status: string) {
   revalidatePath("/dashboard")
 }
 
+export async function toggleExamPayment(orderExamId: string, paid: boolean) {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role === "CLINIC") throw new Error("No autorizado")
+
+  const orderExam = await prisma.orderExam.update({
+    where: { id: orderExamId },
+    data: { paid },
+    select: { orderId: true },
+  })
+
+  revalidatePath(`/muestras/${orderExam.orderId}`)
+  revalidatePath("/muestras")
+}
+
 export async function saveExamResults(
   orderExamId: string,
   results: { fieldId: string; value: string; flagged: boolean }[]

@@ -60,6 +60,7 @@ model OrderExam {
   templateId      String
   template        ExamTemplate @relation(fields: [templateId], references: [id])
   status          String       @default("PENDIENTE") // PENDIENTE | COMPLETADO
+  paid            Boolean      @default(false)
   results         ExamResult[]
   uploadedPdfPath String?
   uploadedPdfName String?

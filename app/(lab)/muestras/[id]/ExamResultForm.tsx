@@ -1,7 +1,7 @@
 "use client"
 import { useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { saveExamResults } from "@/actions/orders"
+import { saveExamResults, toggleExamPayment } from "@/actions/orders"
 
 type Field = {
   id: string
@@ -25,6 +25,7 @@ type Section = {
 type ExamProp = {
   id: string
   status: string
+  paid: boolean
   uploadedPdfPath: string | null
   uploadedPdfName: string | null
   template: {
@@ -66,8 +67,17 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
   const [uploadedPath, setUploadedPath] = useState<string | null>(exam.uploadedPdfPath)
   const [uploadedName, setUploadedName] = useState<string | null>(exam.uploadedPdfName)
   const [uploading, setUploading] = useState(false)
+  const [paid, setPaid] = useState(exam.paid)
   const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  function handleTogglePayment() {
+    const next = !paid
+    setPaid(next)
+    startTransition(async () => {
+      await toggleExamPayment(exam.id, next)
+    })
+  }
 
   async function handleUpload(file: File) {
     setUploading(true)
@@ -181,11 +191,21 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
           <p className="font-serif text-[17px] font-medium tracking-[-0.01em]">{exam.template.name}</p>
           <p className="font-mono text-[8px] tracking-[0.18em] text-salvia-700 uppercase mt-0.5">{exam.template.area}</p>
         </div>
-        <span className={`font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 ${
-          isComplete ? "bg-salvia-700 text-bone" : "bg-black/10 text-ink"
-        }`}>
-          {isComplete ? "Completado" : "Pendiente"}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleTogglePayment}
+            className={`font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 transition-colors ${
+              paid ? "bg-azul-700 text-bone" : "bg-black/10 text-ink hover:bg-black/20"
+            }`}
+          >
+            {paid ? "Pagado" : "No pagado"}
+          </button>
+          <span className={`font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 ${
+            isComplete ? "bg-salvia-700 text-bone" : "bg-black/10 text-ink"
+          }`}>
+            {isComplete ? "Completado" : "Pendiente"}
+          </span>
+        </div>
       </div>
 
       <div className="px-5 py-4">
