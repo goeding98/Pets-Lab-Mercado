@@ -10,6 +10,14 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   COMPLETADA: { label: "Completada", className: "bg-salvia-700 text-bone" },
 }
 
+function getPaymentStatus(exams: { paid: boolean }[]) {
+  if (exams.length === 0) return { label: "—", className: "bg-black/10 text-ink" }
+  const paidCount = exams.filter(e => e.paid).length
+  if (paidCount === 0) return { label: "No pagado", className: "bg-black/10 text-ink" }
+  if (paidCount === exams.length) return { label: "Pagado", className: "bg-azul-700 text-bone" }
+  return { label: "Parcial", className: "bg-azul-100 text-azul-800" }
+}
+
 export default async function MuestrasPage({
   searchParams,
 }: {
@@ -74,7 +82,7 @@ export default async function MuestrasPage({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-salvia-50 border-b border-black/10">
-              {["N° Orden", "Paciente / Especie", "Clínica", "Exámenes", "Fecha", "Estado", ""].map(h => (
+              {["N° Orden", "Paciente / Especie", "Clínica", "Exámenes", "Fecha", "Estado", "Pago", ""].map(h => (
                 <th key={h} className="text-left px-4 py-2.5 font-mono text-[8px] tracking-[0.18em] uppercase text-salvia-700">
                   {h}
                 </th>
@@ -84,6 +92,7 @@ export default async function MuestrasPage({
           <tbody>
             {orders.map((order, i) => {
               const s = STATUS_LABELS[order.status] ?? { label: order.status, className: "bg-black/10 text-ink" }
+              const p = getPaymentStatus(order.exams)
               return (
                 <tr key={order.id} className={`border-b border-black/[0.06] hover:bg-salvia-50/50 transition-colors ${i % 2 !== 0 ? "bg-black/[0.015]" : ""}`}>
                   <td className="px-4 py-3">
@@ -108,6 +117,11 @@ export default async function MuestrasPage({
                     </span>
                   </td>
                   <td className="px-4 py-3">
+                    <span className={`${p.className} font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5`}>
+                      {p.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
                     <Link href={`/muestras/${order.id}`} className="font-mono text-[9px] tracking-[0.15em] text-salvia-700 hover:underline uppercase">
                       Ver →
                     </Link>
@@ -117,7 +131,7 @@ export default async function MuestrasPage({
             })}
             {orders.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center font-sans text-xs text-ink-2">
+                <td colSpan={8} className="px-4 py-8 text-center font-sans text-xs text-ink-2">
                   No hay órdenes.{" "}
                   <Link href="/muestras/nueva" className="text-salvia-700 hover:underline">Registrar nueva muestra →</Link>
                 </td>
