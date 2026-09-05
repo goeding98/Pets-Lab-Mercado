@@ -62,6 +62,7 @@ model OrderExam {
   status          String       @default("PENDIENTE") // PENDIENTE | COMPLETADO
   paid            Boolean      @default(false)
   results         ExamResult[]
+  movements       InventoryMovement[]
   uploadedPdfPath String?
   uploadedPdfName String?
   completedAt     DateTime?
@@ -76,6 +77,7 @@ model ExamTemplate {
   sampleType  String
   sections    ExamSection[]
   orderExams  OrderExam[]
+  recipeItems RecipeItem[]
 }
 
 model ExamSection {
@@ -111,4 +113,39 @@ model ExamResult {
   value       String
   flagged     Boolean   @default(false) // out of reference range
   createdAt   DateTime  @default(now())
+}
+
+model InventoryItem {
+  id          String              @id @default(cuid())
+  name        String
+  unit        String              // presentación: ML | GR | MG | UNIDAD | CC | KG | ... (texto libre)
+  stock       Float               @default(0)
+  minStock    Float?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  recipeItems RecipeItem[]
+  movements   InventoryMovement[]
+}
+
+// Receta: cantidad de cada insumo que consume un examen al completarse
+model RecipeItem {
+  id         String        @id @default(cuid())
+  templateId String
+  template   ExamTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  itemId     String
+  item       InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quantity   Float
+
+  @@unique([templateId, itemId])
+}
+
+model InventoryMovement {
+  id          String         @id @default(cuid())
+  itemId      String
+  item        InventoryItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quantity    Float          // negativo = salida, positivo = entrada/ajuste
+  reason      String         // CONSUMO_EXAMEN | AJUSTE
+  orderExamId String?
+  orderExam   OrderExam?     @relation(fields: [orderExamId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
 }

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { put, del } from "@vercel/blob"
 import { randomUUID } from "crypto"
+import { consumeInventoryForExam, restoreInventoryForExam } from "@/lib/inventory"
 
 export async function POST(
   req: NextRequest,
@@ -28,14 +29,22 @@ export async function POST(
     contentType: "application/pdf",
   })
 
-  await prisma.orderExam.update({
-    where: { id: params.examId },
-    data: {
-      uploadedPdfPath: blob.url,
-      uploadedPdfName: file.name,
-      status: "COMPLETADO",
-      completedAt: new Date(),
-    },
+  const wasComplete = existing?.status === "COMPLETADO"
+
+  await prisma.$transaction(async tx => {
+    await tx.orderExam.update({
+      where: { id: params.examId },
+      data: {
+        uploadedPdfPath: blob.url,
+        uploadedPdfName: file.name,
+        status: "COMPLETADO",
+        completedAt: new Date(),
+      },
+    })
+
+    if (!wasComplete && existing) {
+      await consumeInventoryForExam(tx, params.examId, existing.templateId)
+    }
   })
 
   // Update parent order status
@@ -71,9 +80,12 @@ export async function DELETE(
     await del(exam.uploadedPdfPath).catch(() => {})
   }
 
-  await prisma.orderExam.update({
-    where: { id: params.examId },
-    data: { uploadedPdfPath: null, uploadedPdfName: null, status: "PENDIENTE", completedAt: null },
+  await prisma.$transaction(async tx => {
+    await tx.orderExam.update({
+      where: { id: params.examId },
+      data: { uploadedPdfPath: null, uploadedPdfName: null, status: "PENDIENTE", completedAt: null },
+    })
+    await restoreInventoryForExam(tx, params.examId)
   })
 
   return NextResponse.json({ ok: true })

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { consumeInventoryForExam } from "@/lib/inventory"
 
 async function generateOrderNumber(): Promise<string> {
   const year = new Date().getFullYear()
@@ -77,46 +78,48 @@ export async function saveExamResults(
   const session = await getServerSession(authOptions)
   if (!session || session.user.role === "CLINIC") throw new Error("No autorizado")
 
-  await prisma.examResult.deleteMany({ where: { orderExamId } })
-  await prisma.examResult.createMany({
-    data: results.map(r => ({
-      orderExamId,
-      fieldId: r.fieldId,
-      value: r.value,
-      flagged: r.flagged,
-    })),
-  })
-
-  // Mark exam as completed
-  await prisma.orderExam.update({
+  const current = await prisma.orderExam.findUnique({
     where: { id: orderExamId },
-    data: { status: "COMPLETADO", completedAt: new Date() },
+    select: { status: true, templateId: true, orderId: true },
+  })
+  if (!current) throw new Error("Examen no encontrado")
+  const wasComplete = current.status === "COMPLETADO"
+
+  await prisma.$transaction(async tx => {
+    await tx.examResult.deleteMany({ where: { orderExamId } })
+    await tx.examResult.createMany({
+      data: results.map(r => ({
+        orderExamId,
+        fieldId: r.fieldId,
+        value: r.value,
+        flagged: r.flagged,
+      })),
+    })
+
+    // Mark exam as completed
+    await tx.orderExam.update({
+      where: { id: orderExamId },
+      data: { status: "COMPLETADO", completedAt: new Date() },
+    })
+
+    // Descontar del inventario los insumos de la receta, solo la primera vez que se completa
+    if (!wasComplete) {
+      await consumeInventoryForExam(tx, orderExamId, current.templateId)
+    }
   })
 
   // Check if all exams are complete → update order status
-  const orderExam = await prisma.orderExam.findUnique({
-    where: { id: orderExamId },
-    select: { orderId: true },
+  const allExams = await prisma.orderExam.findMany({
+    where: { orderId: current.orderId },
+    select: { status: true },
   })
-  if (orderExam) {
-    const allExams = await prisma.orderExam.findMany({
-      where: { orderId: orderExam.orderId },
-      select: { status: true },
-    })
-    const allDone = allExams.every(e => e.status === "COMPLETADO")
-    if (allDone) {
-      await prisma.order.update({
-        where: { id: orderExam.orderId },
-        data: { status: "COMPLETADA" },
-      })
-    } else {
-      await prisma.order.update({
-        where: { id: orderExam.orderId },
-        data: { status: "EN_PROCESO" },
-      })
-    }
-    revalidatePath(`/muestras/${orderExam.orderId}`)
-    revalidatePath("/muestras")
-    revalidatePath("/dashboard")
-  }
+  const allDone = allExams.every(e => e.status === "COMPLETADO")
+  await prisma.order.update({
+    where: { id: current.orderId },
+    data: { status: allDone ? "COMPLETADA" : "EN_PROCESO" },
+  })
+  revalidatePath(`/muestras/${current.orderId}`)
+  revalidatePath("/muestras")
+  revalidatePath("/dashboard")
+  revalidatePath("/inventario")
 }

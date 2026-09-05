@@ -10,6 +10,7 @@ const NAV = [
   { href: "/muestras/nueva", label: "Nueva muestra" },
   { href: "/clientes", label: "Clientes" },
   { href: "/usuarios", label: "Usuarios" },
+  { href: "/inventario", label: "Inventario" },
 ]
 
 export default function Sidebar({ userName, role }: { userName: string; role: string }) {
