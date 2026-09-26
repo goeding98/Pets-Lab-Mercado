@@ -3,10 +3,12 @@ import { useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { saveExamResults } from "@/actions/orders"
 import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
+import { evaluar } from "@/catalogo-pets-lab/calculos"
 
 type Field = {
   id: string
   name: string
+  key: string | null
   unit: string | null
   refCanine: string | null
   refFeline: string | null
@@ -114,51 +116,45 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
     return values[fieldId] ?? ""
   }
 
-  function getCalcValue(field: Field, species: "canine" | "feline" = "canine"): string {
+  // Cada campo se identifica para las fórmulas por su `key` (id del catálogo).
+  // Los campos legado sin `key` caen al nombre normalizado, por compatibilidad.
+  function formulaKey(field: Field): string {
+    return field.key || field.name.toLowerCase().replace(/[^a-z0-9]/g, "_")
+  }
+
+  // Resuelve todos los campos calculados del examen a partir de los valores digitados,
+  // repitiendo hasta que no haya cambios (un calculado puede depender de otro calculado).
+  function getResolvedValues(): Record<string, number> {
+    const resolved: Record<string, number> = {}
+    for (const f of allFields) {
+      if (f.fieldType === "calculated") continue
+      const raw = values[f.id]
+      const num = Number(raw)
+      if (raw !== "" && raw != null && !isNaN(num)) resolved[formulaKey(f)] = num
+    }
+
+    const calcFields = allFields.filter(f => f.fieldType === "calculated" && f.calcFormula)
+    for (let i = 0; i < calcFields.length + 1; i++) {
+      let changed = false
+      for (const f of calcFields) {
+        const k = formulaKey(f)
+        if (resolved[k] != null) continue
+        const v = evaluar(f.calcFormula!, resolved)
+        if (v !== null) {
+          resolved[k] = v
+          changed = true
+        }
+      }
+      if (!changed) break
+    }
+    return resolved
+  }
+
+  function getCalcValue(field: Field): string {
     if (!field.calcFormula) return ""
-    // Simple two-operand formulas: "a - b", "a / b", "a + b"
-    const formula = field.calcFormula
-    const normalizedNames = Object.fromEntries(
-      allFields.map(f => [f.name.toLowerCase().replace(/[^a-z0-9]/g, "_"), f.id])
-    )
-
-    function resolveId(token: string): string | undefined {
-      return normalizedNames[token.trim()]
-    }
-
-    const minusMatch = formula.match(/^(.+?)\s*-\s*(.+)$/)
-    const divMatch = formula.match(/^(.+?)\s*\/\s*(.+)$/)
-    const plusMatch = formula.match(/^(.+?)\s*\+\s*(.+)$/)
-
-    let result: number | null = null
-
-    if (minusMatch) {
-      const aId = resolveId(minusMatch[1])
-      const bId = resolveId(minusMatch[2])
-      if (aId && bId) {
-        const a = Number(values[aId])
-        const b = Number(values[bId])
-        if (!isNaN(a) && !isNaN(b)) result = Math.round((a - b) * 100) / 100
-      }
-    } else if (divMatch) {
-      const aId = resolveId(divMatch[1])
-      const bId = resolveId(divMatch[2])
-      if (aId && bId) {
-        const a = Number(values[aId])
-        const b = Number(values[bId])
-        if (!isNaN(a) && !isNaN(b) && b !== 0) result = Math.round((a / b) * 100) / 100
-      }
-    } else if (plusMatch) {
-      const aId = resolveId(plusMatch[1])
-      const bId = resolveId(plusMatch[2])
-      if (aId && bId) {
-        const a = Number(values[aId])
-        const b = Number(values[bId])
-        if (!isNaN(a) && !isNaN(b)) result = Math.round((a + b) * 100) / 100
-      }
-    }
-
-    return result !== null ? String(result) : ""
+    const resolved = getResolvedValues()
+    const v = resolved[formulaKey(field)]
+    return v !== undefined ? String(v) : ""
   }
 
   function handleChange(fieldId: string, value: string) {

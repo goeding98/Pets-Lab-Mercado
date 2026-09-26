@@ -4,6 +4,7 @@ node_modules/
 # Next.js build
 .next/
 out/
+*.tsbuildinfo
 
 # Database (local only)
 prisma/dev.db

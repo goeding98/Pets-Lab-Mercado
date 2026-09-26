@@ -22,10 +22,18 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   orden), `ExamTemplate`/`ExamSection`/`ExamField` (catálogo de exámenes y sus campos de
   resultado con rangos de referencia canino/felino), `ExamResult` (valor capturado por
   campo).
-- `prisma/seed.ts` — catálogo de ejemplo de `ExamTemplate`. **Ojo:** este script borra
-  TODAS las órdenes/resultados/usuarios antes de re-sembrar. El catálogo real en
-  producción ya diverge de este archivo (se editó directo en la BD varias veces) — no
-  asumas que `seed.ts` refleja el estado actual sin confirmarlo contra la base.
+- `prisma/seed.ts` — catálogo de ejemplo de `ExamTemplate`, **desactualizado**: el
+  catálogo real (66 exámenes) se cargó con `scripts/import-catalogo-v6.ts` a partir de
+  `catalogo-pets-lab/catalogo-examenes.json` (exportado del Excel maestro del
+  laboratorio). Este script borra todo `ExamTemplate`/`Order` existente antes de
+  re-importar — **destructivo**, no correrlo salvo que se quiera reemplazar el catálogo
+  completo de nuevo. `ExamField.key` guarda el id del parámetro en el catálogo (ej.
+  `hematocrito`); `ExamField.calcFormula` referencia esos `key`, no nombres. El evaluador
+  general de fórmulas vive en `catalogo-pets-lab/calculos.ts` (`evaluar`) y lo usa
+  `ExamResultForm.tsx` — no reescribir la lógica de evaluación ahí, importar de ese
+  módulo. La carpeta `catalogo-pets-lab/` se regenera completa si el Excel maestro
+  cambia; no editar sus archivos a mano. No asumas que `seed.ts` refleja el estado
+  actual sin confirmarlo contra la base.
 - Un `OrderExam` se completa de dos formas: (a) capturando resultados campo por campo en
   el formulario (`app/(lab)/muestras/[id]/ExamResultForm.tsx`), o (b) subiendo un PDF ya
   hecho externamente. El botón "PDF" de la orden genera un reporte combinado que fusiona

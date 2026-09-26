@@ -99,12 +99,13 @@ model ExamField {
   sectionId   String
   section     ExamSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   name        String
+  key         String?      // id estable del parámetro en el catálogo (ej. "hematocrito"); usado para resolver calcFormula
   unit        String?
   refCanine   String?
   refFeline   String?
   technique   String?
   fieldType   String       @default("number") // number | text | select | calculated
-  calcFormula String?      // e.g. "globulinas = proteinas_totales - albumina"
+  calcFormula String?      // expresión con los `key` de otros campos de la misma sección, ej. "proteinas_totales - albumina"
   order       Int          @default(0)
   results     ExamResult[]
 }
