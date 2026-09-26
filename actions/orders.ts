@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { can } from "@/lib/permissions"
 import { consumeInventoryForExam } from "@/lib/inventory"
 
 async function generateOrderNumber(): Promise<string> {
@@ -16,7 +17,7 @@ async function generateOrderNumber(): Promise<string> {
 
 export async function createOrder(formData: FormData) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role === "CLINIC") throw new Error("No autorizado")
+  if (!session || !can(session.user.role, "muestras.crear")) throw new Error("No autorizado")
 
   const templateIds = formData.getAll("templateIds") as string[]
   if (templateIds.length === 0) throw new Error("Selecciona al menos un examen")
@@ -49,7 +50,7 @@ export async function createOrder(formData: FormData) {
 
 export async function updateOrderStatus(orderId: string, status: string) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role === "CLINIC") throw new Error("No autorizado")
+  if (!session || !can(session.user.role, "resultados.editar")) throw new Error("No autorizado")
 
   await prisma.order.update({ where: { id: orderId }, data: { status } })
   revalidatePath(`/muestras/${orderId}`)
@@ -62,7 +63,7 @@ export async function saveExamResults(
   results: { fieldId: string; value: string; flagged: boolean }[]
 ) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role === "CLINIC") throw new Error("No autorizado")
+  if (!session || !can(session.user.role, "resultados.editar")) throw new Error("No autorizado")
 
   const current = await prisma.orderExam.findUnique({
     where: { id: orderExamId },

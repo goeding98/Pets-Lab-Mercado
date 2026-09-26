@@ -5,10 +5,11 @@ import { getServerSession } from "next-auth"
 import bcrypt from "bcryptjs"
 import { authOptions, clinicEmail } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { can } from "@/lib/permissions"
 
 export async function createClinic(formData: FormData) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role === "CLINIC") throw new Error("No autorizado")
+  if (!session || !can(session.user.role, "clientes.editar")) throw new Error("No autorizado")
 
   const name = formData.get("name") as string
   const nit = (formData.get("nit") as string) || null
@@ -42,7 +43,7 @@ export async function createClinic(formData: FormData) {
 
 export async function updateClinic(id: string, formData: FormData) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role === "CLINIC") throw new Error("No autorizado")
+  if (!session || !can(session.user.role, "clientes.editar")) throw new Error("No autorizado")
 
   await prisma.clinic.update({
     where: { id },

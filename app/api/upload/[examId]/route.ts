@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { can } from "@/lib/permissions"
 import { put, del } from "@vercel/blob"
 import { randomUUID } from "crypto"
 import { consumeInventoryForExam, restoreInventoryForExam } from "@/lib/inventory"
@@ -11,7 +12,7 @@ export async function POST(
   { params }: { params: { examId: string } }
 ) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role === "CLINIC")
+  if (!session || !can(session.user.role, "resultados.editar"))
     return new NextResponse("No autorizado", { status: 401 })
 
   const formData = await req.formData()
@@ -72,7 +73,7 @@ export async function DELETE(
   { params }: { params: { examId: string } }
 ) {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role === "CLINIC")
+  if (!session || !can(session.user.role, "resultados.editar"))
     return new NextResponse("No autorizado", { status: 401 })
 
   const exam = await prisma.orderExam.findUnique({ where: { id: params.examId } })

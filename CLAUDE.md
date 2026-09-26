@@ -11,9 +11,14 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
 - `app/(lab)/` — LIMS interno para el staff del laboratorio (Panel/Dashboard, Muestras,
   Clientes, Usuarios). Requiere sesión de staff (no CLINIC).
 - `app/(auth)/` — login y registro.
-- `middleware.ts` — controla el acceso por rol: `ADMIN`/`STAFF` van a `/dashboard` y rutas
-  de `(lab)`; `CLINIC` va a `/resultados/dashboard`. Revisar aquí antes de tocar rutas
-  protegidas.
+- `middleware.ts` — controla el acceso por rol: `CLINIC` va a `/resultados/dashboard`; el
+  personal interno entra a las rutas de `(lab)` según sus permisos. Revisar aquí antes de
+  tocar rutas protegidas.
+- `lib/permissions.ts` — fuente única de permisos por rol (`can(role, permiso)`), usada por
+  middleware, `Sidebar`, páginas y server actions. Roles internos: `ADMIN` (todo),
+  `STAFF` = microbiólogo (todo menos Usuarios), `COMERCIAL` (Panel, Muestras en consulta,
+  Nueva muestra, Clientes) y `DOMICILIARIO` (Muestras en consulta y Nueva muestra). Al
+  agregar una ruta o acción nueva, mapearla ahí; no volver al chequeo `role !== "CLINIC"`.
 
 ## Datos y dominio del negocio
 

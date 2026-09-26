@@ -1,7 +1,10 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { can } from "@/lib/permissions"
 import ExamResultForm from "./ExamResultForm"
 import UpdateStatusButton from "./UpdateStatusButton"
 
@@ -33,6 +36,9 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
 
   if (!order) notFound()
 
+  const session = await getServerSession(authOptions)
+  const canEdit = can(session?.user.role, "resultados.editar")
+
   return (
     <div className="px-8 py-8 max-w-4xl">
       {/* Header */}
@@ -56,7 +62,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
-          <UpdateStatusButton orderId={order.id} currentStatus={order.status} />
+          {canEdit && <UpdateStatusButton orderId={order.id} currentStatus={order.status} />}
           {order.status === "COMPLETADA" && (
             <a
               href={`/api/pdf/${order.id}`}
@@ -95,7 +101,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
       <div className="space-y-6">
         {order.exams.map(exam => (
           <div key={exam.id}>
-            <ExamResultForm exam={exam} />
+            <ExamResultForm exam={exam} readOnly={!canEdit} />
             {exam.status === "COMPLETADO" && (
               <div className="flex justify-end mt-1.5">
                 <a

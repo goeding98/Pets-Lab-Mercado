@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { ROLE_LABELS } from "@/lib/permissions"
 import Link from "next/link"
 import UserRowActions from "./UserRowActions"
 
@@ -51,7 +52,7 @@ export default async function UsuariosPage() {
                     user.role === "ADMIN" ? "bg-ink text-bone" :
                     user.role === "STAFF" ? "bg-salvia-700 text-bone" :
                     "bg-azul-100 text-azul-800"
-                  }`}>{user.role}</span>
+                  }`}>{ROLE_LABELS[user.role] ?? user.role}</span>
                 </td>
                 <td className="px-4 py-3 font-sans text-xs text-ink-2">{user.clinic?.name ?? "—"}</td>
                 <td className="px-4 py-3 font-mono text-[10px] text-ink-2">

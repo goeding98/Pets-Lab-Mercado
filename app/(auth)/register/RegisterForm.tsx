@@ -47,6 +47,8 @@ export default function RegisterForm({ clinics }: { clinics: Clinic[] }) {
         <select name="role" required className={inputClass}>
           <option value="STAFF">Staff (microbiólogo)</option>
           <option value="ADMIN">Admin</option>
+          <option value="COMERCIAL">Comercial</option>
+          <option value="DOMICILIARIO">Domiciliario</option>
           <option value="CLINIC">Clínica</option>
         </select>
       </div>

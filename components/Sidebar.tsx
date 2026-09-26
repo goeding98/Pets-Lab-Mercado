@@ -3,15 +3,16 @@ import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
+import { can, ROLE_LABELS, type Permission } from "@/lib/permissions"
 
-const NAV = [
-  { href: "/dashboard", label: "Panel" },
-  { href: "/muestras", label: "Muestras" },
-  { href: "/muestras/nueva", label: "Nueva muestra" },
-  { href: "/clientes", label: "Clientes" },
-  { href: "/usuarios", label: "Usuarios" },
-  { href: "/caja", label: "Caja" },
-  { href: "/inventario", label: "Inventario" },
+const NAV: { href: string; label: string; perm: Permission }[] = [
+  { href: "/dashboard", label: "Panel", perm: "panel" },
+  { href: "/muestras", label: "Muestras", perm: "muestras.ver" },
+  { href: "/muestras/nueva", label: "Nueva muestra", perm: "muestras.crear" },
+  { href: "/clientes", label: "Clientes", perm: "clientes.ver" },
+  { href: "/usuarios", label: "Usuarios", perm: "usuarios" },
+  { href: "/caja", label: "Caja", perm: "caja" },
+  { href: "/inventario", label: "Inventario", perm: "inventario" },
 ]
 
 export default function Sidebar({ userName, role }: { userName: string; role: string }) {
@@ -31,7 +32,7 @@ export default function Sidebar({ userName, role }: { userName: string; role: st
       </div>
 
       <nav className="flex-1 py-4">
-        {NAV.map(({ href, label }) => {
+        {NAV.filter(({ perm }) => can(role, perm)).map(({ href, label }) => {
           const active = path === href || (href !== "/dashboard" && path.startsWith(href))
           return (
             <Link
@@ -49,7 +50,7 @@ export default function Sidebar({ userName, role }: { userName: string; role: st
 
       <div className="px-6 pb-6 border-t border-bone/10 pt-4">
         <p className="font-sans text-xs text-bone/70 truncate">{userName}</p>
-        <p className="font-mono text-[8px] tracking-[0.18em] text-salvia-300 uppercase mt-0.5">{role}</p>
+        <p className="font-mono text-[8px] tracking-[0.18em] text-salvia-300 uppercase mt-0.5">{ROLE_LABELS[role] ?? role}</p>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="mt-3 font-mono text-[9px] tracking-[0.18em] text-bone/50 hover:text-bone uppercase transition-colors"

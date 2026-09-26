@@ -59,7 +59,7 @@ function isOutOfRange(value: string, ref: string | null): boolean {
   return s === "low" || s === "high"
 }
 
-export default function ExamResultForm({ exam }: { exam: ExamProp }) {
+export default function ExamResultForm({ exam, readOnly = false }: { exam: ExamProp; readOnly?: boolean }) {
   const allFields = exam.template.sections.flatMap(s => s.fields)
   const initialValues: Record<string, string> = {}
   for (const r of exam.results) initialValues[r.fieldId] = r.value
@@ -177,6 +177,7 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
   }
 
   const isComplete = exam.status === "COMPLETADO"
+  const locked = isComplete || readOnly
 
   return (
     <div className="border border-black/10">
@@ -247,7 +248,7 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
                             <select
                               value={getValue(field.id)}
                               onChange={e => handleChange(field.id, e.target.value)}
-                              disabled={isComplete}
+                              disabled={locked}
                               className="border border-black/20 bg-white px-1.5 py-1 text-xs font-sans w-full focus:outline-salvia-700 disabled:bg-black/5 disabled:cursor-default"
                             >
                               <option value="">—</option>
@@ -271,7 +272,7 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
                               type="text"
                               value={getValue(field.id)}
                               onChange={e => handleChange(field.id, e.target.value)}
-                              disabled={isComplete}
+                              disabled={locked}
                               className="border border-black/20 bg-white px-1.5 py-1 text-xs font-sans w-full focus:outline-salvia-700 disabled:bg-black/5 disabled:cursor-default"
                               placeholder="—"
                             />
@@ -281,7 +282,7 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
                               step="any"
                               value={getValue(field.id)}
                               onChange={e => handleChange(field.id, e.target.value)}
-                              disabled={isComplete}
+                              disabled={locked}
                               className={`border bg-white px-1.5 py-1 text-xs font-mono w-20 focus:outline-salvia-700 disabled:bg-black/5 disabled:cursor-default ${inputBorder}`}
                               placeholder="—"
                             />
@@ -313,7 +314,7 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
                   {uploadedName}
                 </a>
               </div>
-              {!isComplete && (
+              {!locked && (
                 <button
                   onClick={handleRemoveUpload}
                   disabled={uploading}
@@ -326,7 +327,7 @@ export default function ExamResultForm({ exam }: { exam: ExamProp }) {
           ) : null}
 
           {/* Action buttons */}
-          {!isComplete && !uploadedPath && (
+          {!locked && !uploadedPath && (
             <div className="flex items-center gap-3 flex-wrap">
               <button
                 onClick={handleSave}

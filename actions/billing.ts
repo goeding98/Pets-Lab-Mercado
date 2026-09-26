@@ -3,10 +3,11 @@ import { revalidatePath } from "next/cache"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { can } from "@/lib/permissions"
 
 async function requireStaff() {
   const session = await getServerSession(authOptions)
-  if (!session || session.user.role === "CLINIC") throw new Error("No autorizado")
+  if (!session || !can(session.user.role, "caja")) throw new Error("No autorizado")
   return session
 }
 
