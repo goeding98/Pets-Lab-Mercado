@@ -14,6 +14,7 @@ type OrderResult = {
 }
 
 const STATUS_LABEL: Record<string, string> = {
+  SOLICITADA: "Solicitada — el laboratorio aún no recibe la muestra",
   RECIBIDA: "Recibida — en espera de procesamiento",
   EN_PROCESO: "En proceso",
   COMPLETADA: "Completada — resultados disponibles",

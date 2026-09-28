@@ -10,7 +10,6 @@ const LINKS = [
   { href: "/", label: "Inicio" },
   { href: "/servicios", label: "Servicios" },
   { href: "/veterinarios", label: "Veterinarios" },
-  { href: "/resultados", label: "Resultados" },
   { href: "/nosotros", label: "Nosotros" },
   { href: "/contacto", label: "Contacto" },
 ]
@@ -53,6 +52,14 @@ export default function Nav() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <Link
+            href="/portal-vet"
+            className={`hidden md:inline-block font-mono text-[10px] tracking-[0.22em] uppercase border border-salvia-700 px-4 py-2.5 transition-colors focus:outline-2 focus:outline-salvia-700 ${
+              isActive("/portal-vet") ? "bg-salvia-50 text-salvia-800" : "text-salvia-700 hover:bg-salvia-50"
+            }`}
+          >
+            Portal Vet
+          </Link>
           <a
             href={SITE.whatsapp}
             target="_blank"
@@ -101,11 +108,18 @@ export default function Nav() {
                 {label}
               </Link>
             ))}
+            <Link
+              href="/portal-vet"
+              onClick={() => setOpen(false)}
+              className="mt-4 font-mono text-[10px] tracking-[0.22em] uppercase border border-salvia-700 text-salvia-700 px-4 py-3 text-center block"
+            >
+              Portal Vet
+            </Link>
             <a
               href={SITE.whatsapp}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 font-mono text-[10px] tracking-[0.22em] uppercase bg-salvia-700 text-bone px-4 py-3 text-center block"
+              className="mt-2 font-mono text-[10px] tracking-[0.22em] uppercase bg-salvia-700 text-bone px-4 py-3 text-center block"
             >
               WhatsApp ↗
             </a>

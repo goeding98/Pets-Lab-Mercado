@@ -1,7 +1,10 @@
 "use client"
-import { useTransition } from "react"
-import { createOrder } from "@/actions/orders"
+import { useState, useTransition } from "react"
 import type { ExamTemplate, Clinic } from "@prisma/client"
+
+// Formulario de ingreso de una muestra/orden. Lo usan el staff (/muestras/nueva) y las clínicas
+// desde el Portal Vet (/portal-vet/nueva), para que ambos pidan exactamente los mismos datos.
+// Sin `clinics` no se muestra el selector de clínica (en el portal la clínica es la de la sesión).
 
 const AREAS = [
   "Hematología",
@@ -14,22 +17,39 @@ const AREAS = [
   "Otros",
 ]
 
-export default function NuevaMuestraForm({
+export default function OrderForm({
   templates,
   clinics,
+  action,
+  submitLabel = "Registrar muestra →",
+  pendingLabel = "Registrando…",
 }: {
   templates: ExamTemplate[]
-  clinics: Clinic[]
+  clinics?: Clinic[]
+  action: (fd: FormData) => Promise<void>
+  submitLabel?: string
+  pendingLabel?: string
 }) {
   const [pending, startTransition] = useTransition()
+  const [error, setError] = useState("")
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    startTransition(() => createOrder(fd))
+    if (fd.getAll("templateIds").length === 0) {
+      setError("Selecciona al menos un examen.")
+      return
+    }
+    setError("")
+    startTransition(() => action(fd))
   }
 
-  const byArea = AREAS.map(area => ({
+  // Áreas conocidas en su orden; cualquier área nueva del catálogo va al final
+  const areas = [
+    ...AREAS,
+    ...Array.from(new Set(templates.map(t => t.area))).filter(a => !AREAS.includes(a)).sort(),
+  ]
+  const byArea = areas.map(area => ({
     area,
     items: templates.filter(t => t.area === area),
   })).filter(g => g.items.length > 0)
@@ -80,16 +100,18 @@ export default function NuevaMuestraForm({
       <fieldset className="border border-black/10 p-5">
         <legend className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase px-1">Procedencia</legend>
         <div className="grid grid-cols-2 gap-4 mt-3">
-          <div>
-            <Label>Clínica</Label>
-            <select name="clinicId" className={inputClass}>
-              <option value="">Sin clínica</option>
-              {clinics.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
+          {clinics && (
+            <div>
+              <Label>Clínica</Label>
+              <select name="clinicId" className={inputClass}>
+                <option value="">Sin clínica</option>
+                {clinics.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className={clinics ? "" : "col-span-2 md:col-span-1"}>
             <Label>Veterinario solicitante</Label>
             <Input name="requestingVet" placeholder="Nombre del veterinario" />
           </div>
@@ -135,12 +157,16 @@ export default function NuevaMuestraForm({
         />
       </div>
 
+      {error && (
+        <p className="font-mono text-[9px] tracking-[0.15em] text-red-600 uppercase">{error}</p>
+      )}
+
       <button
         type="submit"
         disabled={pending}
         className="bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.22em] uppercase px-6 py-3 hover:bg-salvia-800 transition-colors disabled:opacity-60"
       >
-        {pending ? "Registrando…" : "Registrar muestra →"}
+        {pending ? pendingLabel : submitLabel}
       </button>
     </form>
   )

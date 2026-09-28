@@ -27,6 +27,9 @@ model Clinic {
   address   String?
   phone     String?
   email     String?
+  contactName  String? // persona de contacto (registro desde el Portal Vet)
+  neighborhood String? // barrio
+  city         String?
   users     User[]
   orders    Order[]
   createdAt DateTime @default(now())
@@ -46,7 +49,8 @@ model Order {
   requestingVet String?
   processedById String?
   processedBy   User?       @relation("ProcessedBy", fields: [processedById], references: [id])
-  status        String      @default("RECIBIDA") // RECIBIDA | EN_PROCESO | COMPLETADA
+  status        String      @default("RECIBIDA") // SOLICITADA (desde el portal, aún sin recibir) | RECIBIDA | EN_PROCESO | COMPLETADA
+  source        String      @default("LAB") // LAB (registrada por el staff) | PORTAL (solicitada por la clínica)
   notes         String?
   exams         OrderExam[]
   createdAt     DateTime    @default(now())

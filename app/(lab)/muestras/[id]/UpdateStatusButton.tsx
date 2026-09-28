@@ -3,6 +3,7 @@ import { useTransition } from "react"
 import { updateOrderStatus } from "@/actions/orders"
 
 const NEXT_STATUS: Record<string, { label: string; next: string }> = {
+  SOLICITADA: { label: "Marcar muestra recibida →", next: "RECIBIDA" },
   RECIBIDA: { label: "Marcar en proceso →", next: "EN_PROCESO" },
   EN_PROCESO: { label: "Marcar completada →", next: "COMPLETADA" },
 }

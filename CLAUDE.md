@@ -7,11 +7,18 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
 ## Estructura de rutas
 
 - `app/(web)/` — sitio público de marketing (Inicio, Servicios, Veterinarios, Nosotros,
-  Contacto, portal de Resultados para clínicas).
+  Contacto) + **Portal Vet** (`app/(web)/portal-vet/`, botón "Portal Vet" del `Nav`) para
+  clínicas: registro público (crea `Clinic` + usuario `CLINIC` que entra con su correo; las
+  clínicas creadas por el staff en `/clientes` siguen entrando con el nombre de la clínica),
+  lista de exámenes por paciente y "Nueva solicitud". `/resultados` solo redirige ahí.
+- Solicitudes del portal: crean un `Order` con `source = "PORTAL"` y `status = "SOLICITADA"`
+  (el lab aún no tiene la muestra); el staff la ve en `/muestras` y la pasa a `RECIBIDA`. El
+  formulario de ingreso es el mismo componente para staff y clínicas
+  (`components/OrderForm.tsx`) — si se agrega un campo, se agrega para ambos.
 - `app/(lab)/` — LIMS interno para el staff del laboratorio (Panel/Dashboard, Muestras,
   Clientes, Usuarios). Requiere sesión de staff (no CLINIC).
 - `app/(auth)/` — login y registro.
-- `middleware.ts` — controla el acceso por rol: `CLINIC` va a `/resultados/dashboard`; el
+- `middleware.ts` — controla el acceso por rol: `CLINIC` va a `/portal-vet/dashboard`; el
   personal interno entra a las rutas de `(lab)` según sus permisos. Revisar aquí antes de
   tocar rutas protegidas.
 - `lib/permissions.ts` — fuente única de permisos por rol (`can(role, permiso)`), usada por

@@ -37,8 +37,20 @@ export default function ClinicaForm({ clinic }: { clinic?: Clinic }) {
             <Input name="email" type="email" defaultValue={clinic?.email ?? ""} placeholder="Ej. contacto@clinica.com" />
           </div>
           <div className="col-span-2">
+            <Label>Persona de contacto</Label>
+            <Input name="contactName" defaultValue={clinic?.contactName ?? ""} placeholder="Nombre y apellido" />
+          </div>
+          <div className="col-span-2">
             <Label>Dirección</Label>
-            <Input name="address" defaultValue={clinic?.address ?? ""} placeholder="Ej. Cra 5 #20-30, Cali" />
+            <Input name="address" defaultValue={clinic?.address ?? ""} placeholder="Ej. Cra 5 #20-30" />
+          </div>
+          <div>
+            <Label>Barrio</Label>
+            <Input name="neighborhood" defaultValue={clinic?.neighborhood ?? ""} placeholder="Ej. San Fernando" />
+          </div>
+          <div>
+            <Label>Ciudad</Label>
+            <Input name="city" defaultValue={clinic?.city ?? ""} placeholder="Ej. Cali" />
           </div>
         </div>
       </fieldset>

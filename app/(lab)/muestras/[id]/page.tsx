@@ -50,6 +50,11 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
             </Link>
             <span className="text-black/20">/</span>
             <span className="font-mono text-[9px] tracking-[0.18em] text-salvia-700 uppercase">{order.orderNumber}</span>
+            {order.source === "PORTAL" && (
+              <span className="font-mono text-[8px] tracking-[0.18em] uppercase bg-amber-100 text-amber-900 px-2 py-0.5">
+                {order.status === "SOLICITADA" ? "Solicitada por la clínica · muestra sin recibir" : "Solicitada desde Portal Vet"}
+              </span>
+            )}
           </div>
           <h1 className="font-serif text-[28px] font-medium tracking-[-0.02em]">
             {order.patientName}

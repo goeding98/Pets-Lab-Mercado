@@ -7,14 +7,14 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Pages that redirect already-authenticated users away
-  if (pathname === "/login" || pathname === "/resultados") {
+  if (pathname === "/login" || pathname === "/portal-vet") {
     if (token) return NextResponse.redirect(new URL(homeFor(token.role), req.url))
   }
 
-  // Clinic portal — CLINIC only
-  if (pathname.startsWith("/resultados/dashboard")) {
+  // Portal Vet (clínicas) — CLINIC only. /portal-vet itself is the public login/registro page.
+  if (pathname.startsWith("/portal-vet/")) {
     if (!token || token.role !== "CLINIC") {
-      return NextResponse.redirect(new URL(token ? homeFor(token.role) : "/login", req.url))
+      return NextResponse.redirect(new URL(token ? homeFor(token.role) : "/portal-vet", req.url))
     }
     return NextResponse.next()
   }
@@ -32,13 +32,13 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/login",
-    "/resultados",
+    "/portal-vet",
+    "/portal-vet/:path*",
     "/dashboard/:path*",
     "/muestras/:path*",
     "/usuarios/:path*",
     "/clientes/:path*",
     "/inventario/:path*",
     "/caja/:path*",
-    "/resultados/dashboard/:path*",
   ],
 }

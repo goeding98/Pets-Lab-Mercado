@@ -21,6 +21,9 @@ export async function createClinic(formData: FormData) {
       address: (formData.get("address") as string) || null,
       phone: (formData.get("phone") as string) || null,
       email: (formData.get("email") as string) || null,
+      contactName: (formData.get("contactName") as string) || null,
+      neighborhood: (formData.get("neighborhood") as string) || null,
+      city: (formData.get("city") as string) || null,
     },
   })
 
@@ -53,6 +56,9 @@ export async function updateClinic(id: string, formData: FormData) {
       address: (formData.get("address") as string) || null,
       phone: (formData.get("phone") as string) || null,
       email: (formData.get("email") as string) || null,
+      contactName: (formData.get("contactName") as string) || null,
+      neighborhood: (formData.get("neighborhood") as string) || null,
+      city: (formData.get("city") as string) || null,
     },
   })
 

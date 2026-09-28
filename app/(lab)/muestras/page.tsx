@@ -6,6 +6,7 @@ import { computeNetPrice, getPaymentStatus as getExamPaymentStatus } from "@/lib
 export const metadata: Metadata = { title: "Muestras" }
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+  SOLICITADA: { label: "Solicitada", className: "bg-amber-100 text-amber-900" },
   RECIBIDA: { label: "Recibida", className: "bg-salvia-100 text-salvia-800" },
   EN_PROCESO: { label: "En proceso", className: "bg-azul-100 text-azul-800" },
   COMPLETADA: { label: "Completada", className: "bg-salvia-700 text-bone" },
@@ -21,6 +22,14 @@ function getOrderPaymentStatus(
   if (paidCount === labels.length) return { label: "Pagado", className: "bg-azul-700 text-bone" }
   if (unpaidCount === labels.length) return { label: "No pagado", className: "bg-black/10 text-ink" }
   return { label: "Parcial", className: "bg-azul-100 text-azul-800" }
+}
+
+function PortalTag() {
+  return (
+    <span className="block w-fit mt-1 font-mono text-[7px] tracking-[0.18em] uppercase border border-salvia-700/40 text-salvia-700 px-1.5 py-px">
+      Portal Vet
+    </span>
+  )
 }
 
 export default async function MuestrasPage({
@@ -74,6 +83,7 @@ export default async function MuestrasPage({
           className="border border-black/20 bg-white px-3 py-2 text-sm font-sans focus:outline-2 focus:outline-salvia-700"
         >
           <option value="">Todos los estados</option>
+          <option value="SOLICITADA">Solicitada (portal)</option>
           <option value="RECIBIDA">Recibida</option>
           <option value="EN_PROCESO">En proceso</option>
           <option value="COMPLETADA">Completada</option>
@@ -104,6 +114,7 @@ export default async function MuestrasPage({
                     <Link href={`/muestras/${order.id}`} className="font-mono text-[11px] text-salvia-700 hover:underline">
                       {order.orderNumber}
                     </Link>
+                    {order.source === "PORTAL" && <PortalTag />}
                   </td>
                   <td className="px-4 py-3 font-sans text-xs">
                     {order.patientName}

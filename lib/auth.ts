@@ -54,13 +54,16 @@ export const authOptions: NextAuthOptions = {
       id: "clinic",
       name: "Clínica",
       credentials: {
-        clinicName: { label: "Nombre de la clínica", type: "text" },
+        login: { label: "Correo o nombre de la clínica", type: "text" },
         password: { label: "Contraseña", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.clinicName || !credentials?.password) return null
+        if (!credentials?.login || !credentials?.password) return null
 
-        const email = clinicEmail(credentials.clinicName)
+        // Las clínicas registradas desde el Portal Vet entran con su correo; las creadas por el
+        // staff en /clientes, con el nombre de la clínica (se traduce a su email interno).
+        const login = credentials.login.trim()
+        const email = login.includes("@") ? login.toLowerCase() : clinicEmail(login)
         const user = await prisma.user.findUnique({
           where: { email },
         })

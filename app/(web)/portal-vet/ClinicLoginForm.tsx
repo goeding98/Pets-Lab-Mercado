@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 
 export default function ClinicLoginForm() {
   const router = useRouter()
-  const [clinicName, setClinicName] = useState("")
+  const [login, setLogin] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -15,12 +15,13 @@ export default function ClinicLoginForm() {
     e.preventDefault()
     setError("")
     setLoading(true)
-    const res = await signIn("clinic", { clinicName, password, redirect: false })
+    const res = await signIn("clinic", { login, password, redirect: false })
     setLoading(false)
     if (res?.ok) {
-      router.push("/resultados/dashboard")
+      router.push("/portal-vet/dashboard")
+      router.refresh()
     } else {
-      setError("Nombre de clínica o contraseña incorrectos.")
+      setError("Correo, clínica o contraseña incorrectos.")
     }
   }
 
@@ -28,13 +29,14 @@ export default function ClinicLoginForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block font-mono text-[9px] tracking-[0.18em] text-ink-2 uppercase mb-1.5">
-          Nombre de la clínica
+          Correo electrónico o nombre de la clínica
         </label>
         <input
           type="text"
-          value={clinicName}
-          onChange={e => setClinicName(e.target.value)}
-          placeholder="Clínica Veterinaria Paws"
+          value={login}
+          onChange={e => setLogin(e.target.value)}
+          placeholder="contacto@miclinica.com"
+          autoComplete="username"
           required
           className="w-full border border-black/15 px-3 py-2.5 text-sm font-sans bg-white focus:outline-none focus:border-salvia-700 transition-colors"
         />
@@ -48,6 +50,7 @@ export default function ClinicLoginForm() {
           value={password}
           onChange={e => setPassword(e.target.value)}
           placeholder="••••••••"
+          autoComplete="current-password"
           required
           className="w-full border border-black/15 px-3 py-2.5 text-sm font-sans bg-white focus:outline-none focus:border-salvia-700 transition-colors"
         />

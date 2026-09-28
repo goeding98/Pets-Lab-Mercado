@@ -9,8 +9,9 @@ export const metadata: Metadata = { title: "Panel" }
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
 
-  const [totalOrders, pending, inProcess, completed] = await Promise.all([
+  const [totalOrders, requested, pending, inProcess, completed] = await Promise.all([
     prisma.order.count(),
+    prisma.order.count({ where: { status: "SOLICITADA" } }),
     prisma.order.count({ where: { status: "RECIBIDA" } }),
     prisma.order.count({ where: { status: "EN_PROCESO" } }),
     prisma.order.count({ where: { status: "COMPLETADA" } }),
@@ -30,17 +31,18 @@ export default async function DashboardPage() {
       </h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         {[
           { label: "Total órdenes", value: totalOrders, color: "bg-ink text-bone" },
-          { label: "Recibidas", value: pending, color: "bg-salvia-100 text-ink" },
-          { label: "En proceso", value: inProcess, color: "bg-azul-100 text-ink" },
-          { label: "Completadas", value: completed, color: "bg-salvia-700 text-bone" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className={`${color} p-5`}>
+          { label: "Solicitadas (portal)", value: requested, color: "bg-amber-100 text-ink", status: "SOLICITADA" },
+          { label: "Recibidas", value: pending, color: "bg-salvia-100 text-ink", status: "RECIBIDA" },
+          { label: "En proceso", value: inProcess, color: "bg-azul-100 text-ink", status: "EN_PROCESO" },
+          { label: "Completadas", value: completed, color: "bg-salvia-700 text-bone", status: "COMPLETADA" },
+        ].map(({ label, value, color, status }) => (
+          <Link key={label} href={status ? `/muestras?status=${status}` : "/muestras"} className={`${color} p-5 hover:opacity-90 transition-opacity`}>
             <p className="font-serif text-[36px] font-medium leading-none">{value}</p>
             <p className="font-mono text-[8px] tracking-[0.2em] uppercase mt-2 opacity-70">{label}</p>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -97,6 +99,7 @@ export default async function DashboardPage() {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
+    SOLICITADA: { label: "Solicitada", className: "bg-amber-100 text-amber-900" },
     RECIBIDA: { label: "Recibida", className: "bg-salvia-100 text-salvia-800" },
     EN_PROCESO: { label: "En proceso", className: "bg-azul-100 text-azul-800" },
     COMPLETADA: { label: "Completada", className: "bg-salvia-700 text-bone" },

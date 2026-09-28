@@ -6,14 +6,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { consumeInventoryForExam } from "@/lib/inventory"
-
-async function generateOrderNumber(): Promise<string> {
-  const year = new Date().getFullYear()
-  const count = await prisma.order.count({
-    where: { createdAt: { gte: new Date(year, 0, 1) } },
-  })
-  return `${year}-${String(count + 1).padStart(5, "0")}`
-}
+import { generateOrderNumber } from "@/lib/orders"
 
 export async function createOrder(formData: FormData) {
   const session = await getServerSession(authOptions)

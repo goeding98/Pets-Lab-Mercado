@@ -57,6 +57,6 @@ export function routePermission(pathname: string): Permission | null {
 
 // Página de inicio de cada rol tras iniciar sesión
 export function homeFor(role: string | undefined | null): string {
-  if (role === "CLINIC") return "/resultados/dashboard"
+  if (role === "CLINIC") return "/portal-vet/dashboard"
   return can(role, "panel") ? "/dashboard" : "/muestras"
 }

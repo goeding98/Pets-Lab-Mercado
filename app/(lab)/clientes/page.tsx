@@ -29,7 +29,7 @@ export default async function ClientesPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-salvia-50 border-b border-black/10">
-              {["Nombre", "NIT", "Teléfono", "Email", "Dirección", "Órdenes", ""].map(h => (
+              {["Nombre", "NIT", "Contacto", "Email", "Dirección", "Órdenes", ""].map(h => (
                 <th key={h} className="text-left px-4 py-2.5 font-mono text-[8px] tracking-[0.18em] uppercase text-salvia-700">{h}</th>
               ))}
             </tr>
@@ -39,9 +39,17 @@ export default async function ClientesPage() {
               <tr key={clinic.id} className={`border-b border-black/[0.06] ${i % 2 !== 0 ? "bg-black/[0.015]" : ""}`}>
                 <td className="px-4 py-3 font-sans text-sm font-medium">{clinic.name}</td>
                 <td className="px-4 py-3 font-mono text-[11px] text-ink-2">{clinic.nit ?? "—"}</td>
-                <td className="px-4 py-3 font-sans text-xs text-ink-2">{clinic.phone ?? "—"}</td>
+                <td className="px-4 py-3 font-sans text-xs text-ink-2">
+                  {clinic.contactName ?? "—"}
+                  {clinic.phone && <span className="block">{clinic.phone}</span>}
+                </td>
                 <td className="px-4 py-3 font-mono text-[11px] text-ink-2">{clinic.email ?? "—"}</td>
-                <td className="px-4 py-3 font-sans text-xs text-ink-2">{clinic.address ?? "—"}</td>
+                <td className="px-4 py-3 font-sans text-xs text-ink-2">
+                  {clinic.address ?? "—"}
+                  {(clinic.neighborhood || clinic.city) && (
+                    <span className="block">{[clinic.neighborhood, clinic.city].filter(Boolean).join(", ")}</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 font-mono text-[11px] text-ink-2">{clinic._count.orders}</td>
                 <td className="px-4 py-3">
                   <Link
