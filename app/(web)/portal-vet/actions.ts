@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth"
 import bcrypt from "bcryptjs"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import { generateOrderNumber } from "@/lib/orders"
+import { examsWithListPrice, generateOrderNumber } from "@/lib/orders"
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "")
 
@@ -96,7 +96,7 @@ export async function createPortalOrder(formData: FormData) {
       source: "PORTAL",
       notes: get("notes"),
       exams: {
-        create: templateIds.map(id => ({ templateId: id })),
+        create: await examsWithListPrice(templateIds),
       },
     },
   })

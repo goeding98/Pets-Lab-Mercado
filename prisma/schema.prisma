@@ -84,6 +84,7 @@ model ExamTemplate {
   area        String        // Hematología | Bioquímica | Citología | Uroanálisis | Coprología
   turnaround  String        // "Mismo día" | "24h" | "48h"
   sampleType  String
+  price       Float?        // precio de lista; si existe, se precarga en Caja al crear la orden
   isPromotion Boolean       @default(false) // examen combinado creado en /promociones
   active      Boolean       @default(true)  // false = retirado: no se ofrece en órdenes nuevas
   sections    ExamSection[]

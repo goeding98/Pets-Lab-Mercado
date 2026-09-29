@@ -45,8 +45,11 @@ const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 export async function createPromotion(
   name: string,
   templateIds: string[],
+  price: number | null,
 ): Promise<{ error?: string; success?: boolean }> {
   await requirePermission()
+
+  if (price !== null && (!Number.isFinite(price) || price < 0)) return { error: "El precio no es válido." }
 
   name = name.trim()
   const ids = Array.from(new Set(templateIds))
@@ -119,6 +122,7 @@ export async function createPromotion(
       turnaround: combinedTurnaround(components.map(t => t.turnaround)),
       sampleType: Array.from(new Set(components.map(t => t.sampleType))).join(" + "),
       isPromotion: true,
+      price,
       sections: { create: sections },
       recipeItems: { create: Array.from(recipe.entries()).map(([itemId, quantity]) => ({ itemId, quantity })) },
       promoComponents: { create: components.map((t, i) => ({ templateId: t.id, order: i })) },
@@ -127,6 +131,13 @@ export async function createPromotion(
 
   revalidateCatalog()
   return { success: true }
+}
+
+export async function updatePromotionPrice(id: string, price: number | null) {
+  await requirePermission()
+  if (price !== null && (!Number.isFinite(price) || price < 0)) throw new Error("Precio no válido")
+  await prisma.examTemplate.update({ where: { id, isPromotion: true }, data: { price } })
+  revalidatePath("/promociones")
 }
 
 // Elimina una promoción. Si ya se usó en alguna orden no se puede borrar (esas órdenes guardan sus

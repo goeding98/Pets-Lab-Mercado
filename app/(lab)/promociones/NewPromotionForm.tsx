@@ -6,6 +6,7 @@ type Template = { id: string; name: string; area: string; turnaround: string; sa
 
 export default function NewPromotionForm({ templates }: { templates: Template[] }) {
   const [name, setName] = useState("")
+  const [price, setPrice] = useState("")
   const [selected, setSelected] = useState<string[]>([])
   const [filter, setFilter] = useState("")
   const [error, setError] = useState("")
@@ -21,12 +22,13 @@ export default function NewPromotionForm({ templates }: { templates: Template[] 
     setError("")
     setDone("")
     startTransition(async () => {
-      const res = await createPromotion(name, selected)
+      const res = await createPromotion(name, selected, price === "" ? null : Number(price))
       if (res.error) {
         setError(res.error)
       } else {
         setDone(`Promoción “${name.trim()}” creada.`)
         setName("")
+        setPrice("")
         setSelected([])
       }
     })
@@ -39,15 +41,29 @@ export default function NewPromotionForm({ templates }: { templates: Template[] 
 
   return (
     <form onSubmit={handleSubmit} className="border border-black/10 p-5 space-y-5 bg-white">
-      <div>
-        <Label>Nombre de la promoción *</Label>
-        <input
-          value={name}
-          onChange={e => setName(e.target.value)}
-          required
-          placeholder="Ej. Perfil mixto"
-          className={inputClass}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-4">
+        <div>
+          <Label>Nombre de la promoción *</Label>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
+            placeholder="Ej. Perfil mixto"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <Label>Precio (COP)</Label>
+          <input
+            type="number"
+            min={0}
+            step={100}
+            value={price}
+            onChange={e => setPrice(e.target.value)}
+            placeholder="Ej. 85000"
+            className={inputClass}
+          />
+        </div>
       </div>
 
       <div>

@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { consumeInventoryForExam } from "@/lib/inventory"
-import { generateOrderNumber } from "@/lib/orders"
+import { examsWithListPrice, generateOrderNumber } from "@/lib/orders"
 
 export async function createOrder(formData: FormData) {
   const session = await getServerSession(authOptions)
@@ -32,7 +32,7 @@ export async function createOrder(formData: FormData) {
       processedById: session.user.id,
       notes: (formData.get("notes") as string) || null,
       exams: {
-        create: templateIds.map(id => ({ templateId: id })),
+        create: await examsWithListPrice(templateIds),
       },
     },
   })

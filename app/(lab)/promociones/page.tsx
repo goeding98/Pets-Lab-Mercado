@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { prisma } from "@/lib/db"
 import NewPromotionForm from "./NewPromotionForm"
 import DeletePromotionButton from "./DeletePromotionButton"
+import PromotionPriceEditor from "./PromotionPriceEditor"
 
 export const metadata: Metadata = { title: "Promociones" }
 
@@ -28,7 +29,8 @@ export default async function PromocionesPage() {
       <h1 className="font-serif text-[28px] font-medium tracking-[-0.02em] mt-1">Promociones</h1>
       <p className="font-sans text-sm text-ink-2 mt-2 mb-8 max-w-2xl">
         Una promoción junta varios exámenes en un solo producto. Queda disponible en Nueva muestra, en el
-        Portal Vet y en Caja como un examen más, con todos los campos de los exámenes que la componen.
+        Portal Vet y en Caja como un examen más, con todos los campos de los exámenes que la componen. Su
+        precio se carga solo en Caja al registrar la orden (y ahí se puede ajustar o descontar).
       </p>
 
       <section className="mb-10">
@@ -53,6 +55,7 @@ export default async function PromocionesPage() {
                     {p._count.orderExams > 0 && <> · Usada en {p._count.orderExams} {p._count.orderExams === 1 ? "orden" : "órdenes"}</>}
                   </p>
                 </div>
+                <PromotionPriceEditor id={p.id} price={p.price} />
                 <DeletePromotionButton id={p.id} name={p.name} used={p._count.orderExams > 0} />
               </div>
             ))}
