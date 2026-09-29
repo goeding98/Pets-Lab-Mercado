@@ -39,7 +39,10 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `catalogo-pets-lab/catalogo-examenes.json` (exportado del Excel maestro del
   laboratorio). Este script borra todo `ExamTemplate`/`Order` existente antes de
   re-importar — **destructivo**, no correrlo salvo que se quiera reemplazar el catálogo
-  completo de nuevo. `ExamField.key` guarda el id del parámetro en el catálogo (ej.
+  completo de nuevo. Exámenes agregados a mano en la base después de esa importación (no
+  están en el Excel, se perderían al re-importar): "Tiempo de Tromboplastina - Tiempo de
+  Protrombina (TPT + TP)" (Hematología, mismos campos/rangos de TPT y TP que "Pruebas de
+  Coagulación (PT y PTT)"). `ExamField.key` guarda el id del parámetro en el catálogo (ej.
   `hematocrito`); `ExamField.calcFormula` referencia esos `key`, no nombres. El evaluador
   general de fórmulas vive en `catalogo-pets-lab/calculos.ts` (`evaluar`) y lo usa
   `ExamResultForm.tsx` — no reescribir la lógica de evaluación ahí, importar de ese
