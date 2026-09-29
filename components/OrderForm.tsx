@@ -7,6 +7,7 @@ import type { ExamTemplate, Clinic } from "@prisma/client"
 // Sin `clinics` no se muestra el selector de clínica (en el portal la clínica es la de la sesión).
 
 const AREAS = [
+  "Promociones",
   "Hematología",
   "Coprología",
   "Citologías Reproductivas",

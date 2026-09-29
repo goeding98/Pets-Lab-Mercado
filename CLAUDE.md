@@ -49,6 +49,14 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   módulo. La carpeta `catalogo-pets-lab/` se regenera completa si el Excel maestro
   cambia; no editar sus archivos a mano. No asumas que `seed.ts` refleja el estado
   actual sin confirmarlo contra la base.
+- Promociones (`app/(lab)/promociones/`, `actions/promotions.ts`, permiso `promociones`: ADMIN
+  y COMERCIAL): una promoción es un `ExamTemplate` con `isPromotion = true` y área
+  "Promociones", creado copiando secciones/campos/fórmulas y sumando la receta de los exámenes
+  elegidos (`PromotionComponent` registra cuáles). Si dos componentes comparten un `key`, el
+  repetido se renombra (`key__2`) porque las fórmulas se resuelven por `key` en todo el examen.
+  Eliminar: se borra si no tiene órdenes; si ya se usó, `active = false` (retirada). Toda
+  consulta de exámenes para órdenes nuevas debe filtrar `active: true`. Ojo: el importador del
+  catálogo borra todos los `ExamTemplate`, promociones incluidas.
 - Un `OrderExam` se completa de dos formas: (a) capturando resultados campo por campo en
   el formulario (`app/(lab)/muestras/[id]/ExamResultForm.tsx`), o (b) subiendo un PDF ya
   hecho externamente. El botón "PDF" de la orden genera un reporte combinado que fusiona

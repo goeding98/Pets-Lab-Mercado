@@ -40,5 +40,6 @@ export const config = {
     "/clientes/:path*",
     "/inventario/:path*",
     "/caja/:path*",
+    "/promociones/:path*",
   ],
 }

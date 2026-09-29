@@ -13,7 +13,7 @@ export default async function NuevaSolicitudPage() {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== "CLINIC") redirect("/portal-vet")
 
-  const templates = await prisma.examTemplate.findMany({ orderBy: [{ area: "asc" }, { name: "asc" }] })
+  const templates = await prisma.examTemplate.findMany({ where: { active: true }, orderBy: [{ area: "asc" }, { name: "asc" }] })
 
   return (
     <div className="max-w-3xl mx-auto px-6 lg:px-10 py-10">

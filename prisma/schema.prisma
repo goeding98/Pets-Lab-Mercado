@@ -84,9 +84,26 @@ model ExamTemplate {
   area        String        // Hematología | Bioquímica | Citología | Uroanálisis | Coprología
   turnaround  String        // "Mismo día" | "24h" | "48h"
   sampleType  String
+  isPromotion Boolean       @default(false) // examen combinado creado en /promociones
+  active      Boolean       @default(true)  // false = retirado: no se ofrece en órdenes nuevas
   sections    ExamSection[]
   orderExams  OrderExam[]
   recipeItems RecipeItem[]
+  promoComponents PromotionComponent[] @relation("PromoOf")     // si es promoción: exámenes que la componen
+  inPromotions    PromotionComponent[] @relation("ComponentOf") // promociones que incluyen este examen
+}
+
+// Exámenes que componen una promoción (la promoción es a su vez un ExamTemplate con copia de
+// sus secciones/campos/receta; esto solo registra de dónde salió)
+model PromotionComponent {
+  id          String       @id @default(cuid())
+  promotionId String
+  promotion   ExamTemplate @relation("PromoOf", fields: [promotionId], references: [id], onDelete: Cascade)
+  templateId  String
+  template    ExamTemplate @relation("ComponentOf", fields: [templateId], references: [id], onDelete: Cascade)
+  order       Int          @default(0)
+
+  @@unique([promotionId, templateId])
 }
 
 model ExamSection {

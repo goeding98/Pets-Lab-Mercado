@@ -10,6 +10,7 @@ const NAV: { href: string; label: string; perm: Permission }[] = [
   { href: "/muestras", label: "Muestras", perm: "muestras.ver" },
   { href: "/muestras/nueva", label: "Nueva muestra", perm: "muestras.crear" },
   { href: "/clientes", label: "Clientes", perm: "clientes.ver" },
+  { href: "/promociones", label: "Promociones", perm: "promociones" },
   { href: "/usuarios", label: "Usuarios", perm: "usuarios" },
   { href: "/caja", label: "Caja", perm: "caja" },
   { href: "/inventario", label: "Inventario", perm: "inventario" },

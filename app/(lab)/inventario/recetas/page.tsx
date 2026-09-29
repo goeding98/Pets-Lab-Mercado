@@ -8,6 +8,7 @@ export const metadata: Metadata = { title: "Recetas de exámenes" }
 export default async function RecetasPage() {
   const [templates, items] = await Promise.all([
     prisma.examTemplate.findMany({
+      where: { active: true },
       orderBy: [{ area: "asc" }, { name: "asc" }],
       include: { recipeItems: true },
     }),

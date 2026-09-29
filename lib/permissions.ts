@@ -11,16 +11,17 @@ export type Permission =
   | "caja"
   | "inventario"
   | "usuarios"
+  | "promociones"       // crear/eliminar promociones (exámenes combinados)
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "resultados.editar",
-  "clientes.ver", "clientes.editar", "caja", "inventario", "usuarios",
+  "clientes.ver", "clientes.editar", "caja", "inventario", "usuarios", "promociones",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
-  STAFF: ALL.filter(p => p !== "usuarios"),
-  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar"],
+  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones"),
+  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones"],
   DOMICILIARIO: ["muestras.ver", "muestras.crear"],
   CLINIC: [],
 }
@@ -48,6 +49,7 @@ export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/caja", "caja"],
   ["/inventario", "inventario"],
   ["/usuarios", "usuarios"],
+  ["/promociones", "promociones"],
 ]
 
 export function routePermission(pathname: string): Permission | null {

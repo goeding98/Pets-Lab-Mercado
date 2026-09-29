@@ -73,7 +73,7 @@ export async function createPortalOrder(formData: FormData) {
 
   const templateIds = formData.getAll("templateIds") as string[]
   if (templateIds.length === 0) throw new Error("Selecciona al menos un examen")
-  const validCount = await prisma.examTemplate.count({ where: { id: { in: templateIds } } })
+  const validCount = await prisma.examTemplate.count({ where: { id: { in: templateIds }, active: true } })
   if (validCount !== templateIds.length) throw new Error("Examen no válido")
 
   const get = (k: string) => ((formData.get(k) as string) ?? "").trim() || null
