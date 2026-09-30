@@ -8,6 +8,7 @@
 //
 // Todo corre en una sola transacción. Sin --apply es un ensayo: hace todo, verifica y revierte.
 //   node node_modules/tsx/dist/cli.mjs scripts/update-catalogo-precios-v3.ts [--apply]
+//   ... --rebuild-perfiles [--apply]   (solo rearma los perfiles; ver rebuildProfiles)
 import { PrismaClient, Prisma } from "@prisma/client"
 import { composeSections, type ComposeComponent } from "../lib/composeTemplate"
 
@@ -598,7 +599,7 @@ async function profileComponents(tx: Tx): Promise<Record<string, ComposeComponen
     ].map((f, i) => ({ ...f, unit: null, technique: null, calcFormula: null, order: i })) }],
   }
 
-  const HEMO = () => whole("Hemograma", "Hemograma Simple / Proteínas Plasmáticas")
+  const HEMO = () => whole("Hemograma Completo", "Hemograma Completo con Recuento de Reticulocitos")
   const HPAR = () => whole("Hemoparásitos", "Hemoparásitos (Frotis Extendido y Gota Gruesa)")
   const COPRO = () => whole("Coprológico", "Coprológico (Microscopía y Miniflotac)")
   const ORINA = () => whole("Parcial de Orina", "Parcial de Orina – Completo (Tirilla Urovet, Test de Héller, Relación P/C, Sedimento, Coloración Wright)")
@@ -637,6 +638,35 @@ async function profileComponents(tx: Tx): Promise<Record<string, ComposeComponen
 
 // ── Ejecución ────────────────────────────────────────────────────────────────────────────────
 class DryRun extends Error {}
+
+// --rebuild-perfiles: vuelve a armar solo los perfiles (p. ej. si cambia un examen componente).
+// Solo se permite si ningún perfil tiene órdenes: sus resultados apuntan a los campos actuales.
+async function rebuildProfiles(tx: Tx) {
+  const perfiles = await profileComponents(tx)
+  for (const [name, components] of Object.entries(perfiles)) {
+    const current = await tx.examTemplate.findFirstOrThrow({
+      where: { name, active: true },
+      select: { id: true, _count: { select: { orderExams: true } } },
+    })
+    if (current._count.orderExams > 0) throw new Error(`${name} ya tiene órdenes: no se puede rearmar`)
+    await tx.examSection.deleteMany({ where: { templateId: current.id } })
+    await tx.examTemplate.update({ where: { id: current.id }, data: { sections: { create: composeSections(components) } } })
+    const t = await tx.examTemplate.findUniqueOrThrow({
+      where: { id: current.id },
+      include: { sections: { orderBy: { order: "asc" }, include: { fields: { orderBy: { order: "asc" } } } } },
+    })
+    const fields = t.sections.flatMap(s => s.fields)
+    const keys = new Set(fields.map(f => f.key))
+    if (keys.size !== fields.length) throw new Error(`${name} tiene keys repetidos`)
+    for (const f of fields) {
+      for (const m of (f.calcFormula ?? "").matchAll(/[a-z_][a-z0-9_]*/g)) {
+        if (!keys.has(m[0])) throw new Error(`${name}: la fórmula de ${f.name} usa ${m[0]}, que no existe`)
+      }
+    }
+    console.log(`✓ ${name}: ${t.sections.map(s => `${s.name} (${s.fields.length})`).join(" · ")}`)
+  }
+  if (!APPLY) throw new DryRun()
+}
 
 async function run(tx: Tx) {
   const listNames = new Set(LIST.map(i => i.name))
@@ -742,7 +772,7 @@ async function run(tx: Tx) {
 
 async function main() {
   try {
-    await prisma.$transaction(run, { timeout: 600_000, maxWait: 30_000 })
+    await prisma.$transaction(process.argv.includes("--rebuild-perfiles") ? rebuildProfiles : run, { timeout: 600_000, maxWait: 30_000 })
     console.log("\nAPLICADO.")
   } catch (e) {
     if (e instanceof DryRun) console.log("\nEnsayo OK — no se guardó nada (usar --apply para aplicar).")

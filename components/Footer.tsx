@@ -40,10 +40,10 @@ export default function Footer() {
             <p className="font-mono text-[9px] tracking-[0.22em] uppercase opacity-65 mb-3">Servicios</p>
             <nav className="flex flex-col gap-2 font-sans text-xs leading-loose" aria-label="Servicios">
               {[
+                ["/servicios#perfiles", "Perfiles"],
                 ["/servicios#hematologia", "Hematología"],
-                ["/servicios#bioquimica", "Bioquímica"],
-                ["/servicios#citologia", "Citología"],
-                ["/servicios#urinario", "Uroanálisis"],
+                ["/servicios#quimica-sanguinea", "Química Sanguínea"],
+                ["/servicios#pcr-veterinaria", "PCR Veterinaria"],
               ].map(([href, label]) => (
                 <Link key={href} href={href} className="opacity-80 hover:opacity-100 transition-opacity">
                   {label}

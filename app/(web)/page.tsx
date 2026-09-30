@@ -9,7 +9,7 @@ import { SITE } from "@/lib/site-config"
 export const metadata: Metadata = {
   title: { absolute: "Pets & Lab — Laboratorio veterinario en Cali" },
   description:
-    "Hematología, bioquímica, citología y uroanálisis para clínicas veterinarias en Cali. Resultados en 24 horas, recogida sin costo.",
+    "Hematología, química sanguínea, perfiles, citología, cultivos y PCR para clínicas veterinarias en Cali. Resultados en 24 horas, recogida sin costo.",
 }
 
 const STATS = [
@@ -20,10 +20,10 @@ const STATS = [
 ] as const
 
 const SERVICES_PREVIEW = [
-  { Icon: IconDrop, title: "Hematología", desc: "Hemogramas, plaquetas, reticulocitos." },
-  { Icon: IconTube, title: "Bioquímica", desc: "Perfiles renal, hepático, prequirúrgico." },
-  { Icon: IconSlide, title: "Citología", desc: "Diagnóstica, oído, vaginal." },
-  { Icon: IconFlask, title: "Uroanálisis", desc: "Parcial de orina, relación UPC." },
+  { Icon: IconDrop, title: "Hematología", desc: "Hemograma con reticulocitos, hemoparásitos, coagulación." },
+  { Icon: IconTube, title: "Perfiles", desc: "Prequirúrgicos, renal, hepático, geriátrico, integral." },
+  { Icon: IconSlide, title: "Citología", desc: "Ótica, piel, masas, líquidos e histopatología." },
+  { Icon: IconFlask, title: "Cultivos y PCR", desc: "Antibiograma, urocultivo, hongos y PCR." },
 ] as const
 
 export default function HomePage() {
