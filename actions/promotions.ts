@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
+import { combinedTurnaround, composeSections } from "@/lib/composeTemplate"
 
 const PROMO_AREA = "Promociones"
 
@@ -18,27 +19,6 @@ function revalidateCatalog() {
   revalidatePath("/portal-vet/nueva")
   revalidatePath("/inventario/recetas")
 }
-
-// "Mismo día" < "24h" < "48h" < "5 días"… — la promoción tarda lo que tarde su examen más lento
-function turnaroundHours(t: string): number | null {
-  const s = t.toLowerCase()
-  if (s.includes("mismo")) return 0
-  const h = s.match(/(\d+)\s*h/)
-  if (h) return Number(h[1])
-  const d = s.match(/(\d+)\s*d/)
-  if (d) return Number(d[1]) * 24
-  return null
-}
-
-function combinedTurnaround(values: string[]): string {
-  const unique = Array.from(new Set(values))
-  if (unique.length === 1) return unique[0]
-  const parsed = unique.map(v => ({ v, h: turnaroundHours(v) }))
-  if (parsed.every(p => p.h !== null)) return parsed.sort((a, b) => b.h! - a.h!)[0].v
-  return unique.join(" / ")
-}
-
-const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
 // Crea una promoción: un ExamTemplate nuevo con copia de las secciones, campos (rangos,
 // fórmulas) y receta de inventario de cada examen elegido, en el orden elegido.
@@ -69,47 +49,7 @@ export async function createPromotion(
   if (found.length !== ids.length) return { error: "Alguno de los exámenes elegidos ya no está disponible." }
   const components = ids.map(id => found.find(t => t.id === id)!)
 
-  // Las fórmulas se resuelven por `key` en todo el examen, así que si dos componentes comparten
-  // un parámetro (p. ej. ambos tienen ALT) el segundo se renombra para que no se mezclen.
-  const usedKeys = new Set<string>()
-  let sectionOrder = 0
-  const sections = components.flatMap(t =>
-    t.sections.map(section => {
-      const renames = new Map<string, string>()
-      for (const f of section.fields) {
-        if (!f.key) continue
-        let k = f.key
-        for (let n = 2; usedKeys.has(k); n++) k = `${f.key}__${n}`
-        renames.set(f.key, k)
-      }
-      renames.forEach(k => usedKeys.add(k))
-      const rewrite = (formula: string | null) =>
-        formula &&
-        Array.from(renames.entries()).reduce(
-          (acc, [from, to]) => (from === to ? acc : acc.replace(new RegExp(`\\b${escapeRegex(from)}\\b`, "g"), to)),
-          formula,
-        )
-
-      return {
-        // Prefijo con el examen de origen para que en la captura y el PDF se sepa de dónde viene
-        name: section.name.toLowerCase() === t.name.toLowerCase() ? t.name : `${t.name} — ${section.name}`,
-        order: sectionOrder++,
-        fields: {
-          create: section.fields.map(f => ({
-            name: f.name,
-            key: f.key ? renames.get(f.key) : null,
-            unit: f.unit,
-            refCanine: f.refCanine,
-            refFeline: f.refFeline,
-            technique: f.technique,
-            fieldType: f.fieldType,
-            calcFormula: rewrite(f.calcFormula),
-            order: f.order,
-          })),
-        },
-      }
-    }),
-  )
+  const sections = composeSections(components)
 
   // Receta: suma de los insumos de todos los componentes
   const recipe = new Map<string, number>()

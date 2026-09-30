@@ -34,15 +34,22 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   orden), `ExamTemplate`/`ExamSection`/`ExamField` (catálogo de exámenes y sus campos de
   resultado con rangos de referencia canino/felino), `ExamResult` (valor capturado por
   campo).
-- `prisma/seed.ts` — catálogo de ejemplo de `ExamTemplate`, **desactualizado**: el
-  catálogo real (66 exámenes) se cargó con `scripts/import-catalogo-v6.ts` a partir de
-  `catalogo-pets-lab/catalogo-examenes.json` (exportado del Excel maestro del
-  laboratorio). Este script borra todo `ExamTemplate`/`Order` existente antes de
-  re-importar — **destructivo**, no correrlo salvo que se quiera reemplazar el catálogo
-  completo de nuevo. Exámenes agregados a mano en la base después de esa importación (no
-  están en el Excel, se perderían al re-importar): "Tiempo de Tromboplastina - Tiempo de
-  Protrombina (TPT + TP)" (Hematología, mismos campos/rangos de TPT y TP que "Pruebas de
-  Coagulación (PT y PTT)"). `ExamField.key` guarda el id del parámetro en el catálogo (ej.
+- Catálogo de exámenes: la fuente de verdad comercial es **LISTA_DE_PRECIOS_PETS_AND_LAB_v3.xlsx**
+  (hoja "Claude", 102 exámenes con área, muestra, entrega y precio). Se aplicó con
+  `scripts/update-catalogo-precios-v3.ts` (concilia en su lugar: renombra/ajusta campos de los que
+  siguen, retira con `active = false` los que ya no están, crea los nuevos y los 21 perfiles; todo
+  en una transacción, sin `--apply` es un ensayo que revierte). Los perfiles (área "Perfiles") se
+  arman copiando los campos de sus exámenes componentes con `lib/composeTemplate.ts` (lo mismo que
+  usan las Promociones); el "Hemograma" de los perfiles es el "Hemograma Simple / Proteínas
+  Plasmáticas". `ExamTemplate.description` guarda el "Incluye" y se muestra en `OrderForm`. Hay un
+  solo hemograma para canino y felino (rangos de ambas especies en el mismo campo); el "fuera de
+  rango" se evalúa con el rango de la especie de la orden. Exámenes nuevos sin rango de referencia
+  en la base (hay que pedírselo al laboratorio): CK, Fructosamina, Ácidos Biliares, Creatininuria.
+- `prisma/seed.ts` y `scripts/import-catalogo-v6.ts` están **desactualizados**: el catálogo v6 (66
+  exámenes, de `catalogo-pets-lab/catalogo-examenes.json`) ya no coincide con la base.
+  `import-catalogo-v6.ts` borra todo `ExamTemplate`/`Order` antes de re-importar —
+  **destructivo**, no correrlo: se perderían los cambios de la lista v3, los perfiles y las
+  órdenes. `ExamField.key` guarda el id del parámetro en el catálogo (ej.
   `hematocrito`); `ExamField.calcFormula` referencia esos `key`, no nombres. El evaluador
   general de fórmulas vive en `catalogo-pets-lab/calculos.ts` (`evaluar`) y lo usa
   `ExamResultForm.tsx` — no reescribir la lógica de evaluación ahí, importar de ese
@@ -63,7 +70,14 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   el formulario (`app/(lab)/muestras/[id]/ExamResultForm.tsx`), o (b) subiendo un PDF ya
   hecho externamente. El botón "PDF" de la orden genera un reporte combinado que fusiona
   (con `pdf-lib`) el reporte generado de los exámenes con resultados capturados + las
-  páginas de cada PDF subido.
+  páginas de cada PDF subido (`lib/reportPdf.ts`, usado por ambas rutas de PDF).
+- Al final de cada examen de una orden hay "Comentarios y fotos" (`ExamNotes.tsx`):
+  `OrderExam.comments` y `ExamPhoto` (blob privado, subida en `api/upload/[examId]/photos`, se
+  sirve por `api/photos/[photoId]`). Se pueden editar aunque el examen esté completado. El
+  navegador comprime las fotos a JPEG ≤1600 px antes de subirlas (límite de 4.5 MB de Vercel).
+  Salen en el PDF debajo de los resultados, también para exámenes resueltos con PDF subido.
+  El PDF usa Helvetica: no admite caracteres como "▲", "⁶", "₂", "≥" — usar ASCII/Latin-1 en
+  nombres, unidades y rangos.
 - Caja (`app/(lab)/caja/`, `actions/billing.ts`, `lib/billing.ts`): cada `OrderExam` tiene
   `price`, `discountType` (VALOR | PORCENTAJE), `discountValue`, `paymentTerm` (CONTADO |
   CREDITO), `paymentMethod` (EFECTIVO | TRANSFERENCIA) y `amountPaid`. `/caja` lista todos

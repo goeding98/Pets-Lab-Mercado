@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { saveExamResults } from "@/actions/orders"
 import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
 import { evaluar } from "@/catalogo-pets-lab/calculos"
+import ExamNotes from "./ExamNotes"
 
 type Field = {
   id: string
@@ -34,6 +35,8 @@ type ExamProp = {
   amountPaid: number
   uploadedPdfPath: string | null
   uploadedPdfName: string | null
+  comments: string | null
+  photos: { id: string; name: string }[]
   template: {
     name: string
     area: string
@@ -59,7 +62,18 @@ function isOutOfRange(value: string, ref: string | null): boolean {
   return s === "low" || s === "high"
 }
 
-export default function ExamResultForm({ exam, readOnly = false }: { exam: ExamProp; readOnly?: boolean }) {
+export default function ExamResultForm({
+  exam,
+  species,
+  readOnly = false,
+}: {
+  exam: ExamProp
+  species: string
+  readOnly?: boolean
+}) {
+  // "Fuera de rango" se evalúa contra el rango de la especie del paciente
+  const refFor = (f: Field) => (species === "Felino" ? f.refFeline : species === "Canino" ? f.refCanine : null)
+
   const allFields = exam.template.sections.flatMap(s => s.fields)
   const initialValues: Record<string, string> = {}
   for (const r of exam.results) initialValues[r.fieldId] = r.value
@@ -165,8 +179,7 @@ export default function ExamResultForm({ exam, readOnly = false }: { exam: ExamP
   function handleSave() {
     const results = allFields.map(f => {
       const value = f.fieldType === "calculated" ? getCalcValue(f) : (values[f.id] ?? "")
-      const ref = f.refCanine
-      const flagged = isOutOfRange(value, ref)
+      const flagged = isOutOfRange(value, refFor(f))
       return { fieldId: f.id, value, flagged }
     })
 
@@ -222,7 +235,7 @@ export default function ExamResultForm({ exam, readOnly = false }: { exam: ExamP
                 <tbody>
                   {section.fields.map(field => {
                     const val = field.fieldType === "calculated" ? getCalcValue(field) : getValue(field.id)
-                    const status = getRangeStatus(val, field.refCanine)
+                    const status = getRangeStatus(val, refFor(field))
                     const flagged = status !== "normal"
 
                     const resultColor =
@@ -359,6 +372,8 @@ export default function ExamResultForm({ exam, readOnly = false }: { exam: ExamP
             </div>
           )}
         </div>
+
+        <ExamNotes examId={exam.id} comments={exam.comments} photos={exam.photos} readOnly={readOnly} />
       </div>
     </div>
   )

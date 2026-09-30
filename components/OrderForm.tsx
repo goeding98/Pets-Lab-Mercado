@@ -8,14 +8,17 @@ import type { ExamTemplate, Clinic } from "@prisma/client"
 
 const AREAS = [
   "Promociones",
+  "Perfiles",
   "Hematología",
-  "Coprología",
-  "Citologías Reproductivas",
-  "Uroanálisis",
-  "Perfiles Química Sanguínea",
-  "Citologías de Piel",
   "Química Sanguínea",
-  "Otros",
+  "Urianálisis",
+  "Coproparasitología",
+  "Dermatología",
+  "Endocrinología",
+  "Microbiología",
+  "Inmunología / Serología",
+  "Histología e Histopatología",
+  "PCR Veterinaria",
 ]
 
 export default function OrderForm({
@@ -137,6 +140,9 @@ export default function OrderForm({
                     />
                     <span className="font-sans text-sm">
                       {t.name}
+                      {t.description && (
+                        <span className="block font-sans text-[11px] leading-snug text-ink-2 mt-0.5">Incluye: {t.description}</span>
+                      )}
                       <span className="block font-mono text-[8px] tracking-[0.1em] text-ink-2">{t.turnaround} · {t.sampleType}</span>
                     </span>
                   </label>

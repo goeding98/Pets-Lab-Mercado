@@ -74,8 +74,20 @@ model OrderExam {
   movements       InventoryMovement[]
   uploadedPdfPath String?
   uploadedPdfName String?
+  comments        String?      // comentarios del encargado; salen al final del examen en el PDF
+  photos          ExamPhoto[]
   completedAt     DateTime?
   createdAt       DateTime     @default(now())
+}
+
+// Foto adjunta a un examen de una orden (blob privado; se sirve por /api/photos/[photoId])
+model ExamPhoto {
+  id          String    @id @default(cuid())
+  orderExamId String
+  orderExam   OrderExam @relation(fields: [orderExamId], references: [id], onDelete: Cascade)
+  url         String
+  name        String
+  createdAt   DateTime  @default(now())
 }
 
 model ExamTemplate {
@@ -85,6 +97,7 @@ model ExamTemplate {
   turnaround  String        // "Mismo día" | "24h" | "48h"
   sampleType  String
   price       Float?        // precio de lista; si existe, se precarga en Caja al crear la orden
+  description String?       // qué incluye (perfiles) — se muestra al elegir exámenes
   isPromotion Boolean       @default(false) // examen combinado creado en /promociones
   active      Boolean       @default(true)  // false = retirado: no se ofrece en órdenes nuevas
   sections    ExamSection[]

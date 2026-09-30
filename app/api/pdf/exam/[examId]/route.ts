@@ -2,10 +2,12 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import { renderToBuffer } from "@react-pdf/renderer"
-import { PdfReport } from "@/components/PdfReport"
-import React from "react"
 import { get } from "@vercel/blob"
+import { buildOrderPdf } from "@/lib/reportPdf"
+
+// Los encabezados HTTP no admiten caracteres como "–" o "₃": nombre de archivo solo en ASCII
+const safeFilename = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9 ._-]+/g, "-").replace(/-{2,}/g, "-")
 
 export async function GET(
   req: Request,
@@ -27,40 +29,36 @@ export async function GET(
         },
       },
       results: true,
+      photos: { orderBy: { createdAt: "asc" }, select: { id: true, url: true } },
     },
   })
 
   if (!orderExam) return new NextResponse("No encontrado", { status: 404 })
 
-  // Serve uploaded PDF directly (proxied from Blob storage so the download keeps its filename)
-  if (orderExam.uploadedPdfPath?.startsWith("http")) {
+  const hasNotes = !!orderExam.comments || orderExam.photos.length > 0
+
+  // PDF subido sin comentarios ni fotos: se sirve tal cual (proxy del Blob para conservar el nombre)
+  if (orderExam.uploadedPdfPath?.startsWith("http") && !hasNotes) {
     const blob = await get(orderExam.uploadedPdfPath, { access: "private" })
     if (blob?.stream) {
       return new NextResponse(blob.stream as unknown as BodyInit, {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `inline; filename="${orderExam.uploadedPdfName ?? "reporte.pdf"}"`,
+          "Content-Disposition": `inline; filename="${safeFilename(orderExam.uploadedPdfName ?? "reporte.pdf")}"`,
         },
       })
     }
   }
 
-  // Generate formatted PDF for this single exam
-  const orderData = {
-    ...orderExam.order,
-    exams: [{ id: orderExam.id, template: orderExam.template, results: orderExam.results }],
-  }
+  const { order, ...exam } = orderExam
+  const bytes = await buildOrderPdf(order, [exam])
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const render = renderToBuffer as (el: any) => Promise<Buffer>
-  const buffer = await render(React.createElement(PdfReport, { order: orderData }))
-
-  return new NextResponse(buffer as unknown as BodyInit, {
+  return new NextResponse(Buffer.from(bytes), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${orderExam.order.orderNumber}-${orderExam.template.name}.pdf"`,
+      "Content-Disposition": `inline; filename="${safeFilename(`${order.orderNumber}-${orderExam.template.name}`)}.pdf"`,
     },
   })
 }

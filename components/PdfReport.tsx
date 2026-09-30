@@ -25,13 +25,15 @@ const C = {
 }
 
 const styles = StyleSheet.create({
-  page: { backgroundColor: C.bone, padding: 0, paddingTop: 71, fontFamily: "Helvetica" },
+  // paddingBottom reserva el espacio del pie fijo (si no, las filas quedan debajo del pie y el
+  // relleno inferior del cuerpo puede pasar solo a una página en blanco)
+  page: { backgroundColor: C.bone, padding: 0, paddingTop: 71, paddingBottom: 44, fontFamily: "Helvetica" },
   header: { position: "absolute", top: 0, left: 0, right: 0, backgroundColor: C.salvia700, paddingHorizontal: 32, paddingVertical: 18, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerLogo: { width: 90, height: 35, objectFit: "contain" },
   headerRight: { alignItems: "flex-end" },
   headerTitle: { color: C.bone, fontSize: 7, letterSpacing: 2, textTransform: "uppercase" },
   headerMono: { color: "#a3b8a4", fontSize: 6, letterSpacing: 2, marginTop: 2 },
-  body: { paddingHorizontal: 32, paddingTop: 20, paddingBottom: 32 },
+  body: { paddingHorizontal: 32, paddingTop: 20 },
 
   // Patient bar
   patientBar: { backgroundColor: C.salvia50, borderLeftWidth: 3, borderLeftColor: C.salvia700, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16, flexDirection: "row", flexWrap: "wrap", gap: 12 },
@@ -68,13 +70,19 @@ const styles = StyleSheet.create({
   footerText: { fontSize: 6.5, color: C.ink2, letterSpacing: 1 },
   footerBold: { fontFamily: "Helvetica-Bold", color: C.salvia700 },
 
+  attachedNote: { fontSize: 8, color: C.ink2, marginTop: 8, fontFamily: "Helvetica-Oblique" },
+  notesLabel: { fontSize: 6.5, color: C.ink2, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 10, marginBottom: 4 },
+  notesText: { fontSize: 8.5, color: C.ink, lineHeight: 1.4 },
+  photoGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 6 },
+  photo: { width: 250, height: 188, objectFit: "contain", marginRight: 10, marginBottom: 10, backgroundColor: C.salvia50 },
+
   signBlock: { marginTop: 24, paddingTop: 16, borderTopWidth: 0.5, borderTopColor: C.borderLight, alignItems: "flex-end" },
   signLine: { width: 160, borderBottomWidth: 0.5, borderBottomColor: C.ink2, marginBottom: 4 },
   signName: { fontSize: 8, color: C.ink, fontFamily: "Helvetica-Bold" },
   signRole: { fontSize: 6.5, color: C.ink2, letterSpacing: 1.2, textTransform: "uppercase" },
 })
 
-type OrderData = {
+export type OrderData = {
   orderNumber: string
   patientName: string
   species: string
@@ -106,6 +114,9 @@ type OrderData = {
       }[]
     }
     results: { fieldId: string; value: string; flagged: boolean }[]
+    comments?: string | null
+    photos?: { id: string; src: string }[] // src: data URI JPEG
+    attachedPdf?: boolean // el resultado es un PDF subido (va en las páginas siguientes)
   }[]
 }
 
@@ -154,14 +165,19 @@ export function PdfReport({ order }: { order: OrderData }) {
           {order.exams.map(exam => {
             const resultMap = Object.fromEntries(exam.results.map(r => [r.fieldId, r]))
             return (
-              <View key={exam.id} style={styles.examBlock} wrap={false}>
-                <View style={styles.examHeader}>
+              // Los perfiles no caben en una página: el examen puede partirse, pero cada sección va entera
+              <View key={exam.id} style={styles.examBlock}>
+                <View style={styles.examHeader} minPresenceAhead={80}>
                   <Text style={styles.examTitle}>{exam.template.name}</Text>
                   <Text style={styles.examArea}>{exam.template.area}</Text>
                 </View>
 
-                {exam.template.sections.map(section => (
-                  <View key={section.id}>
+                {exam.attachedPdf && (
+                  <Text style={styles.attachedNote}>Resultado en el documento adjunto (páginas siguientes).</Text>
+                )}
+
+                {!exam.attachedPdf && exam.template.sections.map(section => (
+                  <View key={section.id} wrap={false}>
                     {exam.template.sections.length > 1 && (
                       <Text style={styles.sectionLabel}>{section.name}</Text>
                     )}
@@ -194,7 +210,7 @@ export function PdfReport({ order }: { order: OrderData }) {
                           <View style={styles.colUnit}><Text style={styles.tdMono}>{field.unit ?? ""}</Text></View>
                           <View style={styles.colResult}>
                             <Text style={flagged ? styles.tdFlagged : styles.tdText}>
-                              {value}{flagged ? " ▲" : ""}
+                              {value}{flagged ? " *" : ""}
                             </Text>
                           </View>
                           <View style={styles.colRef}><Text style={styles.tdMono}>{field.refCanine ?? "—"}</Text></View>
@@ -205,9 +221,32 @@ export function PdfReport({ order }: { order: OrderData }) {
                     })}
                   </View>
                 ))}
+
+                {exam.comments && (
+                  <View wrap={false}>
+                    <Text style={styles.notesLabel}>Comentarios</Text>
+                    <Text style={styles.notesText}>{exam.comments}</Text>
+                  </View>
+                )}
+
+                {/* Fotos en filas de a 2; el título va pegado a la primera fila para que no quede solo */}
+                {exam.photos && exam.photos.length > 0 &&
+                  Array.from({ length: Math.ceil(exam.photos.length / 2) }, (_, row) => (
+                    <View key={row} wrap={false}>
+                      {row === 0 && <Text style={styles.notesLabel}>Fotos</Text>}
+                      <View style={styles.photoGrid}>
+                        {exam.photos!.slice(row * 2, row * 2 + 2).map(p => (
+                          // eslint-disable-next-line jsx-a11y/alt-text
+                          <Image key={p.id} src={p.src} style={styles.photo} />
+                        ))}
+                      </View>
+                    </View>
+                  ))}
               </View>
             )
           })}
+
+          <Text style={styles.attachedNote}>* Valor fuera del rango de referencia.</Text>
 
           {/* Signature */}
           <View style={styles.signBlock}>

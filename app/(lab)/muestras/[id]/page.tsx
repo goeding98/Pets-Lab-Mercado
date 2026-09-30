@@ -29,6 +29,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
             },
           },
           results: true,
+          photos: { orderBy: { createdAt: "asc" }, select: { id: true, name: true } },
         },
       },
     },
@@ -106,7 +107,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
       <div className="space-y-6">
         {order.exams.map(exam => (
           <div key={exam.id}>
-            <ExamResultForm exam={exam} readOnly={!canEdit} />
+            <ExamResultForm exam={exam} species={order.species} readOnly={!canEdit} />
             {exam.status === "COMPLETADO" && (
               <div className="flex justify-end mt-1.5">
                 <a

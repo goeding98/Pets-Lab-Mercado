@@ -51,6 +51,19 @@ export async function updateOrderStatus(orderId: string, status: string) {
   revalidatePath("/dashboard")
 }
 
+// Comentarios del encargado sobre un examen. Se pueden editar aunque el examen ya esté completado.
+export async function saveExamComments(orderExamId: string, comments: string) {
+  const session = await getServerSession(authOptions)
+  if (!session || !can(session.user.role, "resultados.editar")) throw new Error("No autorizado")
+
+  const exam = await prisma.orderExam.update({
+    where: { id: orderExamId },
+    data: { comments: comments.trim() || null },
+    select: { orderId: true },
+  })
+  revalidatePath(`/muestras/${exam.orderId}`)
+}
+
 export async function saveExamResults(
   orderExamId: string,
   results: { fieldId: string; value: string; flagged: boolean }[]
