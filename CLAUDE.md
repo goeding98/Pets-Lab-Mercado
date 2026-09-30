@@ -42,8 +42,9 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   arman copiando los campos de sus exámenes componentes con `lib/composeTemplate.ts` (lo mismo que
   usan las Promociones); el "Hemograma" de los perfiles es el "Hemograma Completo con Recuento de
   Reticulocitos". Si cambia un examen componente, `--rebuild-perfiles` rearma los perfiles (solo si
-  ninguno tiene órdenes). La página pública `/servicios` lee los exámenes activos de la base (no
-  hay lista fija que mantener). `ExamTemplate.description` guarda el "Incluye" y se muestra en `OrderForm`. Hay un
+  ninguno tiene órdenes). La página pública `/servicios` lee los exámenes activos de la base en
+  cada visita (no hay lista fija que mantener). Ojo: ninguna página puede consultar la base en el
+  build (prerender estático) — el build de Vercel falla; usar `dynamic = "force-dynamic"`. `ExamTemplate.description` guarda el "Incluye" y se muestra en `OrderForm`. Hay un
   solo hemograma para canino y felino (rangos de ambas especies en el mismo campo); el "fuera de
   rango" se evalúa con el rango de la especie de la orden. Exámenes nuevos sin rango de referencia
   en la base (hay que pedírselo al laboratorio): CK, Fructosamina, Ácidos Biliares, Creatininuria.

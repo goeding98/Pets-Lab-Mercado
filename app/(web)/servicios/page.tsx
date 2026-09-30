@@ -12,8 +12,9 @@ export const metadata: Metadata = {
 }
 
 // El catálogo se lee de la base (los mismos exámenes activos que se ofrecen en Nueva muestra y el
-// Portal Vet), así esta página no se desactualiza. Se regenera cada 10 min o al cambiar Promociones.
-export const revalidate = 600
+// Portal Vet), así esta página no se desactualiza. Se arma en cada visita: prerenderizarla haría que el
+// build de Vercel consulte la base, y ese build falla (así pasó en el deploy 2d3b812).
+export const dynamic = "force-dynamic"
 
 const ICONS = { drop: IconDrop, tube: IconTube, slide: IconSlide, flask: IconFlask, clipboard: IconClipboard, heart: IconHeart }
 type IconName = keyof typeof ICONS

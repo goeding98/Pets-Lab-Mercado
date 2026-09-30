@@ -18,7 +18,6 @@ function revalidateCatalog() {
   revalidatePath("/muestras/nueva")
   revalidatePath("/portal-vet/nueva")
   revalidatePath("/inventario/recetas")
-  revalidatePath("/servicios")
 }
 
 // Crea una promoción: un ExamTemplate nuevo con copia de las secciones, campos (rangos,
