@@ -99,7 +99,7 @@ export async function saveExamResults(
     if (!wasComplete) {
       await consumeInventoryForExam(tx, orderExamId, current.templateId)
     }
-  })
+  }, { maxWait: 10000, timeout: 20000 }) // el default (5 s) es justo con la latencia Vercel → Supabase sa-east-1
 
   // Check if all exams are complete → update order status
   const allExams = await prisma.orderExam.findMany({

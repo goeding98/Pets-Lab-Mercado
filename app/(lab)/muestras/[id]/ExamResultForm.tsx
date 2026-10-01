@@ -83,6 +83,7 @@ export default function ExamResultForm({
 
   const [values, setValues] = useState<Record<string, string>>(initialValues)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [uploadedPath, setUploadedPath] = useState<string | null>(exam.uploadedPdfPath)
   const [uploadedName, setUploadedName] = useState<string | null>(exam.uploadedPdfName)
@@ -183,9 +184,18 @@ export default function ExamResultForm({
       return { fieldId: f.id, value, flagged }
     })
 
+    setSaveError(null)
     startTransition(async () => {
-      await saveExamResults(exam.id, results)
-      setSaved(true)
+      try {
+        await saveExamResults(exam.id, results)
+        setSaved(true)
+        router.refresh()
+      } catch (err) {
+        // Sin esto un fallo del servidor (sesión vencida, timeout de la BD, deploy nuevo) se
+        // pierde en silencio y parece que el botón "no guarda".
+        console.error(err)
+        setSaveError("No se pudieron guardar los resultados. Recarga la página e intenta de nuevo; lo digitado sigue en pantalla.")
+      }
     })
   }
 
@@ -370,6 +380,9 @@ export default function ExamResultForm({
                 </span>
               )}
             </div>
+          )}
+          {saveError && (
+            <p className="font-sans text-xs text-red-600">{saveError}</p>
           )}
         </div>
 
