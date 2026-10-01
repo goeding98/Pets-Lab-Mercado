@@ -45,6 +45,8 @@ export async function GET(
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
+          // Siempre generar de nuevo: si el navegador guarda una copia, se ven formatos/datos viejos
+          "Cache-Control": "no-store",
           "Content-Disposition": `inline; filename="${safeFilename(orderExam.uploadedPdfName ?? "reporte.pdf")}"`,
         },
       })
@@ -58,6 +60,8 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
+      // Siempre generar de nuevo: si el navegador guarda una copia, se ven formatos/datos viejos
+      "Cache-Control": "no-store",
       "Content-Disposition": `inline; filename="${safeFilename(`${order.orderNumber}-${orderExam.template.name}`)}.pdf"`,
     },
   })
