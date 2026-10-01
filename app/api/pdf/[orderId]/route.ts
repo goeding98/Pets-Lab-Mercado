@@ -17,6 +17,9 @@ export async function GET(
       clinic: true,
       processedBy: true,
       exams: {
+        // Orden fijo: sin esto Postgres devuelve primero o al final el examen recién actualizado
+        // y las tarjetas cambian de lugar al guardar (parece que "se borra" lo digitado).
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         include: {
           template: {
             include: {
