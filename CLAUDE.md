@@ -78,6 +78,8 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Extendido de Sangre Periférica, Citología de Piel, Test de Héller y Wright del parcial de orina — también dentro de los perfiles) se muestran
   solo como Parámetro + Descripción, con filas altas, en el formulario y en el PDF. La lista vive en
   `lib/sections.ts: isDescriptiveSection` (por nombre de sección o de examen); agregar ahí las nuevas.
+- Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial
+  por especie), en formulario y PDF: `lib/referenceTables.ts`, por nombre de examen.
 - Al final de cada examen de una orden hay "Comentarios y fotos" (`ExamNotes.tsx`):
   `OrderExam.comments` y `ExamPhoto` (blob privado, subida en `api/upload/[examId]/photos`, se
   sirve por `api/photos/[photoId]`). Se pueden editar aunque el examen esté completado. El

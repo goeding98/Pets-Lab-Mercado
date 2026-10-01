@@ -6,6 +6,7 @@ import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
 import { evaluar } from "@/catalogo-pets-lab/calculos"
 import ExamNotes from "./ExamNotes"
 import { isDescriptiveSection } from "@/lib/sections"
+import { referenceTableFor } from "@/lib/referenceTables"
 
 type Field = {
   id: string
@@ -200,6 +201,7 @@ export default function ExamResultForm({
     })
   }
 
+  const refTable = referenceTableFor(exam.template.name)
   const isComplete = exam.status === "COMPLETADO"
   const locked = isComplete || readOnly
 
@@ -414,6 +416,32 @@ export default function ExamResultForm({
             <p className="font-sans text-xs text-red-600">{saveError}</p>
           )}
         </div>
+
+        {refTable && (
+          <div className="mt-4">
+            <p className="font-mono text-[8px] tracking-[0.2em] text-ink-2 uppercase mb-2 border-b border-black/[0.06] pb-1">
+              {refTable.title}
+            </p>
+            <table className="text-xs">
+              <thead>
+                <tr className="text-left">
+                  {refTable.columns.map(c => (
+                    <th key={c} className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2 pr-8">{c}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {refTable.rows.map((row, ri) => (
+                  <tr key={ri} className="border-t border-black/[0.05]">
+                    {row.map((cell, ci) => (
+                      <td key={ci} className={`py-1.5 pr-8 ${ci === 0 ? "font-sans text-xs text-ink" : "font-mono text-[10px] text-ink-2"}`}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <ExamNotes examId={exam.id} comments={exam.comments} photos={exam.photos} readOnly={readOnly} />
       </div>

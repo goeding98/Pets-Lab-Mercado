@@ -10,6 +10,7 @@ import {
   Font,
 } from "@react-pdf/renderer"
 import { isDescriptiveSection } from "@/lib/sections"
+import { referenceTableFor } from "@/lib/referenceTables"
 
 const logoBuffer = fs.readFileSync(path.join(process.cwd(), "public", "logos", "pets-lab-cream.png"))
 const LOGO = `data:image/png;base64,${logoBuffer.toString("base64")}`
@@ -176,6 +177,7 @@ export function PdfReport({ order }: { order: OrderData }) {
               </View>
             )
             const hasSections = !exam.attachedPdf && exam.template.sections.length > 0
+            const refTable = referenceTableFor(exam.template.name)
             return (
               // Los perfiles no caben en una página: el examen puede partirse, pero cada sección va entera
               <View key={exam.id} style={styles.examBlock}>
@@ -250,6 +252,24 @@ export function PdfReport({ order }: { order: OrderData }) {
                     </>)}
                   </View>
                 ))}
+
+                {hasSections && refTable && (
+                  <View wrap={false}>
+                    <Text style={styles.sectionLabel}>{refTable.title}</Text>
+                    <View style={styles.tableHead}>
+                      {refTable.columns.map(c => (
+                        <View key={c} style={{ flex: 1 }}><Text style={styles.thText}>{c}</Text></View>
+                      ))}
+                    </View>
+                    {refTable.rows.map((row, ri) => (
+                      <View key={ri} style={[styles.tableRow, ri % 2 !== 0 ? styles.tableRowAlt : {}]}>
+                        {row.map((cell, ci) => (
+                          <View key={ci} style={{ flex: 1 }}><Text style={ci === 0 ? styles.tdText : styles.tdMono}>{cell}</Text></View>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                )}
 
                 {exam.comments && (
                   <View wrap={false}>
