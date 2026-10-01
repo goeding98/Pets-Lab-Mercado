@@ -187,7 +187,7 @@ export function PdfReport({ order }: { order: OrderData }) {
                       <Text style={styles.sectionLabel}>{section.name}</Text>
                     )}
 
-                    {isDescriptiveSection(section.name) ? (
+                    {isDescriptiveSection(section.name, exam.template.name) ? (
                       <>
                         <View style={styles.tableHead}>
                           <View style={styles.colParam}><Text style={styles.thText}>Parámetro</Text></View>

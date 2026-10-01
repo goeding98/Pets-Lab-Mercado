@@ -231,7 +231,7 @@ export default function ExamResultForm({
             <p className="font-mono text-[8px] tracking-[0.2em] text-ink-2 uppercase mb-3 border-b border-black/[0.06] pb-1">
               {section.name}
             </p>
-            {isDescriptiveSection(section.name) ? (
+            {isDescriptiveSection(section.name, exam.template.name) ? (
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left">
