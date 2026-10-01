@@ -75,7 +75,7 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   (con `pdf-lib`) el reporte generado de los exámenes con resultados capturados + las
   páginas de cada PDF subido (`lib/reportPdf.ts`, usado por ambas rutas de PDF).
 - Secciones de texto libre (Morfología y Observaciones del hemograma, Hemoparásitos/gota gruesa,
-  Extendido de Sangre Periférica, Citología de Piel, Test de Héller y Wright del parcial de orina — también dentro de los perfiles) se muestran
+  Extendido de Sangre Periférica, Citología de Piel, Citología Conjuntival, Test de Héller y Wright de orina y heces — también dentro de los perfiles) se muestran
   solo como Parámetro + Descripción, con filas altas, en el formulario y en el PDF. La lista vive en
   `lib/sections.ts: isDescriptiveSection` (por nombre de sección o de examen); agregar ahí las nuevas.
 - Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial
