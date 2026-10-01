@@ -7,6 +7,7 @@
 // - todo el examen "Citología de Piel" (en el Perfil Dermatológico: "Citología de Piel — …")
 // - todo el examen "Citología Conjuntival", "Citología de Masa" y "Citología Masa Adicional o Contramuestra"
 // - la "Conclusión" de la Citología de Líquidos (solo esa sección; ver DESCRIPTIVE_EXAM_SECTIONS)
+// - toda sección "Interpretación" (Citologías Óticas, Malassezia) y la "Citología de Efusión" del Citoquímico
 // - "Test de Héller (Proteinuria Cualitativa)" y "Coloración de Wright (Sedimento Urinario)" del
 //   Parcial de Orina, y "Coloración de Wright (Heces)" del Coproscópico (no la de Malassezia, que tiene rangos)
 const DESCRIPTIVE_SECTIONS = [
@@ -15,6 +16,8 @@ const DESCRIPTIVE_SECTIONS = [
   /^extendido de sangre perif[eé]rica$/i,
   /^citolog[ií]a de piel —/i,
   /test de h[eé]ller/i, // Parcial de Orina (y su copia en los perfiles)
+  /^interpretaci[oó]n$/i, // Citologías Óticas, Citología de Piel, Coloración para Malassezia (solo texto)
+  /^citolog[ií]a de efusi[oó]n$/i, // Citoquímico de Líquido
   /coloraci[oó]n de wright \((sedimento urinario|heces)\)/i, // Parcial de Orina (y perfiles) y Coproscópico
 ]
 const DESCRIPTIVE_EXAMS = [
