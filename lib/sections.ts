@@ -6,6 +6,7 @@
 //   las citologías no entra porque se decide por el nombre del examen)
 // - todo el examen "Citología de Piel" (en el Perfil Dermatológico: "Citología de Piel — …")
 // - todo el examen "Citología Conjuntival"
+// - la "Conclusión" de la Citología de Líquidos (solo esa sección; ver DESCRIPTIVE_EXAM_SECTIONS)
 // - "Test de Héller (Proteinuria Cualitativa)" y "Coloración de Wright (Sedimento Urinario)" del
 //   Parcial de Orina, y "Coloración de Wright (Heces)" del Coproscópico (no la de Malassezia, que tiene rangos)
 const DESCRIPTIVE_SECTIONS = [
@@ -23,6 +24,14 @@ const DESCRIPTIVE_EXAMS = [
   /^citolog[ií]a conjuntival$/i, // Recuento = un solo "Descripción"; Conclusión = un solo "Interpretación"
 ]
 
+// Una sección concreta de un examen concreto (cuando el nombre de la sección se repite en otros, ej. "Conclusión")
+const DESCRIPTIVE_EXAM_SECTIONS: { exam: RegExp; section: RegExp }[] = [
+  { exam: /^citolog[ií]a de l[ií]quidos/i, section: /^conclusi[oó]n$/i },
+]
+
 export function isDescriptiveSection(sectionName: string, examName = ""): boolean {
-  return DESCRIPTIVE_SECTIONS.some(re => re.test(sectionName.trim())) || DESCRIPTIVE_EXAMS.some(re => re.test(examName.trim()))
+  const s = sectionName.trim(), e = examName.trim()
+  return DESCRIPTIVE_SECTIONS.some(re => re.test(s))
+    || DESCRIPTIVE_EXAMS.some(re => re.test(e))
+    || DESCRIPTIVE_EXAM_SECTIONS.some(r => r.exam.test(e) && r.section.test(s))
 }
