@@ -169,20 +169,27 @@ export function PdfReport({ order }: { order: OrderData }) {
           {/* Exams */}
           {order.exams.map(exam => {
             const resultMap = Object.fromEntries(exam.results.map(r => [r.fieldId, r]))
+            const header = (
+              <View style={styles.examHeader}>
+                <Text style={styles.examTitle}>{exam.template.name}</Text>
+                <Text style={styles.examArea}>{exam.template.area}</Text>
+              </View>
+            )
+            const hasSections = !exam.attachedPdf && exam.template.sections.length > 0
             return (
               // Los perfiles no caben en una página: el examen puede partirse, pero cada sección va entera
               <View key={exam.id} style={styles.examBlock}>
-                <View style={styles.examHeader} minPresenceAhead={80}>
-                  <Text style={styles.examTitle}>{exam.template.name}</Text>
-                  <Text style={styles.examArea}>{exam.template.area}</Text>
-                </View>
+                {/* El título va dentro del bloque (sin partir) de la primera sección: si la tabla no cabe
+                    en la hoja, pasan juntos a la siguiente en vez de dejar el título solo al final */}
+                {!hasSections && <View wrap={false} minPresenceAhead={40}>{header}</View>}
 
                 {exam.attachedPdf && (
                   <Text style={styles.attachedNote}>Resultado en el documento adjunto (páginas siguientes).</Text>
                 )}
 
-                {!exam.attachedPdf && exam.template.sections.map(section => (
+                {hasSections && exam.template.sections.map((section, si) => (
                   <View key={section.id} wrap={false}>
+                    {si === 0 && header}
                     {exam.template.sections.length > 1 && (
                       <Text style={styles.sectionLabel}>{section.name}</Text>
                     )}
