@@ -5,7 +5,7 @@
 // - todo el examen "Extendido de Sangre Periférica" (incluida su "Conclusión"; la "Conclusión" de
 //   las citologías no entra porque se decide por el nombre del examen)
 // - todo el examen "Citología de Piel" (en el Perfil Dermatológico: "Citología de Piel — …")
-// - todo el examen "Citología Conjuntival"
+// - todo el examen "Citología Conjuntival" y "Citología de Masa"
 // - la "Conclusión" de la Citología de Líquidos (solo esa sección; ver DESCRIPTIVE_EXAM_SECTIONS)
 // - "Test de Héller (Proteinuria Cualitativa)" y "Coloración de Wright (Sedimento Urinario)" del
 //   Parcial de Orina, y "Coloración de Wright (Heces)" del Coproscópico (no la de Malassezia, que tiene rangos)
@@ -22,6 +22,7 @@ const DESCRIPTIVE_EXAMS = [
   /^extendido de sangre perif[eé]rica$/i,
   /^citolog[ií]a de piel$/i,
   /^citolog[ií]a conjuntival$/i, // Recuento = un solo "Descripción"; Conclusión = un solo "Interpretación"
+  /^citolog[ií]a de masa$/i, // Evaluación = un solo "Descripción"; Conclusión = un solo "Interpretación"
 ]
 
 // Una sección concreta de un examen concreto (cuando el nombre de la sección se repite en otros, ej. "Conclusión")
