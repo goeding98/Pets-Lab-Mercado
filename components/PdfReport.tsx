@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Font,
 } from "@react-pdf/renderer"
+import { isDescriptiveSection } from "@/lib/sections"
 
 const logoBuffer = fs.readFileSync(path.join(process.cwd(), "public", "logos", "pets-lab-cream.png"))
 const LOGO = `data:image/png;base64,${logoBuffer.toString("base64")}`
@@ -58,6 +59,10 @@ const styles = StyleSheet.create({
   colResult: { flex: 0.9 },
   colRef: { flex: 1.5 },
   colTech: { flex: 2 },
+  colDesc: { flex: 6.7 },
+  // Filas de "Morfología y observaciones": texto libre, más altas para que la descripción respire
+  descRow: { flexDirection: "row", paddingHorizontal: 8, paddingVertical: 7, minHeight: 30, borderBottomWidth: 0.5, borderBottomColor: C.borderLight },
+  descText: { fontSize: 8, color: C.ink, lineHeight: 1.4 },
 
   thText: { fontSize: 6, color: C.ink2, letterSpacing: 1.2, textTransform: "uppercase" },
   tdText: { fontSize: 8, color: C.ink },
@@ -182,6 +187,22 @@ export function PdfReport({ order }: { order: OrderData }) {
                       <Text style={styles.sectionLabel}>{section.name}</Text>
                     )}
 
+                    {isDescriptiveSection(section.name) ? (
+                      <>
+                        <View style={styles.tableHead}>
+                          <View style={styles.colParam}><Text style={styles.thText}>Parámetro</Text></View>
+                          <View style={styles.colDesc}><Text style={styles.thText}>Descripción</Text></View>
+                        </View>
+                        {section.fields.map((field, fi) => (
+                          <View key={field.id} style={[styles.descRow, fi % 2 !== 0 ? styles.tableRowAlt : {}]}>
+                            <View style={styles.colParam}><Text style={styles.tdText}>{field.name}</Text></View>
+                            <View style={styles.colDesc}>
+                              <Text style={styles.descText}>{resultMap[field.id]?.value || "—"}</Text>
+                            </View>
+                          </View>
+                        ))}
+                      </>
+                    ) : (<>
                     {/* Table header */}
                     <View style={styles.tableHead}>
                       <View style={styles.colParam}><Text style={styles.thText}>Parámetro</Text></View>
@@ -219,6 +240,7 @@ export function PdfReport({ order }: { order: OrderData }) {
                         </View>
                       )
                     })}
+                    </>)}
                   </View>
                 ))}
 
@@ -259,7 +281,7 @@ export function PdfReport({ order }: { order: OrderData }) {
         {/* Page footer */}
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>
-            <Text style={styles.footerBold}>Pets &amp; Lab</Text> · Cl. 10 #31-143, Cali · petsylab.co
+            <Text style={styles.footerBold}>Pets &amp; Lab</Text> · Cl. 10 #31-143, Cali · petslab.com.co
           </Text>
           <Text style={styles.footerText}>Los resultados son válidos únicamente para esta muestra.</Text>
         </View>

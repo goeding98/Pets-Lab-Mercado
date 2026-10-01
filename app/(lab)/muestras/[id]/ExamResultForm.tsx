@@ -5,6 +5,7 @@ import { saveExamResults } from "@/actions/orders"
 import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
 import { evaluar } from "@/catalogo-pets-lab/calculos"
 import ExamNotes from "./ExamNotes"
+import { isDescriptiveSection } from "@/lib/sections"
 
 type Field = {
   id: string
@@ -230,6 +231,33 @@ export default function ExamResultForm({
             <p className="font-mono text-[8px] tracking-[0.2em] text-ink-2 uppercase mb-3 border-b border-black/[0.06] pb-1">
               {section.name}
             </p>
+            {isDescriptiveSection(section.name) ? (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left">
+                    <th className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2 pr-3 w-[220px]">Parámetro</th>
+                    <th className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2">Descripción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {section.fields.map(field => (
+                    <tr key={field.id} className="border-t border-black/[0.05] align-top">
+                      <td className="py-2 pr-3 font-sans text-xs text-ink">{field.name}</td>
+                      <td className="py-2">
+                        <textarea
+                          rows={3}
+                          value={getValue(field.id)}
+                          onChange={e => handleChange(field.id, e.target.value)}
+                          disabled={locked}
+                          className="border border-black/20 bg-white px-2 py-1.5 text-xs font-sans w-full resize-y focus:outline-salvia-700 disabled:bg-black/5 disabled:cursor-default"
+                          placeholder="—"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -320,6 +348,7 @@ export default function ExamResultForm({
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         ))}
 

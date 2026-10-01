@@ -1,6 +1,6 @@
 export const SITE = {
   name: "Pets & Lab",
-  domain: "petsylab.co",
+  domain: "petslab.com.co",
   whatsapp: "https://wa.me/573152946916",
   phone: "315 294 6916",
   address: "Cl. 10 #31-143, Cali",
