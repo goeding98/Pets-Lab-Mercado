@@ -44,7 +44,10 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Reticulocitos". Si cambia un examen componente, `--rebuild-perfiles` rearma los perfiles (solo si
   ninguno tiene órdenes). La página pública `/servicios` lee los exámenes activos de la base en
   cada visita (no hay lista fija que mantener). Ojo: ninguna página puede consultar la base en el
-  build (prerender estático) — el build de Vercel falla; usar `dynamic = "force-dynamic"`. `ExamTemplate.description` guarda el "Incluye" y se muestra en `OrderForm`. Hay un
+  build (prerender estático) — el build de Vercel falla; usar `dynamic = "force-dynamic"`. `ExamTemplate.description` guarda el "Incluye" y se muestra en `OrderForm`. El "Hemograma Simple /
+  Proteínas Plasmáticas" es exactamente el Completo sin reticulocitos (reticulocitos: "% corregido",
+  canino 0 – 1.5, felino 0 – 1); si cambia el Completo, `scripts/unificar-hemogramas.ts` los vuelve a
+  igualar (y ajusta los reticulocitos de los perfiles). Hay un
   solo hemograma para canino y felino (rangos de ambas especies en el mismo campo); el "fuera de
   rango" se evalúa con el rango de la especie de la orden. Exámenes nuevos sin rango de referencia
   en la base (hay que pedírselo al laboratorio): CK, Fructosamina, Ácidos Biliares, Creatininuria.
