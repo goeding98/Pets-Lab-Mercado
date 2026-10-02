@@ -14,6 +14,7 @@ import { referenceTableFor } from "@/lib/referenceTables"
 
 const logoBuffer = fs.readFileSync(path.join(process.cwd(), "public", "logos", "pets-lab-cream.png"))
 const LOGO = `data:image/png;base64,${logoBuffer.toString("base64")}`
+const SIGNATURE = `data:image/png;base64,${fs.readFileSync(path.join(process.cwd(), "public", "firma-marcelo-valencia.png")).toString("base64")}`
 
 // Colors
 const C = {
@@ -82,10 +83,14 @@ const styles = StyleSheet.create({
   photoGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 6 },
   photo: { width: 250, height: 188, objectFit: "contain", marginRight: 10, marginBottom: 10, backgroundColor: C.salvia50 },
 
-  signBlock: { marginTop: 24, paddingTop: 16, borderTopWidth: 0.5, borderTopColor: C.borderLight, alignItems: "flex-end" },
-  signLine: { width: 160, borderBottomWidth: 0.5, borderBottomColor: C.ink2, marginBottom: 4 },
-  signName: { fontSize: 8, color: C.ink, fontFamily: "Helvetica-Bold" },
-  signRole: { fontSize: 6.5, color: C.ink2, letterSpacing: 1.2, textTransform: "uppercase" },
+  signBlock: { marginTop: 24, paddingTop: 16, borderTopWidth: 0.5, borderTopColor: C.borderLight, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
+  signText: { flex: 1 },
+  signSignature: { width: 170, alignItems: "center" },
+  signImage: { width: 110, height: 92, objectFit: "contain", marginBottom: -6 },
+  signLine: { width: 160, borderBottomWidth: 0.5, borderBottomColor: C.ink2 },
+  signName: { fontSize: 9, color: C.ink, fontFamily: "Helvetica-Bold", marginTop: 3, marginBottom: 2 },
+  signRole: { fontSize: 6.5, color: C.salvia700, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "Helvetica-Bold" },
+  signDetail: { fontSize: 7.5, color: C.ink2, lineHeight: 1.4 },
 })
 
 export type OrderData = {
@@ -137,7 +142,6 @@ function PatientInfo({ label, value }: { label: string; value: string }) {
 }
 
 export function PdfReport({ order }: { order: OrderData }) {
-  const processedByName = order.processedBy?.name ?? "Microbiólogo"
   const dateStr = new Date(order.createdAt).toLocaleDateString("es-CO", {
     year: "numeric", month: "long", day: "numeric",
   })
@@ -299,11 +303,20 @@ export function PdfReport({ order }: { order: OrderData }) {
 
           <Text style={styles.attachedNote}>* Valor fuera del rango de referencia.</Text>
 
-          {/* Signature */}
-          <View style={styles.signBlock}>
-            <View style={styles.signLine} />
-            <Text style={styles.signName}>{processedByName}</Text>
-            <Text style={styles.signRole}>Microbiólogo — Pets &amp; Lab</Text>
+          {/* Firma del director de laboratorio (va en todos los reportes) */}
+          <View style={styles.signBlock} wrap={false}>
+            <View style={styles.signText}>
+              <Text style={styles.signRole}>Director de Laboratorio</Text>
+              <Text style={styles.signName}>Dr. Marcelo Valencia Vargas</Text>
+              <Text style={styles.signDetail}>Universidad de Caldas - M.V.Z</Text>
+              <Text style={styles.signDetail}>Especialista en Laboratorio Clínico Veterinario - U.D.C.A</Text>
+              <Text style={styles.signDetail}>M.P. 37708</Text>
+            </View>
+            <View style={styles.signSignature}>
+              {/* eslint-disable-next-line jsx-a11y/alt-text */}
+              <Image src={SIGNATURE} style={styles.signImage} />
+              <View style={styles.signLine} />
+            </View>
           </View>
         </View>
 
