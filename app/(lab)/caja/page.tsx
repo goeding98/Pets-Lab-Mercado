@@ -25,7 +25,7 @@ export default async function CajaPage() {
   }))
 
   return (
-    <div className="px-8 py-8 max-w-6xl">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-6xl">
       <div className="mb-6">
         <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase">Caja</p>
         <h1 className="font-serif text-[28px] font-medium tracking-[-0.02em] mt-1">Cobro de exámenes</h1>

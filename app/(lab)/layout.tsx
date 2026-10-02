@@ -11,9 +11,9 @@ export default async function LabLayout({ children }: { children: React.ReactNod
   if (session.user.role === "CLINIC") redirect("/mis-muestras")
 
   return (
-    <div className="flex min-h-screen bg-bone">
+    <div className="flex flex-col md:flex-row min-h-screen bg-bone">
       <Sidebar userName={session.user.name ?? ""} role={session.user.role} />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-auto">
         {children}
       </main>
     </div>

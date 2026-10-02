@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   })
 
   return (
-    <div className="px-8 py-8 max-w-5xl">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-5xl">
       <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase">Panel</p>
       <h1 className="font-serif text-[32px] font-medium tracking-[-0.02em] mt-1 mb-6">
         Bienvenido, {session?.user.name?.split(" ")[0]}
@@ -53,7 +53,7 @@ export default async function DashboardPage() {
           Ver todas →
         </Link>
       </div>
-      <div className="border border-black/10 overflow-hidden">
+      <div className="border border-black/10 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-salvia-50 border-b border-black/10">

@@ -19,7 +19,7 @@ export default async function UsuariosPage() {
   })
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-4xl">
       <div className="flex items-start justify-between mb-6">
         <div>
           <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase">Administración</p>
@@ -33,7 +33,7 @@ export default async function UsuariosPage() {
         </Link>
       </div>
 
-      <div className="border border-black/10 overflow-hidden">
+      <div className="border border-black/10 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-salvia-50 border-b border-black/10">

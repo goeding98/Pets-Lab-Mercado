@@ -24,7 +24,7 @@ export default async function PromocionesPage() {
   ])
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-4xl">
       <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase">Catálogo</p>
       <h1 className="font-serif text-[28px] font-medium tracking-[-0.02em] mt-1">Promociones</h1>
       <p className="font-sans text-sm text-ink-2 mt-2 mb-8 max-w-2xl">

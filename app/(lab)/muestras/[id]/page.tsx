@@ -44,9 +44,9 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
   const canEdit = can(session?.user.role, "resultados.editar")
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-4xl">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6 gap-4">
+      <div className="flex flex-wrap items-start justify-between mb-6 gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <Link href="/muestras" className="font-mono text-[9px] tracking-[0.18em] text-ink-2 hover:text-ink uppercase">

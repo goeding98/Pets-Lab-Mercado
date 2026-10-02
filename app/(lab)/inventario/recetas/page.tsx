@@ -22,7 +22,7 @@ export default async function RecetasPage() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-4xl">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
           <Link href="/inventario" className="font-mono text-[9px] tracking-[0.18em] text-ink-2 hover:text-ink uppercase">
