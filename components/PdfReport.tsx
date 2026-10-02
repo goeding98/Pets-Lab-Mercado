@@ -99,6 +99,7 @@ export type OrderData = {
   requestingVet?: string | null
   createdAt: Date
   clinic?: { name: string } | null
+  branch?: { name: string; address: string } | null
   processedBy?: { name: string } | null
   exams: {
     id: string
@@ -164,6 +165,7 @@ export function PdfReport({ order }: { order: OrderData }) {
             {order.sex && <PatientInfo label="Sexo" value={order.sex === "M" ? "Macho" : "Hembra"} />}
             {order.ownerName && <PatientInfo label="Propietario" value={order.ownerName} />}
             {order.clinic && <PatientInfo label="Clínica" value={order.clinic.name} />}
+            {order.branch && <PatientInfo label="Sede" value={`${order.branch.name} · ${order.branch.address}`} />}
             {order.requestingVet && <PatientInfo label="Veterinario" value={order.requestingVet} />}
           </View>
 

@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       // LIMS, API y áreas con sesión: no indexar
       disallow: ["/api/", "/dashboard", "/muestras", "/clientes", "/caja", "/inventario", "/usuarios",
-        "/promociones", "/rangos", "/portal-vet/dashboard", "/portal-vet/nueva", "/login", "/register"],
+        "/promociones", "/rangos", "/portal-vet/dashboard", "/portal-vet/nueva", "/portal-vet/sedes", "/login", "/register"],
     },
     sitemap: "https://www.petslab.com.co/sitemap.xml",
   }

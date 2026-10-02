@@ -15,6 +15,7 @@ export async function GET(
     where: { id: params.orderId },
     include: {
       clinic: true,
+      branch: true,
       processedBy: true,
       exams: {
         // Orden fijo: sin esto Postgres devuelve primero o al final el examen recién actualizado

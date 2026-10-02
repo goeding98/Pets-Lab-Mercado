@@ -15,6 +15,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
     where: { id: params.id },
     include: {
       clinic: true,
+      branch: true,
       processedBy: true,
       exams: {
         // Orden fijo: sin esto Postgres devuelve primero o al final el examen recién actualizado
@@ -87,7 +88,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
       {/* Info cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {[
-          { label: "Clínica", value: order.clinic?.name ?? "—" },
+          { label: "Clínica", value: order.clinic ? (order.branch ? `${order.clinic.name} · Sede ${order.branch.name}` : order.clinic.name) : "—" },
           { label: "Veterinario", value: order.requestingVet ?? "—" },
           { label: "Dueño", value: order.ownerName ?? "—" },
           { label: "Fecha", value: new Date(order.createdAt).toLocaleDateString("es-CO") },

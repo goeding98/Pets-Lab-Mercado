@@ -11,6 +11,19 @@ export async function examsWithListPrice(templateIds: string[]) {
   return templateIds.map(id => ({ templateId: id, price: priceOf.get(id) ?? 0 }))
 }
 
+// Sede de la orden: debe ser de la clínica; si la clínica tiene sedes, es obligatoria
+export async function resolveBranch(clinicId: string | null, branchIdRaw: FormDataEntryValue | null): Promise<string | null> {
+  const branchId = typeof branchIdRaw === "string" && branchIdRaw !== "" ? branchIdRaw : null
+  if (!clinicId) return null
+  if (branchId) {
+    const ok = await prisma.clinicBranch.count({ where: { id: branchId, clinicId } })
+    if (!ok) throw new Error("La sede no corresponde a la clínica")
+    return branchId
+  }
+  if (await prisma.clinicBranch.count({ where: { clinicId } })) throw new Error("Selecciona la sede")
+  return null
+}
+
 // Siguiente número del año: el último + 1 (no un conteo, que repetiría números si se borra una orden)
 export async function generateOrderNumber(): Promise<string> {
   const year = new Date().getFullYear()

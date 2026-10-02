@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth"
 import bcrypt from "bcryptjs"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import { createWithOrderNumber, examsWithListPrice } from "@/lib/orders"
+import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "")
 
@@ -41,9 +41,19 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
   const clinicsWithNit = await prisma.clinic.findMany({ where: { nit: { not: null } }, select: { nit: true } })
   if (clinicsWithNit.some(c => onlyDigits(c.nit!) === nitDigits)) {
     return {
-      error: "Ya hay una clínica registrada con ese NIT o cédula. Escríbenos por WhatsApp para darte acceso.",
+      error:
+        "Ya hay una cuenta con ese NIT o cédula. Si es otra sede de la misma clínica, inicia sesión con esa cuenta y agrégala en Mis sedes. Si no tienes el acceso, escríbenos por WhatsApp.",
     }
   }
+
+  // Sede principal (la dirección de la cuenta) + las sedes adicionales del formulario
+  const all = (k: string) => formData.getAll(k).map(v => String(v).trim())
+  const [extraNames, extraAddresses, extraNeighborhoods, extraCities] = ["extraName", "extraAddress", "extraNeighborhood", "extraCity"].map(all)
+  const branches = [
+    { name: get("branchName") || "Principal", address, neighborhood, city },
+    ...extraNames.map((n, i) => ({ name: n, address: extraAddresses[i] ?? "", neighborhood: extraNeighborhoods[i] || null, city: extraCities[i] || null })),
+  ]
+  if (branches.some(b => !b.name || !b.address)) return { error: "Cada sede necesita nombre y dirección." }
 
   const hashed = await bcrypt.hash(password, 10)
   await prisma.clinic.create({
@@ -58,6 +68,7 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
       users: {
         create: { name, email, password: hashed, role: "CLINIC" },
       },
+      branches: { create: branches },
     },
   })
 
@@ -82,6 +93,7 @@ export async function createPortalOrder(formData: FormData) {
   if (!patientName || !species) throw new Error("Faltan datos del paciente")
 
   const exams = await examsWithListPrice(templateIds)
+  const branchId = await resolveBranch(session.user.clinicId, formData.get("branchId"))
   await createWithOrderNumber(orderNumber => prisma.order.create({
     data: {
       orderNumber,
@@ -93,6 +105,7 @@ export async function createPortalOrder(formData: FormData) {
       ownerName: get("ownerName"),
       requestingVet: get("requestingVet"),
       clinicId: session.user.clinicId,
+      branchId,
       status: "SOLICITADA",
       source: "PORTAL",
       notes: get("notes"),

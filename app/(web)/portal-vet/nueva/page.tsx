@@ -13,7 +13,14 @@ export default async function NuevaSolicitudPage() {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== "CLINIC") redirect("/portal-vet")
 
-  const templates = await prisma.examTemplate.findMany({ where: { active: true }, orderBy: [{ area: "asc" }, { name: "asc" }] })
+  const [templates, branches] = await Promise.all([
+    prisma.examTemplate.findMany({ where: { active: true }, orderBy: [{ area: "asc" }, { name: "asc" }] }),
+    prisma.clinicBranch.findMany({
+      where: { clinicId: session.user.clinicId ?? "" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, address: true },
+    }),
+  ])
 
   return (
     <div className="max-w-3xl mx-auto px-6 lg:px-10 py-10">
@@ -24,6 +31,7 @@ export default async function NuevaSolicitudPage() {
       <h1 className="font-serif text-[28px] font-medium tracking-[-0.02em] mt-1 mb-6">Nueva solicitud de exámenes</h1>
       <OrderForm
         templates={templates}
+        branches={branches}
         action={createPortalOrder}
         submitLabel="Enviar solicitud →"
         pendingLabel="Enviando…"

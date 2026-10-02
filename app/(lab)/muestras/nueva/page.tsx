@@ -8,7 +8,10 @@ export const metadata: Metadata = { title: "Nueva muestra" }
 export default async function NuevaMuestraPage() {
   const [templates, clinics] = await Promise.all([
     prisma.examTemplate.findMany({ where: { active: true }, orderBy: [{ area: "asc" }, { name: "asc" }] }),
-    prisma.clinic.findMany({ orderBy: { name: "asc" } }),
+    prisma.clinic.findMany({
+      orderBy: { name: "asc" },
+      include: { branches: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, address: true } } },
+    }),
   ])
 
   return (

@@ -4,7 +4,10 @@ import type { ExamTemplate, Clinic } from "@prisma/client"
 
 // Formulario de ingreso de una muestra/orden. Lo usan el staff (/muestras/nueva) y las clínicas
 // desde el Portal Vet (/portal-vet/nueva), para que ambos pidan exactamente los mismos datos.
-// Sin `clinics` no se muestra el selector de clínica (en el portal la clínica es la de la sesión).
+// Sin `clinics` no se muestra el selector de clínica (en el portal la clínica es la de la sesión y
+// sus sedes llegan en `branches`). Si la clínica tiene sedes, hay que elegir una.
+
+type BranchOption = { id: string; name: string; address: string }
 
 const AREAS = [
   "Promociones",
@@ -24,18 +27,22 @@ const AREAS = [
 export default function OrderForm({
   templates,
   clinics,
+  branches: ownBranches,
   action,
   submitLabel = "Registrar muestra →",
   pendingLabel = "Registrando…",
 }: {
   templates: ExamTemplate[]
-  clinics?: Clinic[]
+  clinics?: (Clinic & { branches: BranchOption[] })[]
+  branches?: BranchOption[]
   action: (fd: FormData) => Promise<void>
   submitLabel?: string
   pendingLabel?: string
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState("")
+  const [clinicId, setClinicId] = useState("")
+  const branchOptions = clinics ? clinics.find(c => c.id === clinicId)?.branches ?? [] : ownBranches ?? []
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -107,10 +114,22 @@ export default function OrderForm({
           {clinics && (
             <div>
               <Label>Clínica</Label>
-              <select name="clinicId" className={inputClass}>
+              <select name="clinicId" value={clinicId} onChange={e => setClinicId(e.target.value)} className={inputClass}>
                 <option value="">Sin clínica</option>
                 {clinics.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {branchOptions.length > 0 && (
+            <div>
+              <Label>Sede *</Label>
+              {/* key: al cambiar de clínica se reinicia la sede elegida */}
+              <select key={clinicId} name="branchId" required defaultValue={branchOptions.length === 1 ? branchOptions[0].id : ""} className={inputClass}>
+                {branchOptions.length > 1 && <option value="">Seleccionar sede…</option>}
+                {branchOptions.map(b => (
+                  <option key={b.id} value={b.id}>{b.name} — {b.address}</option>
                 ))}
               </select>
             </div>

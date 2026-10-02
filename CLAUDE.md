@@ -11,6 +11,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   clínicas: registro público (crea `Clinic` + usuario `CLINIC` que entra con su correo; las
   clínicas creadas por el staff en `/clientes` siguen entrando con el nombre de la clínica),
   lista de exámenes por paciente y "Nueva solicitud". `/resultados` solo redirige ahí.
+- Sedes (`ClinicBranch`): una clínica = una cuenta/NIT con una o varias sedes (dirección). El registro
+  del Portal Vet crea la sede principal con la dirección (+ sedes extra opcionales); la clínica
+  las administra en `/portal-vet/sedes` y el staff en `/clientes/[id]` (`components/BranchManager.tsx`,
+  `actions/branches.ts`). Cada `Order` tiene `branchId`: si la clínica tiene sedes es obligatoria y
+  debe ser suya (`lib/orders.ts: resolveBranch`). La sede sale en Muestras, Panel, Caja, el Portal
+  (con filtro por sede) y el PDF. Un NIT ya registrado no puede crear otra cuenta: agrega una sede.
 - Solicitudes del portal: crean un `Order` con `source = "PORTAL"` y `status = "SOLICITADA"`
   (el lab aún no tiene la muestra); el staff la ve en `/muestras` y la pasa a `RECIBIDA`. El
   formulario de ingreso es el mismo componente para staff y clínicas

@@ -21,63 +21,80 @@ model User {
 }
 
 model Clinic {
-  id        String   @id @default(cuid())
-  name      String
-  nit       String?
-  address   String?
-  phone     String?
-  email     String?
+  id           String         @id @default(cuid())
+  name         String
+  nit          String?
+  address      String?
+  phone        String?
+  email        String?
   contactName  String? // persona de contacto (registro desde el Portal Vet)
   neighborhood String? // barrio
   city         String?
-  users     User[]
-  orders    Order[]
-  createdAt DateTime @default(now())
+  users        User[]
+  orders       Order[]
+  branches     ClinicBranch[]
+  createdAt    DateTime       @default(now())
+}
+
+// Sede de una clínica (misma cuenta/NIT, distinta dirección). Cada orden puede ir a una sede.
+model ClinicBranch {
+  id           String   @id @default(cuid())
+  clinicId     String
+  clinic       Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  name         String // ej. "Principal", "Sede Norte"
+  address      String
+  neighborhood String?
+  city         String?
+  phone        String?
+  orders       Order[]
+  createdAt    DateTime @default(now())
 }
 
 model Order {
-  id            String      @id @default(cuid())
-  orderNumber   String      @unique
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
   patientName   String
-  species       String      // Canino | Felino | Otro
+  species       String // Canino | Felino | Otro
   breed         String?
   age           String?
-  sex           String?     // M | H | ND
+  sex           String? // M | H | ND
   ownerName     String?
   clinicId      String?
-  clinic        Clinic?     @relation(fields: [clinicId], references: [id])
+  clinic        Clinic?       @relation(fields: [clinicId], references: [id])
+  branchId      String?
+  branch        ClinicBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
   requestingVet String?
   processedById String?
-  processedBy   User?       @relation("ProcessedBy", fields: [processedById], references: [id])
-  status        String      @default("RECIBIDA") // SOLICITADA (desde el portal, aún sin recibir) | RECIBIDA | EN_PROCESO | COMPLETADA
-  source        String      @default("LAB") // LAB (registrada por el staff) | PORTAL (solicitada por la clínica)
+  processedBy   User?         @relation("ProcessedBy", fields: [processedById], references: [id])
+  status        String        @default("RECIBIDA") // SOLICITADA (desde el portal, aún sin recibir) | RECIBIDA | EN_PROCESO | COMPLETADA
+  source        String        @default("LAB") // LAB (registrada por el staff) | PORTAL (solicitada por la clínica)
   notes         String?
   exams         OrderExam[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model OrderExam {
-  id              String       @id @default(cuid())
+  id              String              @id @default(cuid())
   orderId         String
-  order           Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order           Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   templateId      String
-  template        ExamTemplate @relation(fields: [templateId], references: [id])
-  status          String       @default("PENDIENTE") // PENDIENTE | COMPLETADO
-  price           Float        @default(0)
-  discountType    String       @default("VALOR") // VALOR | PORCENTAJE
-  discountValue   Float        @default(0)
-  paymentTerm     String       @default("CONTADO") // CONTADO | CREDITO
-  paymentMethod   String       @default("EFECTIVO") // EFECTIVO | TRANSFERENCIA
-  amountPaid      Float        @default(0)
+  template        ExamTemplate        @relation(fields: [templateId], references: [id])
+  status          String              @default("PENDIENTE") // PENDIENTE | COMPLETADO
+  price           Float               @default(0)
+  discountType    String              @default("VALOR") // VALOR | PORCENTAJE
+  discountValue   Float               @default(0)
+  paymentTerm     String              @default("CONTADO") // CONTADO | CREDITO
+  paymentMethod   String              @default("EFECTIVO") // EFECTIVO | TRANSFERENCIA
+  amountPaid      Float               @default(0)
   results         ExamResult[]
   movements       InventoryMovement[]
   uploadedPdfPath String?
   uploadedPdfName String?
-  comments        String?      // comentarios del encargado; salen al final del examen en el PDF
+  comments        String? // comentarios del encargado; salen al final del examen en el PDF
   photos          ExamPhoto[]
   completedAt     DateTime?
-  createdAt       DateTime     @default(now())
+  createdAt       DateTime            @default(now())
 }
 
 // Foto adjunta a un examen de una orden (blob privado; se sirve por /api/photos/[photoId])
@@ -91,19 +108,19 @@ model ExamPhoto {
 }
 
 model ExamTemplate {
-  id          String        @id @default(cuid())
-  name        String
-  area        String        // Hematología | Bioquímica | Citología | Uroanálisis | Coprología
-  turnaround  String        // "Mismo día" | "24h" | "48h"
-  sampleType  String
-  price       Float?        // precio de lista; si existe, se precarga en Caja al crear la orden
-  description String?       // qué incluye (perfiles) — se muestra al elegir exámenes
-  isPromotion Boolean       @default(false) // examen combinado creado en /promociones
-  active      Boolean       @default(true)  // false = retirado: no se ofrece en órdenes nuevas
-  sections    ExamSection[]
-  orderExams  OrderExam[]
-  recipeItems RecipeItem[]
-  promoComponents PromotionComponent[] @relation("PromoOf")     // si es promoción: exámenes que la componen
+  id              String               @id @default(cuid())
+  name            String
+  area            String // Hematología | Bioquímica | Citología | Uroanálisis | Coprología
+  turnaround      String // "Mismo día" | "24h" | "48h"
+  sampleType      String
+  price           Float? // precio de lista; si existe, se precarga en Caja al crear la orden
+  description     String? // qué incluye (perfiles) — se muestra al elegir exámenes
+  isPromotion     Boolean              @default(false) // examen combinado creado en /promociones
+  active          Boolean              @default(true) // false = retirado: no se ofrece en órdenes nuevas
+  sections        ExamSection[]
+  orderExams      OrderExam[]
+  recipeItems     RecipeItem[]
+  promoComponents PromotionComponent[] @relation("PromoOf") // si es promoción: exámenes que la componen
   inPromotions    PromotionComponent[] @relation("ComponentOf") // promociones que incluyen este examen
 }
 
@@ -121,7 +138,7 @@ model PromotionComponent {
 }
 
 model ExamSection {
-  id         String      @id @default(cuid())
+  id         String       @id @default(cuid())
   templateId String
   template   ExamTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   name       String
@@ -130,24 +147,24 @@ model ExamSection {
 }
 
 model ExamField {
-  id          String       @id @default(cuid())
-  sectionId   String
-  section     ExamSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  name        String
-  key         String?      // id estable del parámetro en el catálogo (ej. "hematocrito"); usado para resolver calcFormula
-  unit        String?
-  refCanine   String?
-  refFeline   String?
-  technique   String?
-  fieldType   String       @default("number") // number | text | select | calculated
-  calcFormula String?      // expresión con los `key` de otros campos de la misma sección, ej. "proteinas_totales - albumina"
-  order       Int          @default(0)
-  results     ExamResult[]
+  id            String       @id @default(cuid())
+  sectionId     String
+  section       ExamSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  name          String
+  key           String? // id estable del parámetro en el catálogo (ej. "hematocrito"); usado para resolver calcFormula
+  unit          String?
+  refCanine     String?
+  refFeline     String?
+  technique     String?
+  fieldType     String       @default("number") // number | text | select | calculated
+  calcFormula   String? // expresión con los `key` de otros campos de la misma sección, ej. "proteinas_totales - albumina"
+  order         Int          @default(0)
+  results       ExamResult[]
   // Copia de un parámetro de un examen maestro (en un perfil, promoción o examen derivado): sus
   // rangos se editan en el maestro (/rangos) y se propagan a todas las copias.
   sourceFieldId String?
-  sourceField   ExamField?  @relation("FieldCopies", fields: [sourceFieldId], references: [id], onDelete: SetNull)
-  copies        ExamField[] @relation("FieldCopies")
+  sourceField   ExamField?   @relation("FieldCopies", fields: [sourceFieldId], references: [id], onDelete: SetNull)
+  copies        ExamField[]  @relation("FieldCopies")
 }
 
 model ExamResult {
@@ -164,7 +181,7 @@ model ExamResult {
 model InventoryItem {
   id          String              @id @default(cuid())
   name        String
-  unit        String              // presentación: ML | GR | MG | UNIDAD | CC | KG | ... (texto libre)
+  unit        String // presentación: ML | GR | MG | UNIDAD | CC | KG | ... (texto libre)
   stock       Float               @default(0)
   minStock    Float?
   createdAt   DateTime            @default(now())
@@ -186,12 +203,12 @@ model RecipeItem {
 }
 
 model InventoryMovement {
-  id          String         @id @default(cuid())
+  id          String        @id @default(cuid())
   itemId      String
-  item        InventoryItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  quantity    Float          // negativo = salida, positivo = entrada/ajuste
-  reason      String         // CONSUMO_EXAMEN | AJUSTE
+  item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quantity    Float // negativo = salida, positivo = entrada/ajuste
+  reason      String // CONSUMO_EXAMEN | AJUSTE
   orderExamId String?
-  orderExam   OrderExam?     @relation(fields: [orderExamId], references: [id], onDelete: SetNull)
-  createdAt   DateTime       @default(now())
+  orderExam   OrderExam?    @relation(fields: [orderExamId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now())
 }

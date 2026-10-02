@@ -19,7 +19,7 @@ export async function GET(
   const orderExam = await prisma.orderExam.findUnique({
     where: { id: params.examId },
     include: {
-      order: { include: { clinic: true, processedBy: true } },
+      order: { include: { clinic: true, branch: true, processedBy: true } },
       template: {
         include: {
           sections: {

@@ -51,7 +51,7 @@ export default async function MuestrasPage({
   const orders = await prisma.order.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: { clinic: true, exams: { include: { template: true } } },
+    include: { clinic: true, branch: { select: { name: true } }, exams: { include: { template: true } } },
   })
 
   return (
@@ -120,7 +120,7 @@ export default async function MuestrasPage({
                     {order.patientName}
                     <span className="text-ink-2 ml-1">({order.species})</span>
                   </td>
-                  <td className="px-4 py-3 font-sans text-xs text-ink-2">{order.clinic?.name ?? "—"}</td>
+                  <td className="px-4 py-3 font-sans text-xs text-ink-2">{order.clinic?.name ?? "—"}{order.branch && <span className="block font-mono text-[8px] tracking-[0.12em] uppercase text-salvia-700 mt-0.5">Sede {order.branch.name}</span>}</td>
                   <td className="px-4 py-3 font-sans text-xs text-ink-2 max-w-[200px] truncate">
                     {order.exams.map(e => e.template.name).join(", ")}
                   </td>

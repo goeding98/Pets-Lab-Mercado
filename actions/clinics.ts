@@ -27,6 +27,13 @@ export async function createClinic(formData: FormData) {
     },
   })
 
+  // La dirección de la clínica queda como su primera sede; las demás se agregan en /clientes/[id]
+  if (clinic.address) {
+    await prisma.clinicBranch.create({
+      data: { clinicId: clinic.id, name: "Principal", address: clinic.address, neighborhood: clinic.neighborhood, city: clinic.city, phone: clinic.phone },
+    })
+  }
+
   const initialPassword = nit || slugifyForPassword(name)
   const hashed = await bcrypt.hash(initialPassword, 10)
 
@@ -41,7 +48,7 @@ export async function createClinic(formData: FormData) {
   })
 
   revalidatePath("/clientes")
-  redirect("/clientes")
+  redirect(`/clientes/${clinic.id}`)
 }
 
 export async function updateClinic(id: string, formData: FormData) {

@@ -18,15 +18,22 @@ const ORDER_STATUS: Record<string, { label: string; className: string }> = {
 export default async function PortalVetDashboardPage({
   searchParams,
 }: {
-  searchParams: { q?: string; enviada?: string }
+  searchParams: { q?: string; enviada?: string; sede?: string }
 }) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) redirect("/portal-vet")
 
   const q = searchParams.q?.trim()
+  const branches = await prisma.clinicBranch.findMany({
+    where: { clinicId: session.user.clinicId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+  })
+  const sede = branches.some(b => b.id === searchParams.sede) ? searchParams.sede : undefined
   const orders = await prisma.order.findMany({
     where: {
       clinicId: session.user.clinicId,
+      ...(sede ? { branchId: sede } : {}),
       ...(q
         ? {
             OR: [
@@ -38,7 +45,7 @@ export default async function PortalVetDashboardPage({
         : {}),
     },
     orderBy: { createdAt: "desc" },
-    include: { exams: { include: { template: { select: { name: true } } } } },
+    include: { exams: { include: { template: { select: { name: true } } } }, branch: { select: { name: true } } },
   })
 
   // Agrupar por paciente (nombre + especie + dueño); el orden sigue la solicitud más reciente
@@ -62,7 +69,13 @@ export default async function PortalVetDashboardPage({
             {patients.size} pacientes · {totalExams} exámenes · {ready} resultados listos
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/portal-vet/sedes"
+            className="border border-salvia-700 text-salvia-700 font-mono text-[10px] tracking-[0.18em] uppercase px-4 py-2.5 hover:bg-salvia-50 transition-colors"
+          >
+            Mis sedes ({branches.length})
+          </Link>
           <Link
             href="/portal-vet/nueva"
             className="bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.18em] uppercase px-5 py-2.5 hover:bg-salvia-800 transition-colors"
@@ -80,13 +93,23 @@ export default async function PortalVetDashboardPage({
         </div>
       )}
 
-      <form method="get" className="flex gap-2 mb-6 max-w-md">
+      <form method="get" className="flex flex-wrap gap-2 mb-6 max-w-2xl">
         <input
           name="q"
           defaultValue={q}
           placeholder="Buscar paciente, dueño o N° de orden…"
-          className="flex-1 border border-black/15 bg-white px-3 py-2 text-sm font-sans focus:outline-none focus:border-salvia-700"
+          className="flex-1 min-w-[200px] border border-black/15 bg-white px-3 py-2 text-sm font-sans focus:outline-none focus:border-salvia-700"
         />
+        {branches.length > 1 && (
+          <select
+            name="sede"
+            defaultValue={sede ?? ""}
+            className="border border-black/15 bg-white px-3 py-2 text-sm font-sans focus:outline-none focus:border-salvia-700"
+          >
+            <option value="">Todas las sedes</option>
+            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
         <button type="submit" className="border border-black/15 font-mono text-[9px] tracking-[0.18em] uppercase px-4 hover:bg-black/[0.03]">
           Buscar
         </button>
@@ -128,6 +151,9 @@ export default async function PortalVetDashboardPage({
                         <p className="font-mono text-[9px] text-ink-2 mt-0.5">
                           {new Date(o.createdAt).toLocaleDateString("es-CO")}
                         </p>
+                        {o.branch && (
+                          <p className="font-mono text-[8px] tracking-[0.12em] uppercase text-salvia-700 mt-1">Sede {o.branch.name}</p>
+                        )}
                       </div>
                       <ul className="flex-1 min-w-[200px] space-y-1">
                         {o.exams.map(e => (

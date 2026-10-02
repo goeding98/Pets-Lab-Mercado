@@ -7,14 +7,14 @@ export const metadata: Metadata = { title: "Caja" }
 export default async function CajaPage() {
   const exams = await prisma.orderExam.findMany({
     orderBy: { createdAt: "desc" },
-    include: { order: { include: { clinic: true } }, template: true },
+    include: { order: { include: { clinic: true, branch: { select: { name: true } } } }, template: true },
   })
 
   const rows: CajaRow[] = exams.map(e => ({
     id: e.id,
     orderNumber: e.order.orderNumber,
     patientName: e.order.patientName,
-    clinicName: e.order.clinic?.name ?? "—",
+    clinicName: e.order.clinic ? (e.order.branch ? `${e.order.clinic.name} · ${e.order.branch.name}` : e.order.clinic.name) : "—",
     templateName: e.template.name,
     price: e.price,
     discountType: e.discountType,

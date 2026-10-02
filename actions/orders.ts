@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { consumeInventoryForExam } from "@/lib/inventory"
-import { createWithOrderNumber, examsWithListPrice } from "@/lib/orders"
+import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
 
 export async function createOrder(formData: FormData) {
   const session = await getServerSession(authOptions)
@@ -20,6 +20,7 @@ export async function createOrder(formData: FormData) {
 
   const clinicIdRaw = formData.get("clinicId") as string
   const clinicId = clinicIdRaw && clinicIdRaw !== "" ? clinicIdRaw : null
+  const branchId = await resolveBranch(clinicId, formData.get("branchId"))
   const exams = await examsWithListPrice(templateIds)
 
   const order = await createWithOrderNumber(orderNumber => prisma.order.create({
@@ -33,6 +34,7 @@ export async function createOrder(formData: FormData) {
       ownerName: (formData.get("ownerName") as string) || null,
       requestingVet: (formData.get("requestingVet") as string) || null,
       clinicId,
+      branchId,
       processedById: session.user.id,
       notes: (formData.get("notes") as string) || null,
       exams: {

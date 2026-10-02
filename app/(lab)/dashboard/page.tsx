@@ -20,7 +20,7 @@ export default async function DashboardPage() {
   const recentOrders = await prisma.order.findMany({
     take: 8,
     orderBy: { createdAt: "desc" },
-    include: { clinic: true, exams: { include: { template: true } } },
+    include: { clinic: true, branch: { select: { name: true } }, exams: { include: { template: true } } },
   })
 
   return (
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
                   </Link>
                 </td>
                 <td className="px-4 py-2.5 font-sans text-xs">{order.patientName} <span className="text-ink-2">({order.species})</span></td>
-                <td className="px-4 py-2.5 font-sans text-xs text-ink-2">{order.clinic?.name ?? "—"}</td>
+                <td className="px-4 py-2.5 font-sans text-xs text-ink-2">{order.clinic?.name ?? "—"}{order.branch && <span className="block font-mono text-[8px] tracking-[0.12em] uppercase text-salvia-700 mt-0.5">Sede {order.branch.name}</span>}</td>
                 <td className="px-4 py-2.5 font-sans text-xs text-ink-2">
                   {order.exams.map(e => e.template.name).join(", ")}
                 </td>
