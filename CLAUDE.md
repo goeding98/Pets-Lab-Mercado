@@ -81,6 +81,16 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Extendido de Sangre Periférica, Citología de Piel, Citología Conjuntival, Citología de Masa (y Masa Adicional), Conclusión de Citología de Líquidos, secciones "Interpretación", Citología de Efusión, Test de Héller y Wright de orina y heces — también dentro de los perfiles) se muestran
   solo como Parámetro + Descripción, con filas altas, en el formulario y en el PDF. La lista vive en
   `lib/sections.ts: isDescriptiveSection` (por nombre de sección o de examen); agregar ahí las nuevas.
+- Rangos de referencia (`app/(lab)/rangos/`, `actions/ranges.ts`, permiso `rangos`: solo ADMIN —
+  el jefe médico Marcelo Valencia es ADMIN): lista los exámenes maestros (activos, no perfiles ni
+  promociones) y edita refCanine/refFeline. Cada parámetro copiado (perfiles, promociones, Hemograma
+  Simple, Bilirrubinas Diferenciadas, Electrolitos, TPT+TP, PCR combinados) tiene
+  `ExamField.sourceFieldId` → su parámetro maestro; guardar en el maestro actualiza todas las copias.
+  Las copias no se editan aparte. Vínculos creados con `scripts/vincular-rangos.ts` (idempotente;
+  correrlo de nuevo si se crea un perfil/examen derivado fuera de Promociones). `composeSections`
+  liga solas las promociones nuevas. "Hemograma 0 - 3 Meses" y "Hemograma 4 - 6 Meses" son maestros
+  aparte (copia del Completo, rangos propios). Cambiar un rango no recalcula el "fuera de rango" de
+  resultados ya guardados.
 - Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial
   por especie), en formulario y PDF: `lib/referenceTables.ts`, por nombre de examen.
 - Al final de cada examen de una orden hay "Comentarios y fotos" (`ExamNotes.tsx`):

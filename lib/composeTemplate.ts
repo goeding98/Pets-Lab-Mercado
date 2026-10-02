@@ -11,6 +11,8 @@ type SourceField = {
   fieldType: string
   calcFormula: string | null
   order: number
+  id?: string // si viene de la base: la copia queda ligada a su maestro (rangos editables en /rangos)
+  sourceFieldId?: string | null
 }
 
 export type ComposeComponent = {
@@ -57,6 +59,7 @@ export function composeSections(components: ComposeComponent[]) {
             fieldType: f.fieldType,
             calcFormula: rewrite(f.calcFormula),
             order: f.order,
+            sourceFieldId: f.sourceFieldId ?? f.id ?? null,
           })),
         },
       }

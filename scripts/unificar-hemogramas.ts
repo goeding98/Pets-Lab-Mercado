@@ -18,21 +18,21 @@ const RETIC = { unit: "% corregido", refCanine: "0 – 1.5", refFeline: "0 – 1
 
 async function main() {
   await prisma.$transaction(async tx => {
-    // 1. Reticulocitos del Completo y de los perfiles (sección "Hemograma Completo")
-    const retic = await tx.examField.updateMany({
-      where: {
-        key: { startsWith: "reticulocitos" },
-        section: { name: "Hemograma Completo", template: { active: true } },
-      },
-      data: RETIC,
-    })
-    console.log(`Reticulocitos actualizados: ${retic.count}`)
-
-    // 2. Simple = Completo sin reticulocitos
     const completo = await tx.examTemplate.findFirstOrThrow({
       where: { name: COMPLETO, active: true },
       include: { sections: { orderBy: { order: "asc" }, include: { fields: { orderBy: { order: "asc" } } } } },
     })
+
+    // 1. Reticulocitos del Completo y de sus copias en perfiles (ligadas por sourceFieldId; no toca
+    //    los hemogramas por edad, que tienen rangos propios)
+    const reticId = completo.sections.flatMap(s => s.fields).find(f => f.key === "reticulocitos")!.id
+    const retic = await tx.examField.updateMany({
+      where: { OR: [{ id: reticId }, { sourceFieldId: reticId }] },
+      data: RETIC,
+    })
+    console.log(`Reticulocitos actualizados: ${retic.count}`)
+
+    // 2. Simple = Completo sin reticulocitos (sus campos quedan ligados a los del Completo)
     const simple = await tx.examTemplate.findFirstOrThrow({ where: { name: SIMPLE, active: true } })
     const used = await tx.examResult.count({ where: { orderExam: { templateId: simple.id } } })
     if (used > 0) throw new Error(`${SIMPLE} ya tiene ${used} resultados; no se rearma`)
@@ -50,6 +50,7 @@ async function main() {
             create: fields.map((f, i) => ({
               name: f.name, key: f.key, unit: f.unit, refCanine: f.refCanine, refFeline: f.refFeline,
               technique: f.technique, fieldType: f.fieldType, calcFormula: f.calcFormula, order: i,
+              sourceFieldId: f.id,
             })),
           },
         },

@@ -143,6 +143,11 @@ model ExamField {
   calcFormula String?      // expresión con los `key` de otros campos de la misma sección, ej. "proteinas_totales - albumina"
   order       Int          @default(0)
   results     ExamResult[]
+  // Copia de un parámetro de un examen maestro (en un perfil, promoción o examen derivado): sus
+  // rangos se editan en el maestro (/rangos) y se propagan a todas las copias.
+  sourceFieldId String?
+  sourceField   ExamField?  @relation("FieldCopies", fields: [sourceFieldId], references: [id], onDelete: SetNull)
+  copies        ExamField[] @relation("FieldCopies")
 }
 
 model ExamResult {
