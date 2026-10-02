@@ -19,9 +19,20 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 })
 
+const DESCRIPTION =
+  "Laboratorio veterinario en Cali: hematología, química sanguínea, perfiles, citología, urianálisis y PCR para perros y gatos. Resultados en línea para clínicas."
+
 export const metadata: Metadata = {
-  title: { template: "%s — Pets & Lab LIMS", default: "Pets & Lab LIMS" },
-  description: "Sistema de gestión de laboratorio veterinario",
+  metadataBase: new URL("https://www.petslab.com.co"),
+  title: { template: "%s — Pets & Lab", default: "Pets & Lab — Laboratorio veterinario en Cali" },
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    locale: "es_CO",
+    siteName: "Pets & Lab",
+    title: "Pets & Lab — Laboratorio veterinario en Cali",
+    description: DESCRIPTION,
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

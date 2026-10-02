@@ -7,8 +7,8 @@ export default async function LabLayout({ children }: { children: React.ReactNod
   const session = await getServerSession(authOptions)
   if (!session) redirect("/login")
 
-  // Only ADMIN and STAFF can access lab routes
-  if (session.user.role === "CLINIC") redirect("/mis-muestras")
+  // Las clínicas usan el Portal Vet, no el LIMS
+  if (session.user.role === "CLINIC") redirect("/portal-vet/dashboard")
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-bone">

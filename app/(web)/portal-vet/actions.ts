@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth"
 import bcrypt from "bcryptjs"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import { examsWithListPrice, generateOrderNumber } from "@/lib/orders"
+import { createWithOrderNumber, examsWithListPrice } from "@/lib/orders"
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "")
 
@@ -81,9 +81,10 @@ export async function createPortalOrder(formData: FormData) {
   const species = get("species")
   if (!patientName || !species) throw new Error("Faltan datos del paciente")
 
-  await prisma.order.create({
+  const exams = await examsWithListPrice(templateIds)
+  await createWithOrderNumber(orderNumber => prisma.order.create({
     data: {
-      orderNumber: await generateOrderNumber(),
+      orderNumber,
       patientName,
       species,
       breed: get("breed"),
@@ -96,10 +97,10 @@ export async function createPortalOrder(formData: FormData) {
       source: "PORTAL",
       notes: get("notes"),
       exams: {
-        create: await examsWithListPrice(templateIds),
+        create: exams,
       },
     },
-  })
+  }))
 
   revalidatePath("/portal-vet/dashboard")
   revalidatePath("/muestras")

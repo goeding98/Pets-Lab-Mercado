@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import Image from "next/image"
 import Eyebrow from "@/components/Eyebrow"
 import Btn from "@/components/Btn"
-import Newsletter from "@/components/Newsletter"
 import { IconDrop, IconTube, IconSlide, IconFlask } from "@/components/icons"
 import { SITE } from "@/lib/site-config"
 
@@ -159,20 +158,9 @@ export default function HomePage() {
           <p className="font-serif text-[28px] font-medium tracking-[-0.02em] mt-3">
             Trabajamos con 12+ clínicas en Cali.
           </p>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3.5 mt-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-bone h-16 flex items-center justify-center border border-black/[0.08]"
-              >
-                <span className="font-mono text-[9px] tracking-[0.18em] text-salvia-700">LOGO {i + 1}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
-      <Newsletter />
     </>
   )
 }

@@ -35,6 +35,11 @@ export async function GET(
 
   if (!orderExam) return new NextResponse("No encontrado", { status: 404 })
 
+  // Las clínicas solo ven exámenes de sus propias órdenes
+  if (session.user.role === "CLINIC" && orderExam.order.clinicId !== session.user.clinicId) {
+    return new NextResponse("No autorizado", { status: 403 })
+  }
+
   const hasNotes = !!orderExam.comments || orderExam.photos.length > 0
 
   // PDF subido sin comentarios ni fotos: se sirve tal cual (proxy del Blob para conservar el nombre)

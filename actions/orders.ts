@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { consumeInventoryForExam } from "@/lib/inventory"
-import { examsWithListPrice, generateOrderNumber } from "@/lib/orders"
+import { createWithOrderNumber, examsWithListPrice } from "@/lib/orders"
 
 export async function createOrder(formData: FormData) {
   const session = await getServerSession(authOptions)
@@ -15,12 +15,16 @@ export async function createOrder(formData: FormData) {
   const templateIds = formData.getAll("templateIds") as string[]
   if (templateIds.length === 0) throw new Error("Selecciona al menos un examen")
 
+  const validCount = await prisma.examTemplate.count({ where: { id: { in: templateIds }, active: true } })
+  if (validCount !== templateIds.length) throw new Error("Examen no válido")
+
   const clinicIdRaw = formData.get("clinicId") as string
   const clinicId = clinicIdRaw && clinicIdRaw !== "" ? clinicIdRaw : null
+  const exams = await examsWithListPrice(templateIds)
 
-  const order = await prisma.order.create({
+  const order = await createWithOrderNumber(orderNumber => prisma.order.create({
     data: {
-      orderNumber: await generateOrderNumber(),
+      orderNumber,
       patientName: formData.get("patientName") as string,
       species: formData.get("species") as string,
       breed: (formData.get("breed") as string) || null,
@@ -32,10 +36,10 @@ export async function createOrder(formData: FormData) {
       processedById: session.user.id,
       notes: (formData.get("notes") as string) || null,
       exams: {
-        create: await examsWithListPrice(templateIds),
+        create: exams,
       },
     },
-  })
+  }))
 
   revalidatePath("/muestras")
   redirect(`/muestras/${order.id}`)
