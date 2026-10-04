@@ -103,6 +103,10 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   con **negrita**/*cursiva* y frases rápidas, protozoos, flotación (parásito + HPG), técnica, nota fija
   y observaciones. Se guarda en `OrderExam.structured.copro`. El examen y los perfiles que lo incluyen
   tienen una sección marcador "Coprológico" sin campos (`scripts/coprologico-estructurado.ts`).
+  Coproscópico = todo el Coprológico + "Examen microscópico" (tabla 2 columnas) + tabla "Coproscópico"
+  (pH 4–9, almidones, grasa, sangre oculta, Wright/Gram con frase automática) en
+  `structured.coproscopico` (`components/CoproscopicoFields.tsx`); sección marcador "Coproscópico"
+  (`scripts/coproscopico-estructurado.ts`; la de "Sangre Oculta en Heces" se llama "Sangre Oculta").
 - Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial
   por especie), en formulario y PDF: `lib/referenceTables.ts`, por nombre de examen.
 - Al final de cada examen de una orden hay "Comentarios y fotos" (`ExamNotes.tsx`):

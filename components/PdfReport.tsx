@@ -12,7 +12,10 @@ import {
 import type { Style } from "@react-pdf/types"
 import { isDescriptiveSection } from "@/lib/sections"
 import { referenceTableFor } from "@/lib/referenceTables"
-import { colorLabel, isCoproSection, NOTA_FIJA, parseMarkup, readCopro, stripMarkup, TECNICA_DEFAULT, type CoproData, type Segment } from "@/lib/coprologico"
+import {
+  colorLabel, gramPhrase, isCoproSection, isCoproscopicoSection, NOTA_FIJA, parseMarkup, phLabel, readCopro, readCoproscopico,
+  stripMarkup, TECNICA_DEFAULT, type CoproData, type CoproscopicoData, type Segment,
+} from "@/lib/coprologico"
 
 const logoBuffer = fs.readFileSync(path.join(process.cwd(), "public", "logos", "pets-lab-cream.png"))
 const LOGO = `data:image/png;base64,${logoBuffer.toString("base64")}`
@@ -156,6 +159,12 @@ const copro = StyleSheet.create({
   colParasito: { flex: 3 },
   colHpg: { flex: 1 },
   note: { fontSize: 7, color: C.ink2, fontFamily: "Helvetica-Oblique", paddingHorizontal: 8, marginTop: 3 },
+  // Tablas de 2 columnas del Coproscópico (filas más altas)
+  pairRow: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: C.borderLight },
+  cell: { flex: 1, paddingHorizontal: 8, paddingVertical: 6, minHeight: 30 },
+  cellLeft: { borderRightWidth: 0.5, borderRightColor: C.borderLight },
+  cellLabel: { fontSize: 6, color: C.ink2, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 2 },
+  cellValue: { fontSize: 8.5, color: C.ink, lineHeight: 1.35 },
 })
 
 const segmentFont = (s: Segment) =>
@@ -180,7 +189,77 @@ function CoproRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function CoproPdf({ data, photo, lead }: { data: CoproData; photo: string | null; lead: React.ReactNode }) {
+function PairCell({ title, children, left = false, keepCase = false }: { title: string; children: React.ReactNode; left?: boolean; keepCase?: boolean }) {
+  return (
+    <View style={left ? [copro.cell, copro.cellLeft] : copro.cell}>
+      <Text style={keepCase ? [copro.cellLabel, { textTransform: "none" }] : copro.cellLabel}>{title}</Text>
+      {children}
+    </View>
+  )
+}
+
+function CoproscopicoPdf({ d }: { d: CoproscopicoData }) {
+  const protozoarios = d.protozoarios.items.filter(i => i.hallazgo.trim())
+  const helmintos = d.helmintos.items.filter(i => i.parasito.trim())
+  const gram = [gramPhrase(d), d.gramOtros.trim()].filter(Boolean).join(" ")
+  return (
+    <>
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.title}>Examen microscópico</Text>
+        <View style={copro.pairRow}>
+          <PairCell title="Microbiota" left><Text style={copro.cellValue}>{d.microbiota}</Text></PairCell>
+          <PairCell title="Glóbulos rojos"><Text style={copro.cellValue}>{d.globulosRojos}</Text></PairCell>
+        </View>
+        <View style={copro.pairRow}>
+          <PairCell title="Restos alimenticios" left><Text style={copro.cellValue}>{d.restos}</Text></PairCell>
+          <PairCell title="Leucocitos"><Text style={copro.cellValue}>{d.leucocitos.trim() || "—"}</Text></PairCell>
+        </View>
+        <View style={copro.pairRow}>
+          <PairCell title="Levaduras" left><Text style={copro.cellValue}>{d.levaduras}</Text></PairCell>
+          <PairCell title="Protozoarios">
+            {d.protozoarios.ninguno || protozoarios.length === 0
+              ? <Text style={copro.cellValue}>No se observan</Text>
+              : protozoarios.map((p, i) => <RichText key={i} text={`${p.hallazgo}${p.cantidad ? ` ${p.cantidad}` : ""}`} style={copro.cellValue} />)}
+          </PairCell>
+        </View>
+        <View style={copro.pairRow}>
+          <PairCell title="Otros" left><RichText text={d.otros.trim() || "—"} style={copro.cellValue} /></PairCell>
+          <PairCell title="Helmintos">
+            {d.helmintos.ninguno || helmintos.length === 0
+              ? <Text style={copro.cellValue}>No se observan</Text>
+              : helmintos.map((h, i) => (
+                <Text key={i} style={copro.cellValue}>
+                  <Text style={{ fontFamily: "Helvetica-Oblique" }}>{stripMarkup(h.parasito)}</Text>
+                  {h.hpg ? ` — ${h.hpg} HPG` : ""}
+                </Text>
+              ))}
+          </PairCell>
+        </View>
+      </View>
+
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.title}>Coproscópico</Text>
+        <View style={copro.pairRow}>
+          <PairCell title="pH" left keepCase><Text style={copro.cellValue}>{phLabel(d.ph) || "—"}</Text></PairCell>
+          <PairCell title="Almidones"><Text style={copro.cellValue}>{d.almidones}</Text></PairCell>
+        </View>
+        <View style={copro.pairRow}>
+          <PairCell title="Grasa fecal" left><Text style={copro.cellValue}>{d.grasa}</Text></PairCell>
+          <PairCell title="Sangre oculta">
+            <Text style={d.sangreOculta === "Positivo" ? [copro.cellValue, { fontFamily: "Helvetica-Bold" }] : copro.cellValue}>{d.sangreOculta}</Text>
+          </PairCell>
+        </View>
+        <View style={copro.pairRow}>
+          <PairCell title="Tinción Wright / Gram">
+            <RichText text={gram || "No se observan bacterias."} style={copro.cellValue} />
+          </PairCell>
+        </View>
+      </View>
+    </>
+  )
+}
+
+function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string | null; lead: React.ReactNode; extra?: React.ReactNode }) {
   const protozoos = data.protozoos.items.filter(i => i.hallazgo.trim())
   const huevos = data.flotacion.items.filter(i => i.parasito.trim())
   return (
@@ -251,6 +330,8 @@ function CoproPdf({ data, photo, lead }: { data: CoproData; photo: string | null
         <Text style={copro.plain}>Técnica: {data.tecnica.trim() || TECNICA_DEFAULT}</Text>
         <Text style={copro.note}>Nota: {NOTA_FIJA}</Text>
       </View>
+
+      {extra}
 
       {data.observaciones.trim() && (
         <View style={copro.block} wrap={false}>
@@ -325,11 +406,12 @@ export function PdfReport({ order }: { order: OrderData }) {
                   <Text style={styles.attachedNote}>Resultado en el documento adjunto (páginas siguientes).</Text>
                 )}
 
-                {hasSections && exam.template.sections.map((section, si) => isCoproSection(section.name) ? (
+                {hasSections && exam.template.sections.map((section, si) => isCoproSection(section.name) || isCoproscopicoSection(section.name) ? (
                   <CoproPdf
                     key={section.id}
                     data={readCopro(exam.structured)}
                     photo={exam.macroPhoto ?? null}
+                    extra={isCoproscopicoSection(section.name) ? <CoproscopicoPdf d={readCoproscopico(exam.structured)} /> : undefined}
                     lead={<>
                       {si === 0 && header}
                       {exam.template.sections.length > 1 && <Text style={styles.sectionLabel}>{section.name}</Text>}

@@ -10,9 +10,9 @@ import { uploadExamPhoto } from "@/lib/imageCompress"
 // Formulario del Coprológico (resultado estructurado, ver lib/coprologico.ts). Lo pinta
 // ExamResultForm en lugar de la tabla de campos cuando la sección es "Coprológico".
 
-const input = "border border-black/20 bg-white px-2 py-1.5 text-xs font-sans w-full focus:outline-salvia-700 disabled:bg-black/5 disabled:cursor-default"
-const label = "block font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase mb-1"
-const heading = "font-mono text-[8px] tracking-[0.2em] text-ink-2 uppercase mb-3 border-b border-black/[0.06] pb-1"
+export const input = "border border-black/20 bg-white px-2 py-1.5 text-xs font-sans w-full focus:outline-salvia-700 disabled:bg-black/5 disabled:cursor-default"
+export const label = "block font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase mb-1"
+export const heading = "font-mono text-[8px] tracking-[0.2em] text-ink-2 uppercase mb-3 border-b border-black/[0.06] pb-1"
 const chip = "border border-black/15 bg-white px-2 py-0.5 font-mono text-[10px] text-ink hover:border-salvia-700 hover:text-salvia-700 disabled:opacity-40"
 
 // Texto con **negrita** y *cursiva*
@@ -26,7 +26,7 @@ export function Markup({ text }: { text: string }) {
   )
 }
 
-function Select({ value, options, onChange, disabled, placeholder = "Seleccionar…" }: {
+export function Select({ value, options, onChange, disabled, placeholder = "Seleccionar…" }: {
   value: string; options: string[]; onChange: (v: string) => void; disabled: boolean; placeholder?: string
 }) {
   return (
@@ -94,14 +94,94 @@ function MacroPhoto({ examId, photo, locked }: { examId: string; photo: { id: st
   )
 }
 
+type Findings = { ninguno: boolean; items: { hallazgo: string; cantidad: string }[] }
+type HpgFindings = { ninguno: boolean; items: { parasito: string; hpg: string }[] }
+
+// "No se observan" o lista de hallazgos con cantidad (+ a +++). Protozoos / Protozoarios.
+export function FindingsList({ value, onChange, locked, noneLabel = "No se observan" }: {
+  value: Findings; onChange: (v: Findings) => void; locked: boolean; noneLabel?: string
+}) {
+  const setItem = (i: number, patch: Partial<Findings["items"][number]>) =>
+    onChange({ ...value, items: value.items.map((x, j) => (j === i ? { ...x, ...patch } : x)) })
+  return (
+    <>
+      <label className="flex items-center gap-2 font-sans text-xs text-ink mb-2">
+        <input type="checkbox" checked={value.ninguno} disabled={locked} onChange={e => onChange({ ...value, ninguno: e.target.checked })} className="accent-salvia-700" />
+        {noneLabel}
+      </label>
+      {!value.ninguno && (
+        <div className="space-y-2">
+          {value.items.map((it, i) => (
+            <div key={i} className="flex flex-wrap gap-2 items-center">
+              <input list="copro-protozoos" value={it.hallazgo} onChange={e => setItem(i, { hallazgo: e.target.value })} disabled={locked}
+                placeholder="Hallazgo (ej. *Giardia sp.* (quistes))" className={`${input} flex-1 min-w-[200px]`} />
+              <select value={it.cantidad} onChange={e => setItem(i, { cantidad: e.target.value })} disabled={locked} className={`${input} w-24`}>
+                <option value="">Cant.</option>
+                {CANTIDAD.map(c => <option key={c}>{c}</option>)}
+              </select>
+              {!locked && (
+                <button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, j) => j !== i) })} className="font-mono text-[9px] uppercase text-red-600">✕</button>
+              )}
+            </div>
+          ))}
+          <datalist id="copro-protozoos">{PROTOZOOS.map(p => <option key={p} value={p}>{stripMarkup(p)}</option>)}</datalist>
+          {!locked && (
+            <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { hallazgo: "", cantidad: "" }] })} className={chip}>
+              + Agregar hallazgo
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
+// "No se observan" o lista de parásitos (en cursiva) + HPG. Flotación / Helmintos.
+export function HpgList({ value, onChange, locked, noneLabel = "No se observan" }: {
+  value: HpgFindings; onChange: (v: HpgFindings) => void; locked: boolean; noneLabel?: string
+}) {
+  const setItem = (i: number, patch: Partial<HpgFindings["items"][number]>) =>
+    onChange({ ...value, items: value.items.map((x, j) => (j === i ? { ...x, ...patch } : x)) })
+  return (
+    <>
+      <label className="flex items-center gap-2 font-sans text-xs text-ink mb-2">
+        <input type="checkbox" checked={value.ninguno} disabled={locked} onChange={e => onChange({ ...value, ninguno: e.target.checked })} className="accent-salvia-700" />
+        {noneLabel}
+      </label>
+      {!value.ninguno && (
+        <div className="space-y-2">
+          {value.items.map((it, i) => (
+            <div key={i} className="flex flex-wrap gap-2 items-center">
+              <input list="copro-parasitos" value={it.parasito} onChange={e => setItem(i, { parasito: e.target.value })} disabled={locked}
+                placeholder="Parásito (ej. Toxocara canis)" className={`${input} flex-1 min-w-[200px] italic`} />
+              <input value={it.hpg} onChange={e => setItem(i, { hpg: e.target.value })} disabled={locked} inputMode="numeric" placeholder="HPG" className={`${input} w-28`} />
+              {!locked && (
+                <button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, j) => j !== i) })} className="font-mono text-[9px] uppercase text-red-600">✕</button>
+              )}
+            </div>
+          ))}
+          <datalist id="copro-parasitos">{PARASITOS_FLOTACION.map(p => <option key={p} value={p} />)}</datalist>
+          <p className="font-sans text-[10px] text-ink-2">HPG = huevos por gramo de materia fecal.</p>
+          {!locked && (
+            <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { parasito: "", hpg: "" }] })} className={chip}>
+              + Agregar parásito
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function CoproForm({
-  value, onChange, locked, examId, photo,
+  value, onChange, locked, examId, photo, extra,
 }: {
   value: CoproData
   onChange: (v: CoproData) => void
   locked: boolean
   examId: string
   photo: { id: string } | null
+  extra?: React.ReactNode // bloques adicionales antes de Observaciones (Coproscópico)
 }) {
   const microRef = useRef<HTMLTextAreaElement>(null)
   const set = <K extends keyof CoproData>(k: K, v: CoproData[K]) => onChange({ ...value, [k]: v })
@@ -134,8 +214,6 @@ export default function CoproForm({
     set("microscopico", cur.slice(0, s) + mark + cur.slice(s, e) + mark + cur.slice(e))
   }
 
-  const proto = value.protozoos
-  const flot = value.flotacion
 
   return (
     <div className="space-y-6">
@@ -218,87 +296,13 @@ export default function CoproForm({
       {/* Protozoos */}
       <div>
         <p className={heading}>Protozoos</p>
-        <label className="flex items-center gap-2 font-sans text-xs text-ink mb-2">
-          <input type="checkbox" checked={proto.ninguno} disabled={locked} onChange={e => set("protozoos", { ...proto, ninguno: e.target.checked })} className="accent-salvia-700" />
-          No se observan
-        </label>
-        {!proto.ninguno && (
-          <div className="space-y-2">
-            {proto.items.map((it, i) => (
-              <div key={i} className="flex flex-wrap gap-2 items-center">
-                <input
-                  list="copro-protozoos"
-                  value={it.hallazgo}
-                  onChange={e => set("protozoos", { ...proto, items: proto.items.map((x, j) => j === i ? { ...x, hallazgo: e.target.value } : x) })}
-                  disabled={locked}
-                  placeholder="Hallazgo (ej. *Giardia sp.* (quistes))"
-                  className={`${input} flex-1 min-w-[200px]`}
-                />
-                <select
-                  value={it.cantidad}
-                  onChange={e => set("protozoos", { ...proto, items: proto.items.map((x, j) => j === i ? { ...x, cantidad: e.target.value } : x) })}
-                  disabled={locked}
-                  className={`${input} w-24`}
-                >
-                  <option value="">Cant.</option>
-                  {CANTIDAD.map(c => <option key={c}>{c}</option>)}
-                </select>
-                {!locked && (
-                  <button type="button" onClick={() => set("protozoos", { ...proto, items: proto.items.filter((_, j) => j !== i) })} className="font-mono text-[9px] uppercase text-red-600">✕</button>
-                )}
-              </div>
-            ))}
-            <datalist id="copro-protozoos">{PROTOZOOS.map(p => <option key={p} value={p}>{stripMarkup(p)}</option>)}</datalist>
-            {!locked && (
-              <button type="button" onClick={() => set("protozoos", { ...proto, items: [...proto.items, { hallazgo: "", cantidad: "" }] })} className={chip}>
-                + Agregar hallazgo
-              </button>
-            )}
-          </div>
-        )}
+        <FindingsList value={value.protozoos} onChange={v => set("protozoos", v)} locked={locked} />
       </div>
 
       {/* Técnica de flotación */}
       <div>
         <p className={heading}>Técnica de flotación</p>
-        <label className="flex items-center gap-2 font-sans text-xs text-ink mb-2">
-          <input type="checkbox" checked={flot.ninguno} disabled={locked} onChange={e => set("flotacion", { ...flot, ninguno: e.target.checked })} className="accent-salvia-700" />
-          No se observan huevos
-        </label>
-        {!flot.ninguno && (
-          <div className="space-y-2">
-            {flot.items.map((it, i) => (
-              <div key={i} className="flex flex-wrap gap-2 items-center">
-                <input
-                  list="copro-parasitos"
-                  value={it.parasito}
-                  onChange={e => set("flotacion", { ...flot, items: flot.items.map((x, j) => j === i ? { ...x, parasito: e.target.value } : x) })}
-                  disabled={locked}
-                  placeholder="Parásito (ej. Toxocara canis)"
-                  className={`${input} flex-1 min-w-[200px] italic`}
-                />
-                <input
-                  value={it.hpg}
-                  onChange={e => set("flotacion", { ...flot, items: flot.items.map((x, j) => j === i ? { ...x, hpg: e.target.value } : x) })}
-                  disabled={locked}
-                  inputMode="numeric"
-                  placeholder="HPG"
-                  className={`${input} w-28`}
-                />
-                {!locked && (
-                  <button type="button" onClick={() => set("flotacion", { ...flot, items: flot.items.filter((_, j) => j !== i) })} className="font-mono text-[9px] uppercase text-red-600">✕</button>
-                )}
-              </div>
-            ))}
-            <datalist id="copro-parasitos">{PARASITOS_FLOTACION.map(p => <option key={p} value={p} />)}</datalist>
-            <p className="font-sans text-[10px] text-ink-2">HPG = huevos por gramo de materia fecal.</p>
-            {!locked && (
-              <button type="button" onClick={() => set("flotacion", { ...flot, items: [...flot.items, { parasito: "", hpg: "" }] })} className={chip}>
-                + Agregar parásito
-              </button>
-            )}
-          </div>
-        )}
+        <HpgList value={value.flotacion} onChange={v => set("flotacion", v)} locked={locked} noneLabel="No se observan huevos" />
       </div>
 
       {/* Pie técnico */}
@@ -307,6 +311,8 @@ export default function CoproForm({
         <input value={value.tecnica} onChange={e => set("tecnica", e.target.value)} disabled={locked} className={input} />
         <p className="font-sans text-[11px] text-ink-2 italic mt-1.5">Nota: {NOTA_FIJA}</p>
       </div>
+
+      {extra}
 
       {/* Observaciones */}
       <div>

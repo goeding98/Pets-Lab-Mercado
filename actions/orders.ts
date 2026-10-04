@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { consumeInventoryForExam } from "@/lib/inventory"
-import { readCopro } from "@/lib/coprologico"
+import { phError, readCopro, readCoproscopico } from "@/lib/coprologico"
 import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
 
 export async function createOrder(formData: FormData) {
@@ -74,13 +74,19 @@ export async function saveExamComments(orderExamId: string, comments: string) {
 export async function saveExamResults(
   orderExamId: string,
   results: { fieldId: string; value: string; flagged: boolean }[],
-  structured?: { copro?: unknown },
+  structured?: { copro?: unknown; coproscopico?: unknown },
 ) {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "resultados.editar")) throw new Error("No autorizado")
 
   // Bloques con formulario propio: se normalizan (y se acotan) antes de guardar
-  const structuredData = structured?.copro !== undefined ? { copro: readCopro(structured) } : undefined
+  const structuredData = structured?.copro !== undefined
+    ? { copro: readCopro(structured), ...(structured.coproscopico !== undefined ? { coproscopico: readCoproscopico(structured) } : {}) }
+    : undefined
+  if (structuredData?.coproscopico) {
+    const phInvalid = phError(structuredData.coproscopico.ph)
+    if (phInvalid) throw new Error(phInvalid)
+  }
 
   const current = await prisma.orderExam.findUnique({
     where: { id: orderExamId },

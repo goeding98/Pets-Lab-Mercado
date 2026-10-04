@@ -7,7 +7,8 @@ import { evaluar } from "@/catalogo-pets-lab/calculos"
 import ExamNotes from "./ExamNotes"
 import { isDescriptiveSection } from "@/lib/sections"
 import { referenceTableFor } from "@/lib/referenceTables"
-import { isCoproSection, readCopro } from "@/lib/coprologico"
+import { isCoproSection, isCoproscopicoSection, phError, readCopro, readCoproscopico } from "@/lib/coprologico"
+import CoproscopicoFields from "@/components/CoproscopicoFields"
 import CoproForm from "@/components/CoproForm"
 
 type Field = {
@@ -89,8 +90,10 @@ export default function ExamResultForm({
 
   const [values, setValues] = useState<Record<string, string>>(initialValues)
   const [saved, setSaved] = useState(false)
-  const hasCopro = exam.template.sections.some(s => isCoproSection(s.name))
+  const hasCoproscopico = exam.template.sections.some(s => isCoproscopicoSection(s.name))
+  const hasCopro = hasCoproscopico || exam.template.sections.some(s => isCoproSection(s.name))
   const [copro, setCopro] = useState(() => readCopro(exam.structured))
+  const [coproscopico, setCoproscopico] = useState(() => readCoproscopico(exam.structured))
   const [saveError, setSaveError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [uploadedPath, setUploadedPath] = useState<string | null>(exam.uploadedPdfPath)
@@ -193,9 +196,11 @@ export default function ExamResultForm({
     })
 
     setSaveError(null)
+    const phInvalid = hasCoproscopico && phError(coproscopico.ph)
+    if (phInvalid) { setSaveError(phInvalid); return }
     startTransition(async () => {
       try {
-        await saveExamResults(exam.id, results, hasCopro ? { copro } : undefined)
+        await saveExamResults(exam.id, results, hasCopro ? { copro, ...(hasCoproscopico ? { coproscopico } : {}) } : undefined)
         setSaved(true)
         router.refresh()
       } catch (err) {
@@ -239,7 +244,16 @@ export default function ExamResultForm({
             <p className="font-mono text-[8px] tracking-[0.2em] text-ink-2 uppercase mb-3 border-b border-black/[0.06] pb-1">
               {section.name}
             </p>
-            {isCoproSection(section.name) ? (
+            {isCoproscopicoSection(section.name) ? (
+              <CoproForm
+                value={copro}
+                onChange={v => { setCopro(v); setSaved(false) }}
+                locked={locked}
+                examId={exam.id}
+                photo={exam.macroPhoto}
+                extra={<CoproscopicoFields value={coproscopico} onChange={v => { setCoproscopico(v); setSaved(false) }} locked={locked} />}
+              />
+            ) : isCoproSection(section.name) ? (
               <CoproForm value={copro} onChange={v => { setCopro(v); setSaved(false) }} locked={locked} examId={exam.id} photo={exam.macroPhoto} />
             ) : isDescriptiveSection(section.name, exam.template.name) ? (
               <table className="w-full text-xs">
