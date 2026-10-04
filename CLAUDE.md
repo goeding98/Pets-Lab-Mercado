@@ -107,6 +107,14 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   (pH 4–9, almidones, grasa, sangre oculta, Wright/Gram con frase automática) en
   `structured.coproscopico` (`components/CoproscopicoFields.tsx`); sección marcador "Coproscópico"
   (`scripts/coproscopico-estructurado.ts`; la de "Sangre Oculta en Heces" se llama "Sangre Oculta").
+- Parcial de Orina = resultado estructurado (`lib/orina.ts`, `components/OrinaForm.tsx`, `OrinaPdf` en
+  `PdfReport.tsx`), en `structured.orina`; sección marcador "Parcial de Orina" en el examen y en los
+  perfiles Renal Completo, Diabético, Geriátrico e Integral (`scripts/orina-estructurado.ts`). Método
+  de recolección y tirilla obligatorios. Referencias por especie (texto + qué es normal / mín-máx, que
+  define la negrita) y cortes del UPC en `LabSetting` "orina" (`lib/settings.ts: getOrinaConfig`),
+  editables en /rangos; no fijarlos en el código. UPC = proteína (tirilla, o medida aparte) /
+  creatinina urinaria. Reactivos = items de Inventario con lote y vencimiento; con lote vencido no se
+  valida (chequeo en cliente y en `saveExamResults`, con los datos del inventario).
 - Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial
   por especie), en formulario y PDF: `lib/referenceTables.ts`, por nombre de examen.
 - Al final de cada examen de una orden hay "Comentarios y fotos" (`ExamNotes.tsx`):

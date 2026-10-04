@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { prisma } from "@/lib/db"
 import { isDescriptiveSection } from "@/lib/sections"
 import RangesEditor, { type MasterExam } from "./RangesEditor"
+import OrinaConfigEditor from "./OrinaConfigEditor"
+import { getOrinaConfig } from "@/lib/settings"
 
 export const metadata: Metadata = { title: "Rangos de referencia" }
 export const dynamic = "force-dynamic"
@@ -76,6 +78,15 @@ export default async function RangosPage() {
         perfiles y el Hemograma Simple). Los hemogramas por edad (0 - 2, 2.5 - 3 y 4 - 6 meses) tienen sus rangos
         aparte. Los resultados ya guardados conservan su marca de &quot;fuera de rango&quot; hasta que se vuelvan a guardar.
       </p>
+      {/* El Parcial de Orina tiene resultado estructurado: sus referencias van en una configuración aparte */}
+      <details className="border border-black/10 bg-white mb-8 group">
+        <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between">
+          <span className="font-sans text-sm font-medium text-ink">Parcial de Orina — referencias por especie y UPC</span>
+          <span className="font-mono text-[8px] tracking-[0.15em] uppercase text-ink-2 group-open:hidden">Editar ›</span>
+        </summary>
+        <OrinaConfigEditor initial={await getOrinaConfig()} />
+      </details>
+
       <RangesEditor exams={exams} />
     </div>
   )

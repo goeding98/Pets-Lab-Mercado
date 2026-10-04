@@ -43,6 +43,23 @@ export default function NewItemForm() {
           <Input name="minStock" type="number" step="any" min="0" placeholder="Opcional" />
         </div>
       </div>
+      <p className="font-sans text-[11px] text-ink-2 mt-4 mb-2">
+        Si es un reactivo (ej. tirillas de orina), llena marca, lote y vencimiento: salen en el control de calidad del reporte.
+      </p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div>
+          <Label>Marca</Label>
+          <Input name="brand" placeholder="Opcional" />
+        </div>
+        <div>
+          <Label>Lote</Label>
+          <Input name="lot" placeholder="Opcional" />
+        </div>
+        <div>
+          <Label>Vence</Label>
+          <Input name="expiresAt" type="date" />
+        </div>
+      </div>
       <button
         type="submit"
         disabled={pending}

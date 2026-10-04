@@ -6,6 +6,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import ExamResultForm from "./ExamResultForm"
+import { isOrinaSection } from "@/lib/orina"
+import { getOrinaConfig } from "@/lib/settings"
 import UpdateStatusButton from "./UpdateStatusButton"
 
 export const metadata: Metadata = { title: "Detalle de muestra" }
@@ -43,6 +45,18 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
 
   const session = await getServerSession(authOptions)
   const canEdit = can(session?.user.role, "resultados.editar")
+
+  // Parcial de Orina: valores de referencia (configurables) y reactivos con lote del inventario
+  const hasOrina = order.exams.some(e => e.template.sections.some(s => isOrinaSection(s.name)))
+  const [orinaConfig, reagentItems] = hasOrina
+    ? await Promise.all([
+        getOrinaConfig(),
+        prisma.inventoryItem.findMany({ where: { lot: { not: null }, expiresAt: { not: null } }, orderBy: { name: "asc" } }),
+      ])
+    : [undefined, []]
+  const reagents = reagentItems.map(r => ({
+    id: r.id, nombre: r.name, marca: r.brand ?? "", lote: r.lot ?? "", vence: r.expiresAt!.toISOString().slice(0, 10),
+  }))
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-4xl">
@@ -119,6 +133,8 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
               }}
               species={order.species}
               readOnly={!canEdit}
+              orinaConfig={orinaConfig}
+              reagents={reagents}
             />
             {exam.status === "COMPLETADO" && (
               <div className="flex justify-end mt-1.5">

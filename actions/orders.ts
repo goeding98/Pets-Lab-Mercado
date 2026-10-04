@@ -7,6 +7,22 @@ import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { consumeInventoryForExam } from "@/lib/inventory"
 import { phError, readCopro, readCoproscopico } from "@/lib/coprologico"
+import { orinaErrors, readOrina } from "@/lib/orina"
+
+// Parcial de Orina: el reactivo se toma del inventario (lote y vencimiento actuales, no los del
+// navegador) y no se puede validar con un lote vencido ni con datos fuera de rango.
+async function validatedOrina(structured: unknown) {
+  const orina = readOrina(structured)
+  if (orina.reactivo) {
+    const item = await prisma.inventoryItem.findUnique({ where: { id: orina.reactivo.id } })
+    orina.reactivo = item?.lot && item.expiresAt
+      ? { id: item.id, nombre: item.name, marca: item.brand ?? "", lote: item.lot, vence: item.expiresAt.toISOString().slice(0, 10) }
+      : null
+  }
+  const errors = orinaErrors(orina)
+  if (errors.length) throw new Error(errors.join(". "))
+  return orina
+}
 import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
 
 export async function createOrder(formData: FormData) {
@@ -74,14 +90,18 @@ export async function saveExamComments(orderExamId: string, comments: string) {
 export async function saveExamResults(
   orderExamId: string,
   results: { fieldId: string; value: string; flagged: boolean }[],
-  structured?: { copro?: unknown; coproscopico?: unknown },
+  structured?: { copro?: unknown; coproscopico?: unknown; orina?: unknown },
 ) {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "resultados.editar")) throw new Error("No autorizado")
 
   // Bloques con formulario propio: se normalizan (y se acotan) antes de guardar
-  const structuredData = structured?.copro !== undefined
-    ? { copro: readCopro(structured), ...(structured.coproscopico !== undefined ? { coproscopico: readCoproscopico(structured) } : {}) }
+  const structuredData = structured && Object.keys(structured).length
+    ? {
+        ...(structured.copro !== undefined ? { copro: readCopro(structured) } : {}),
+        ...(structured.coproscopico !== undefined ? { coproscopico: readCoproscopico(structured) } : {}),
+        ...(structured.orina !== undefined ? { orina: await validatedOrina(structured) } : {}),
+      }
     : undefined
   if (structuredData?.coproscopico) {
     const phInvalid = phError(structuredData.coproscopico.ph)

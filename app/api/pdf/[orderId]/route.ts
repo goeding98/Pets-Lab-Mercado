@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { buildOrderPdf } from "@/lib/reportPdf"
+import { getOrinaConfig } from "@/lib/settings"
 
 export async function GET(
   req: Request,
@@ -46,7 +47,7 @@ export async function GET(
     }
   }
 
-  const bytes = await buildOrderPdf(order, order.exams)
+  const bytes = await buildOrderPdf({ ...order, orinaConfig: await getOrinaConfig() }, order.exams)
 
   return new NextResponse(Buffer.from(bytes), {
     status: 200,

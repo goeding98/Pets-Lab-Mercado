@@ -9,6 +9,8 @@ import { isDescriptiveSection } from "@/lib/sections"
 import { referenceTableFor } from "@/lib/referenceTables"
 import { isCoproSection, isCoproscopicoSection, phError, readCopro, readCoproscopico } from "@/lib/coprologico"
 import CoproscopicoFields from "@/components/CoproscopicoFields"
+import OrinaForm from "@/components/OrinaForm"
+import { isOrinaSection, orinaErrors, readOrina, type OrinaConfig, type Reactivo } from "@/lib/orina"
 import CoproForm from "@/components/CoproForm"
 
 type Field = {
@@ -73,10 +75,14 @@ export default function ExamResultForm({
   exam,
   species,
   readOnly = false,
+  orinaConfig,
+  reagents = [],
 }: {
   exam: ExamProp
   species: string
   readOnly?: boolean
+  orinaConfig?: OrinaConfig // valores de referencia del Parcial de Orina (LabSetting)
+  reagents?: Reactivo[] // reactivos con lote del inventario (control de calidad de la orina)
 }) {
   // "Fuera de rango" se evalúa contra el rango de la especie del paciente
   const refFor = (f: Field) => (species === "Felino" ? f.refFeline : species === "Canino" ? f.refCanine : null)
@@ -94,6 +100,8 @@ export default function ExamResultForm({
   const hasCopro = hasCoproscopico || exam.template.sections.some(s => isCoproSection(s.name))
   const [copro, setCopro] = useState(() => readCopro(exam.structured))
   const [coproscopico, setCoproscopico] = useState(() => readCoproscopico(exam.structured))
+  const hasOrina = exam.template.sections.some(s => isOrinaSection(s.name))
+  const [orina, setOrina] = useState(() => readOrina(exam.structured))
   const [saveError, setSaveError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [uploadedPath, setUploadedPath] = useState<string | null>(exam.uploadedPdfPath)
@@ -198,9 +206,16 @@ export default function ExamResultForm({
     setSaveError(null)
     const phInvalid = hasCoproscopico && phError(coproscopico.ph)
     if (phInvalid) { setSaveError(phInvalid); return }
+    const orinaInvalid = hasOrina ? orinaErrors(orina) : []
+    if (orinaInvalid.length) { setSaveError(orinaInvalid.join(". ") + "."); return }
+    const structured = {
+      ...(hasCopro ? { copro } : {}),
+      ...(hasCoproscopico ? { coproscopico } : {}),
+      ...(hasOrina ? { orina } : {}),
+    }
     startTransition(async () => {
       try {
-        await saveExamResults(exam.id, results, hasCopro ? { copro, ...(hasCoproscopico ? { coproscopico } : {}) } : undefined)
+        await saveExamResults(exam.id, results, Object.keys(structured).length ? structured : undefined)
         setSaved(true)
         router.refresh()
       } catch (err) {
@@ -244,7 +259,9 @@ export default function ExamResultForm({
             <p className="font-mono text-[8px] tracking-[0.2em] text-ink-2 uppercase mb-3 border-b border-black/[0.06] pb-1">
               {section.name}
             </p>
-            {isCoproscopicoSection(section.name) ? (
+            {isOrinaSection(section.name) && orinaConfig ? (
+              <OrinaForm value={orina} onChange={v => { setOrina(v); setSaved(false) }} locked={locked} species={species} config={orinaConfig} reagents={reagents} />
+            ) : isCoproscopicoSection(section.name) ? (
               <CoproForm
                 value={copro}
                 onChange={v => { setCopro(v); setSaved(false) }}

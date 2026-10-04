@@ -187,6 +187,10 @@ model InventoryItem {
   unit        String // presentación: ML | GR | MG | UNIDAD | CC | KG | ... (texto libre)
   stock       Float               @default(0)
   minStock    Float?
+  // Reactivos (ej. tirillas de orina): marca, lote y vencimiento salen en el control de calidad del reporte
+  brand       String?
+  lot         String?
+  expiresAt   DateTime?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   recipeItems RecipeItem[]
@@ -214,4 +218,12 @@ model InventoryMovement {
   orderExamId String?
   orderExam   OrderExam?    @relation(fields: [orderExamId], references: [id], onDelete: SetNull)
   createdAt   DateTime      @default(now())
+}
+
+// Configuración del laboratorio editable desde la app (clave -> JSON). Ej. "orina": valores de
+// referencia por especie y cortes del UPC del Parcial de Orina (lib/orina.ts).
+model LabSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
 }

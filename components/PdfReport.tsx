@@ -16,6 +16,11 @@ import {
   colorLabel, gramPhrase, isCoproSection, isCoproscopicoSection, NOTA_FIJA, parseMarkup, phLabel, readCopro, readCoproscopico,
   stripMarkup, TECNICA_DEFAULT, type CoproData, type CoproscopicoData, type Segment,
 } from "@/lib/coprologico"
+import {
+  colorOrinaLabel, densidadLabel, isAbnormal, isOrinaSection, LEYENDA_BACTERIAS, METODOS_DEFAULT, NOTA_ORINA,
+  ORINA_CONFIG_DEFAULT, PARAM_LABEL, phOrinaLabel, readOrina, speciesKey, upcInterpretacion, upcValue,
+  type CatParam, type NumParam, type OrinaConfig, type OrinaData,
+} from "@/lib/orina"
 
 const logoBuffer = fs.readFileSync(path.join(process.cwd(), "public", "logos", "pets-lab-cream.png"))
 const LOGO = `data:image/png;base64,${logoBuffer.toString("base64")}`
@@ -114,6 +119,7 @@ export type OrderData = {
   clinic?: { name: string } | null
   branch?: { name: string; address: string } | null
   processedBy?: { name: string } | null
+  orinaConfig?: OrinaConfig // valores de referencia del Parcial de Orina (LabSetting)
   exams: {
     id: string
     template: {
@@ -259,6 +265,155 @@ function CoproscopicoPdf({ d }: { d: CoproscopicoData }) {
   )
 }
 
+// ── Parcial de Orina (resultado estructurado, ver lib/orina.ts) ──────────────────────────────────
+const orina = StyleSheet.create({
+  metodo: { fontSize: 8.5, color: C.ink, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: C.salvia50, marginBottom: 2 },
+  head: { flexDirection: "row", backgroundColor: C.salvia50, paddingHorizontal: 8, paddingVertical: 4 },
+  row: { flexDirection: "row", paddingHorizontal: 8, paddingVertical: 3.5, borderBottomWidth: 0.5, borderBottomColor: C.borderLight },
+  cParam: { flex: 2.2, fontSize: 8, color: C.ink },
+  cRes: { flex: 1.6, fontSize: 8, color: C.ink },
+  cRef: { flex: 1.6, fontSize: 7.5, color: C.ink2 },
+  qc: { fontSize: 6.5, color: C.ink2, paddingHorizontal: 8, marginTop: 4, lineHeight: 1.4 },
+  legend: { fontSize: 6.5, color: C.ink2, paddingHorizontal: 8, marginTop: 3 },
+})
+const bold = { fontFamily: "Helvetica-Bold" }
+
+function OrinaTable({ rows }: { rows: { label: string; value: string; ref: string; abnormal: boolean }[] }) {
+  return (
+    <>
+      <View style={orina.head}>
+        <Text style={[orina.cParam, styles.thText]}>Parámetro</Text>
+        <Text style={[orina.cRes, styles.thText]}>Resultado</Text>
+        <Text style={[orina.cRef, styles.thText]}>Valor de referencia</Text>
+      </View>
+      {rows.map(r => (
+        <View key={r.label} style={orina.row}>
+          <Text style={orina.cParam}>{r.label}</Text>
+          <Text style={r.abnormal ? [orina.cRes, bold] : orina.cRes}>{r.value || "—"}</Text>
+          <Text style={orina.cRef}>{r.ref || "—"}</Text>
+        </View>
+      ))}
+    </>
+  )
+}
+
+function OrinaPdf({ d, species, config, lead }: { d: OrinaData; species: string; config: OrinaConfig; lead: React.ReactNode }) {
+  const sp = speciesKey(species)
+  const refs = config.ref[sp]
+  const row = (p: CatParam | NumParam, value: string, shown = value) =>
+    ({ label: PARAM_LABEL[p], value: shown, ref: refs[p].texto, abnormal: isAbnormal(p, value, refs) })
+  const upc = upcValue(d)
+  const cut = config.upc[sp]
+  const upcInterp = upc === null ? null : upcInterpretacion(upc, cut)
+  const s = d.sedimento
+  const bacterias = s.bacterias.grado === "Negativo"
+    ? "Negativo"
+    : [s.bacterias.grado, s.bacterias.tipo, s.bacterias.ubicacion].filter(Boolean).join(" · ")
+  const cilindros = s.cilindros.ninguno || !s.cilindros.items.some(c => c.tipo)
+    ? "0 AP"
+    : s.cilindros.items.filter(c => c.tipo).map(c => `${c.tipo}${c.cantidad ? ` ${c.cantidad}` : ""}`).join(", ")
+  const cristales = s.cristales.ninguno || !s.cristales.items.some(c => c.tipo)
+    ? "No se observan"
+    : s.cristales.items.filter(c => c.tipo).map(c => `${c.tipo}${c.cantidad ? ` (${c.cantidad})` : ""}`).join(", ")
+  const cells: [string, string, boolean][] = [
+    ["Cantidad de sedimento", s.cantidad || "—", false],
+    ["Bacterias", bacterias, s.bacterias.grado !== "Negativo"],
+    ["Leucocitos (AP)", s.leucocitos || "—", false],
+    ["Eritrocitos (AP)", s.eritrocitos || "—", false],
+    ["Células epiteliales transicionales (AP)", s.transicionales || "—", false],
+    ["Células escamosas (AP)", s.escamosas || "—", false],
+    ...(s.renales ? [["Células renales (AP)", s.renales, false] as [string, string, boolean]] : []),
+    ["Cilindros", cilindros, cilindros !== "0 AP"],
+    ["Cristales", cristales, cristales !== "No se observan"],
+    ...(s.otros.trim() ? [["Otros", s.otros.trim(), false] as [string, string, boolean]] : []),
+  ]
+  const pairs = Array.from({ length: Math.ceil(cells.length / 2) }, (_, i) => cells.slice(i * 2, i * 2 + 2))
+  const r = d.reactivo
+
+  return (
+    <View>
+      <View wrap={false}>
+        {lead}
+        <View style={copro.block}>
+          <Text style={copro.title}>Citoquímico de orina</Text>
+          <Text style={orina.metodo}>Método de recolección: <Text style={bold}>{d.metodo || "—"}</Text></Text>
+        </View>
+        <View style={copro.block}>
+          <Text style={copro.title}>Examen físico</Text>
+          <OrinaTable rows={[
+            row("color", d.color, colorOrinaLabel(d)),
+            row("aspecto", d.aspecto),
+            row("densidad", d.densidad, densidadLabel(d.densidad)),
+            row("olor", d.olor || "No evaluado"),
+          ]} />
+        </View>
+      </View>
+
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.title}>Examen químico</Text>
+        <OrinaTable rows={[
+          row("glucosa", d.glucosa), row("bilirrubina", d.bilirrubina), row("cetonas", d.cetonas),
+          row("sangre", d.sangre), row("nitritos", d.nitritos), row("leucocitos", d.leucocitos),
+          row("ph", d.ph, phOrinaLabel(d.ph)), row("proteinas", d.proteinas),
+          row("urobilinogeno", d.urobilinogeno), row("creatinina", d.creatinina),
+        ]} />
+        <Text style={orina.qc}>
+          {r ? `Tirilla / reactivo: ${r.nombre}${r.marca ? ` (${r.marca})` : ""} · Lote ${r.lote} · Vence ${r.vence}. ` : ""}
+          Métodos: {d.metodos.trim() || METODOS_DEFAULT}.
+        </Text>
+      </View>
+
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.title}>Pruebas complementarias</Text>
+        <View style={copro.pairRow}>
+          <PairCell title="Test de Héller (proteínas)" left>
+            <Text style={d.heller !== "Negativo" ? [copro.cellValue, bold] : copro.cellValue}>{d.heller}</Text>
+          </PairCell>
+          <PairCell title="Anillo de Héller (bilirrubina)">
+            <Text style={d.anilloHeller !== "Negativo" ? [copro.cellValue, bold] : copro.cellValue}>{d.anilloHeller}</Text>
+          </PairCell>
+        </View>
+        <View style={copro.pairRow}>
+          <PairCell title="Ratio proteína / creatinina (UPC)">
+            <Text style={copro.cellValue}>
+              {upc === null ? "—" : <Text style={upcInterp !== "No proteinúrico" ? bold : {}}>{upc.toFixed(2)} · {upcInterp}</Text>}
+            </Text>
+            <Text style={[copro.cellLabel, { textTransform: "none", marginTop: 2 }]}>
+              {species === "Felino" ? "Felino" : "Canino"}: {"<"}{cut.limitrofe} no proteinúrico · {cut.limitrofe}–{cut.proteinurico} limítrofe · {">"}{cut.proteinurico} proteinúrico
+              {d.proteinaMgDl.trim() ? " · proteína urinaria medida por otro método" : ""}
+            </Text>
+          </PairCell>
+        </View>
+      </View>
+
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.title}>Sedimento urinario</Text>
+        {pairs.map((pair, i) => (
+          <View key={i} style={copro.pairRow}>
+            {pair.map(([t, v, b], j) => (
+              <PairCell key={t} title={t} left={j === 0 && pair.length === 2}>
+                <Text style={b ? [copro.cellValue, bold] : copro.cellValue}>{v}</Text>
+              </PairCell>
+            ))}
+          </View>
+        ))}
+        <Text style={orina.legend}>{LEYENDA_BACTERIAS}</Text>
+      </View>
+
+      {!!d.observaciones.trim() && (
+        <View style={copro.block} wrap={false}>
+          <Text style={copro.title}>Observaciones</Text>
+          <RichText text={d.observaciones} style={copro.paragraph} />
+        </View>
+      )}
+
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.note}>Nota: {NOTA_ORINA}</Text>
+      </View>
+    </View>
+  )
+}
+
 function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string | null; lead: React.ReactNode; extra?: React.ReactNode }) {
   const protozoos = data.protozoos.items.filter(i => i.hallazgo.trim())
   const huevos = data.flotacion.items.filter(i => i.parasito.trim())
@@ -276,7 +431,7 @@ function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string
               <CoproRow label="Sangre macroscópica" value={data.sangre} />
               <CoproRow label="Moco" value={data.moco} />
               <CoproRow label="Parásitos adultos" value={data.parasitosAdultos} />
-              {data.otros.trim() && <CoproRow label="Otros" value={data.otros} />}
+              {!!data.otros.trim() && <CoproRow label="Otros" value={data.otros} />}
             </View>
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             {photo && <Image src={photo} style={copro.photo} />}
@@ -333,7 +488,7 @@ function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string
 
       {extra}
 
-      {data.observaciones.trim() && (
+      {!!data.observaciones.trim() && (
         <View style={copro.block} wrap={false}>
           <Text style={copro.title}>Observaciones</Text>
           <RichText text={data.observaciones} style={copro.paragraph} />
@@ -406,7 +561,18 @@ export function PdfReport({ order }: { order: OrderData }) {
                   <Text style={styles.attachedNote}>Resultado en el documento adjunto (páginas siguientes).</Text>
                 )}
 
-                {hasSections && exam.template.sections.map((section, si) => isCoproSection(section.name) || isCoproscopicoSection(section.name) ? (
+                {hasSections && exam.template.sections.map((section, si) => isOrinaSection(section.name) ? (
+                  <OrinaPdf
+                    key={section.id}
+                    d={readOrina(exam.structured)}
+                    species={order.species}
+                    config={order.orinaConfig ?? ORINA_CONFIG_DEFAULT}
+                    lead={<>
+                      {si === 0 && header}
+                      {exam.template.sections.length > 1 && <Text style={styles.sectionLabel}>{section.name}</Text>}
+                    </>}
+                  />
+                ) : isCoproSection(section.name) || isCoproscopicoSection(section.name) ? (
                   <CoproPdf
                     key={section.id}
                     data={readCopro(exam.structured)}

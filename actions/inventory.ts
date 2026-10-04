@@ -5,6 +5,13 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 
+// Reactivos: marca, lote y vencimiento (opcionales). El vencimiento llega como YYYY-MM-DD.
+function reagentFields(formData: FormData) {
+  const t = (k: string) => ((formData.get(k) as string) ?? "").trim() || null
+  const exp = t("expiresAt")
+  return { brand: t("brand"), lot: t("lot"), expiresAt: exp ? new Date(`${exp}T12:00:00Z`) : null }
+}
+
 async function requireStaff() {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "inventario")) throw new Error("No autorizado")
@@ -23,7 +30,7 @@ export async function createInventoryItem(formData: FormData) {
   const minStock = minStockRaw ? Number(minStockRaw) : null
 
   await prisma.inventoryItem.create({
-    data: { name, unit, stock, minStock },
+    data: { name, unit, stock, minStock, ...reagentFields(formData) },
   })
 
   revalidatePath("/inventario")
@@ -42,7 +49,7 @@ export async function updateInventoryItem(id: string, formData: FormData) {
 
   await prisma.inventoryItem.update({
     where: { id },
-    data: { name, unit, minStock },
+    data: { name, unit, minStock, ...reagentFields(formData) },
   })
 
   revalidatePath("/inventario")

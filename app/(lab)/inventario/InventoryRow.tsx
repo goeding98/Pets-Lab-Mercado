@@ -10,6 +10,10 @@ export default function InventoryRow({ item, isEven }: { item: InventoryItem; is
 
   const low = item.minStock != null && item.stock < item.minStock
   const negative = item.stock < 0
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" })
+  const exp = item.expiresAt?.toISOString().slice(0, 10)
+  const expired = !!exp && exp < today
+  const soon = !!exp && !expired && (new Date(exp).getTime() - new Date(today).getTime()) / 86400000 <= 30
 
   function handleSaveEdit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -51,6 +55,18 @@ export default function InventoryRow({ item, isEven }: { item: InventoryItem; is
               <FieldLabel>Mínimo</FieldLabel>
               <input name="minStock" type="number" step="any" min="0" defaultValue={item.minStock ?? ""} className={`${inputClass} w-28`} />
             </div>
+            <div>
+              <FieldLabel>Marca</FieldLabel>
+              <input name="brand" defaultValue={item.brand ?? ""} className={`${inputClass} w-32`} />
+            </div>
+            <div>
+              <FieldLabel>Lote</FieldLabel>
+              <input name="lot" defaultValue={item.lot ?? ""} className={`${inputClass} w-28`} />
+            </div>
+            <div>
+              <FieldLabel>Vence</FieldLabel>
+              <input name="expiresAt" type="date" defaultValue={item.expiresAt ? item.expiresAt.toISOString().slice(0, 10) : ""} className={inputClass} />
+            </div>
             <button type="submit" disabled={pending} className="bg-salvia-700 text-bone font-mono text-[9px] tracking-[0.18em] uppercase px-4 py-2 hover:bg-salvia-800 disabled:opacity-60">
               Guardar
             </button>
@@ -65,7 +81,19 @@ export default function InventoryRow({ item, isEven }: { item: InventoryItem; is
 
   return (
     <tr className={`border-b border-black/[0.06] hover:bg-salvia-50/50 transition-colors ${isEven ? "bg-black/[0.015]" : ""}`}>
-      <td className="px-4 py-3 font-sans text-sm">{item.name}</td>
+      <td className="px-4 py-3 font-sans text-sm">
+        {item.name}
+        {(item.brand || item.lot || item.expiresAt) && (
+          <span className="block font-mono text-[9px] text-ink-2 mt-0.5">
+            {[item.brand, item.lot && `Lote ${item.lot}`].filter(Boolean).join(" · ")}
+            {item.expiresAt && (
+              <span className={expired ? "text-red-600 font-bold" : soon ? "text-amber-700" : ""}>
+                {(item.brand || item.lot) && " · "}Vence {item.expiresAt.toISOString().slice(0, 10)}{expired && " (VENCIDO)"}
+              </span>
+            )}
+          </span>
+        )}
+      </td>
       <td className="px-4 py-3 font-mono text-[11px] text-ink-2 uppercase">{item.unit}</td>
       <td className="px-4 py-3">
         <span className={`font-mono text-xs ${negative ? "text-red-600 font-bold" : low ? "text-red-600" : "text-ink"}`}>

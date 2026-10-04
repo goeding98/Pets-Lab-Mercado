@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { get } from "@vercel/blob"
 import { buildOrderPdf } from "@/lib/reportPdf"
+import { getOrinaConfig } from "@/lib/settings"
 
 // Los encabezados HTTP no admiten caracteres como "–" o "₃": nombre de archivo solo en ASCII
 const safeFilename = (s: string) =>
@@ -59,7 +60,7 @@ export async function GET(
   }
 
   const { order, ...exam } = orderExam
-  const bytes = await buildOrderPdf(order, [exam])
+  const bytes = await buildOrderPdf({ ...order, orinaConfig: await getOrinaConfig() }, [exam])
 
   return new NextResponse(Buffer.from(bytes), {
     status: 200,
