@@ -59,3 +59,7 @@ export async function GET(
     },
   })
 }
+
+// Un reporte con muchos exámenes puede tardar varios segundos (consultas + render del PDF): margen
+// para que no lo corte el límite por defecto de las funciones de Vercel.
+export const maxDuration = 60

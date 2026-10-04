@@ -6,6 +6,7 @@ import { PdfReport, type OrderData } from "@/components/PdfReport"
 
 type ReportExam = Omit<OrderData["exams"][number], "photos" | "attachedPdf" | "macroPhoto"> & {
   uploadedPdfPath: string | null
+  status?: string
   photos: { id: string; url: string; role?: string | null }[] // role "COPRO_MACRO" = foto de la muestra del Coprológico
 }
 
@@ -28,8 +29,12 @@ export async function buildOrderPdf(
   order: Omit<OrderData, "exams">,
   exams: ReportExam[],
 ): Promise<Uint8Array> {
+  // En el reporte de la orden solo van los exámenes completados (un pendiente saldría vacío); si se
+  // pide un solo examen, o ninguno está completo, van todos.
+  const done = exams.filter(e => e.status === "COMPLETADO")
+  const shown = exams.length > 1 && done.length > 0 ? done : exams
   const hasNotes = (e: ReportExam) => !!e.comments || e.photos.some(p => !p.role)
-  const inReport = exams.filter(e => !e.uploadedPdfPath || hasNotes(e))
+  const inReport = shown.filter(e => !e.uploadedPdfPath || hasNotes(e))
 
   const merged = await PDFDocument.create()
 
@@ -62,7 +67,7 @@ export async function buildOrderPdf(
   }
 
   // Cada PDF subido (reportes hechos por fuera del sistema), en el orden de la orden
-  for (const exam of exams.filter(e => e.uploadedPdfPath)) {
+  for (const exam of shown.filter(e => e.uploadedPdfPath)) {
     const bytes = await readBlob(exam.uploadedPdfPath!)
     if (!bytes) continue
     try {
