@@ -94,7 +94,7 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `ExamField.sourceFieldId` → su parámetro maestro; guardar en el maestro actualiza todas las copias.
   Las copias no se editan aparte. Vínculos creados con `scripts/vincular-rangos.ts` (idempotente;
   correrlo de nuevo si se crea un perfil/examen derivado fuera de Promociones). `composeSections`
-  liga solas las promociones nuevas. "Hemograma 0 - 3 Meses" y "Hemograma 4 - 6 Meses" son maestros
+  liga solas las promociones nuevas. "Hemograma 0 - 2 Meses", "Hemograma 2.5 - 3 Meses" y "Hemograma 4 - 6 Meses" son maestros
   aparte (copia del Completo, rangos propios). Cambiar un rango no recalcula el "fuera de rango" de
   resultados ya guardados.
 - Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial

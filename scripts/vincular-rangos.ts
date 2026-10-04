@@ -1,6 +1,6 @@
 // Liga cada parámetro copiado con su parámetro del examen maestro (ExamField.sourceFieldId), para que
 // en /rangos se edite el rango una sola vez y se propague a todas las copias. Además crea los
-// hemogramas por edad ("Hemograma 0 - 3 Meses" y "Hemograma 4 - 6 Meses"), que son maestros
+// hemogramas por edad (0 - 2, 2.5 - 3 y 4 - 6 meses), que son maestros
 // propios: copian el Hemograma Completo pero sus rangos se editan aparte (no se ligan a nada).
 //
 // - Exámenes derivados de otros maestros (DERIVED): sus campos se ligan al maestro fuente.
@@ -19,7 +19,7 @@ const APPLY = process.argv.includes("--apply")
 type Tx = Prisma.TransactionClient
 
 const COMPLETO = "Hemograma Completo con Recuento de Reticulocitos"
-const POR_EDAD = ["Hemograma 0 - 3 Meses", "Hemograma 4 - 6 Meses"]
+const POR_EDAD = ["Hemograma 0 - 2 Meses", "Hemograma 2.5 - 3 Meses", "Hemograma 4 - 6 Meses"]
 
 // examen derivado -> maestros de los que toma sus parámetros
 const DERIVED: [string, string[]][] = [

@@ -73,7 +73,7 @@ export default async function RangosPage() {
       <p className="font-sans text-sm text-ink-2 mt-2 mb-8 max-w-2xl">
         Rangos canino y felino de cada examen maestro. Al guardar un parámetro se actualiza también en todos
         los perfiles, promociones y exámenes que lo incluyen (por ejemplo, el hemograma de todos los
-        perfiles y el Hemograma Simple). Los hemogramas por edad (0 - 3 y 4 - 6 meses) tienen sus rangos
+        perfiles y el Hemograma Simple). Los hemogramas por edad (0 - 2, 2.5 - 3 y 4 - 6 meses) tienen sus rangos
         aparte. Los resultados ya guardados conservan su marca de &quot;fuera de rango&quot; hasta que se vuelvan a guardar.
       </p>
       <RangesEditor exams={exams} />
