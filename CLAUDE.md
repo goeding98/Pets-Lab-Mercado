@@ -97,6 +97,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   liga solas las promociones nuevas. "Hemograma 0 - 2 Meses", "Hemograma 2.5 - 3 Meses" y "Hemograma 4 - 6 Meses" son maestros
   aparte (copia del Completo, rangos propios). Cambiar un rango no recalcula el "fuera de rango" de
   resultados ya guardados.
+- Coprológico = resultado estructurado, no por campos (`lib/coprologico.ts`, formulario
+  `components/CoproForm.tsx`, PDF `CoproPdf` en `components/PdfReport.tsx`): macroscópico con selectores
+  + foto de la muestra (`ExamPhoto.role = "COPRO_MACRO"`, una sola, circular en el PDF), microscópico
+  con **negrita**/*cursiva* y frases rápidas, protozoos, flotación (parásito + HPG), técnica, nota fija
+  y observaciones. Se guarda en `OrderExam.structured.copro`. El examen y los perfiles que lo incluyen
+  tienen una sección marcador "Coprológico" sin campos (`scripts/coprologico-estructurado.ts`).
 - Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial
   por especie), en formulario y PDF: `lib/referenceTables.ts`, por nombre de examen.
 - Al final de cada examen de una orden hay "Comentarios y fotos" (`ExamNotes.tsx`):

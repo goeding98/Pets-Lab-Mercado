@@ -33,7 +33,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
             },
           },
           results: true,
-          photos: { orderBy: { createdAt: "asc" }, select: { id: true, name: true } },
+          photos: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, role: true } },
         },
       },
     },
@@ -111,7 +111,15 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
       <div className="space-y-6">
         {order.exams.map(exam => (
           <div key={exam.id}>
-            <ExamResultForm exam={exam} species={order.species} readOnly={!canEdit} />
+            <ExamResultForm
+              exam={{
+                ...exam,
+                photos: exam.photos.filter(p => !p.role),
+                macroPhoto: exam.photos.find(p => p.role === "COPRO_MACRO") ?? null,
+              }}
+              species={order.species}
+              readOnly={!canEdit}
+            />
             {exam.status === "COMPLETADO" && (
               <div className="flex justify-end mt-1.5">
                 <a

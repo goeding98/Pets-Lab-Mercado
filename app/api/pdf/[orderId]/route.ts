@@ -31,7 +31,7 @@ export async function GET(
             },
           },
           results: true,
-          photos: { orderBy: { createdAt: "asc" }, select: { id: true, url: true } },
+          photos: { orderBy: { createdAt: "asc" }, select: { id: true, url: true, role: true } },
         },
       },
     },

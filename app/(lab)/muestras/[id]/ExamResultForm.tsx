@@ -7,6 +7,8 @@ import { evaluar } from "@/catalogo-pets-lab/calculos"
 import ExamNotes from "./ExamNotes"
 import { isDescriptiveSection } from "@/lib/sections"
 import { referenceTableFor } from "@/lib/referenceTables"
+import { isCoproSection, readCopro } from "@/lib/coprologico"
+import CoproForm from "@/components/CoproForm"
 
 type Field = {
   id: string
@@ -39,6 +41,8 @@ type ExamProp = {
   uploadedPdfName: string | null
   comments: string | null
   photos: { id: string; name: string }[]
+  structured: unknown // bloques con formulario propio (Coprológico)
+  macroPhoto: { id: string } | null // foto de la muestra del Coprológico
   template: {
     name: string
     area: string
@@ -85,6 +89,8 @@ export default function ExamResultForm({
 
   const [values, setValues] = useState<Record<string, string>>(initialValues)
   const [saved, setSaved] = useState(false)
+  const hasCopro = exam.template.sections.some(s => isCoproSection(s.name))
+  const [copro, setCopro] = useState(() => readCopro(exam.structured))
   const [saveError, setSaveError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [uploadedPath, setUploadedPath] = useState<string | null>(exam.uploadedPdfPath)
@@ -189,7 +195,7 @@ export default function ExamResultForm({
     setSaveError(null)
     startTransition(async () => {
       try {
-        await saveExamResults(exam.id, results)
+        await saveExamResults(exam.id, results, hasCopro ? { copro } : undefined)
         setSaved(true)
         router.refresh()
       } catch (err) {
@@ -233,7 +239,9 @@ export default function ExamResultForm({
             <p className="font-mono text-[8px] tracking-[0.2em] text-ink-2 uppercase mb-3 border-b border-black/[0.06] pb-1">
               {section.name}
             </p>
-            {isDescriptiveSection(section.name, exam.template.name) ? (
+            {isCoproSection(section.name) ? (
+              <CoproForm value={copro} onChange={v => { setCopro(v); setSaved(false) }} locked={locked} examId={exam.id} photo={exam.macroPhoto} />
+            ) : isDescriptiveSection(section.name, exam.template.name) ? (
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left">

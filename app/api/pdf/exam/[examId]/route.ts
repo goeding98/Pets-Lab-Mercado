@@ -29,7 +29,7 @@ export async function GET(
         },
       },
       results: true,
-      photos: { orderBy: { createdAt: "asc" }, select: { id: true, url: true } },
+      photos: { orderBy: { createdAt: "asc" }, select: { id: true, url: true, role: true } },
     },
   })
 
@@ -40,7 +40,7 @@ export async function GET(
     return new NextResponse("No autorizado", { status: 403 })
   }
 
-  const hasNotes = !!orderExam.comments || orderExam.photos.length > 0
+  const hasNotes = !!orderExam.comments || orderExam.photos.some(p => !p.role)
 
   // PDF subido sin comentarios ni fotos: se sirve tal cual (proxy del Blob para conservar el nombre)
   if (orderExam.uploadedPdfPath?.startsWith("http") && !hasNotes) {

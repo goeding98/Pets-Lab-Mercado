@@ -4,9 +4,9 @@ import { get } from "@vercel/blob"
 import { PDFDocument } from "pdf-lib"
 import { PdfReport, type OrderData } from "@/components/PdfReport"
 
-type ReportExam = Omit<OrderData["exams"][number], "photos" | "attachedPdf"> & {
+type ReportExam = Omit<OrderData["exams"][number], "photos" | "attachedPdf" | "macroPhoto"> & {
   uploadedPdfPath: string | null
-  photos: { id: string; url: string }[]
+  photos: { id: string; url: string; role?: string | null }[] // role "COPRO_MACRO" = foto de la muestra del Coprológico
 }
 
 async function readBlob(url: string): Promise<Buffer | null> {
@@ -28,7 +28,7 @@ export async function buildOrderPdf(
   order: Omit<OrderData, "exams">,
   exams: ReportExam[],
 ): Promise<Uint8Array> {
-  const hasNotes = (e: ReportExam) => !!e.comments || e.photos.length > 0
+  const hasNotes = (e: ReportExam) => !!e.comments || e.photos.some(p => !p.role)
   const inReport = exams.filter(e => !e.uploadedPdfPath || hasNotes(e))
 
   const merged = await PDFDocument.create()
@@ -38,9 +38,14 @@ export async function buildOrderPdf(
       inReport.map(async e => ({
         ...e,
         attachedPdf: !!e.uploadedPdfPath,
+        macroPhoto: await (async () => {
+          const p = e.photos.find(x => x.role === "COPRO_MACRO")
+          const bytes = p ? await readBlob(p.url) : null
+          return bytes ? `data:image/jpeg;base64,${bytes.toString("base64")}` : null
+        })(),
         photos: (
           await Promise.all(
-            e.photos.map(async p => {
+            e.photos.filter(p => !p.role).map(async p => {
               const bytes = await readBlob(p.url)
               return bytes ? { id: p.id, src: `data:image/jpeg;base64,${bytes.toString("base64")}` } : null
             }),

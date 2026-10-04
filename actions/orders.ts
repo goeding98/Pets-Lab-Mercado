@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { consumeInventoryForExam } from "@/lib/inventory"
+import { readCopro } from "@/lib/coprologico"
 import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
 
 export async function createOrder(formData: FormData) {
@@ -72,10 +73,14 @@ export async function saveExamComments(orderExamId: string, comments: string) {
 
 export async function saveExamResults(
   orderExamId: string,
-  results: { fieldId: string; value: string; flagged: boolean }[]
+  results: { fieldId: string; value: string; flagged: boolean }[],
+  structured?: { copro?: unknown },
 ) {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "resultados.editar")) throw new Error("No autorizado")
+
+  // Bloques con formulario propio: se normalizan (y se acotan) antes de guardar
+  const structuredData = structured?.copro !== undefined ? { copro: readCopro(structured) } : undefined
 
   const current = await prisma.orderExam.findUnique({
     where: { id: orderExamId },
@@ -98,7 +103,7 @@ export async function saveExamResults(
     // Mark exam as completed
     await tx.orderExam.update({
       where: { id: orderExamId },
-      data: { status: "COMPLETADO", completedAt: new Date() },
+      data: { status: "COMPLETADO", completedAt: new Date(), ...(structuredData ? { structured: structuredData } : {}) },
     })
 
     // Descontar del inventario los insumos de la receta, solo la primera vez que se completa

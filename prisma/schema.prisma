@@ -93,6 +93,8 @@ model OrderExam {
   uploadedPdfName String?
   comments        String? // comentarios del encargado; salen al final del examen en el PDF
   photos          ExamPhoto[]
+  // Resultado de bloques con formulario propio (hoy el Coprológico: lib/coprologico.ts), en JSON
+  structured      Json?
   completedAt     DateTime?
   createdAt       DateTime            @default(now())
 }
@@ -104,6 +106,7 @@ model ExamPhoto {
   orderExam   OrderExam @relation(fields: [orderExamId], references: [id], onDelete: Cascade)
   url         String
   name        String
+  role        String? // null = foto de "Comentarios y fotos"; "COPRO_MACRO" = foto de la muestra del Coprológico
   createdAt   DateTime  @default(now())
 }
 

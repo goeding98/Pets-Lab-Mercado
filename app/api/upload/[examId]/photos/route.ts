@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
-import { put } from "@vercel/blob"
+import { del, put } from "@vercel/blob"
 import { randomUUID } from "crypto"
 
 // Sube una foto a un examen de una orden. El navegador ya la manda comprimida a JPEG
@@ -24,13 +24,24 @@ export async function POST(
   const exam = await prisma.orderExam.findUnique({ where: { id: params.examId }, select: { orderId: true } })
   if (!exam) return new NextResponse("Examen no encontrado", { status: 404 })
 
+  // role "COPRO_MACRO": foto de la muestra del Coprológico (una sola; reemplaza la anterior)
+  const role = formData.get("role") === "COPRO_MACRO" ? "COPRO_MACRO" : null
+
   const blob = await put(`photos/${randomUUID()}.jpg`, file, {
     access: "private",
     contentType: "image/jpeg",
   })
 
+  if (role) {
+    const previous = await prisma.examPhoto.findMany({ where: { orderExamId: params.examId, role }, select: { id: true, url: true } })
+    if (previous.length) {
+      await del(previous.map(p => p.url)).catch(() => {})
+      await prisma.examPhoto.deleteMany({ where: { id: { in: previous.map(p => p.id) } } })
+    }
+  }
+
   const photo = await prisma.examPhoto.create({
-    data: { orderExamId: params.examId, url: blob.url, name: file.name || "foto.jpg" },
+    data: { orderExamId: params.examId, url: blob.url, name: file.name || "foto.jpg", role },
     select: { id: true, name: true },
   })
 

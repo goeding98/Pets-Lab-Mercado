@@ -9,11 +9,16 @@ import {
   StyleSheet,
   Font,
 } from "@react-pdf/renderer"
+import type { Style } from "@react-pdf/types"
 import { isDescriptiveSection } from "@/lib/sections"
 import { referenceTableFor } from "@/lib/referenceTables"
+import { colorLabel, isCoproSection, NOTA_FIJA, parseMarkup, readCopro, stripMarkup, TECNICA_DEFAULT, type CoproData, type Segment } from "@/lib/coprologico"
 
 const logoBuffer = fs.readFileSync(path.join(process.cwd(), "public", "logos", "pets-lab-cream.png"))
 const LOGO = `data:image/png;base64,${logoBuffer.toString("base64")}`
+// Sin división de palabras con guion: react-pdf usa reglas del inglés ("compat-ibles", "Cor-regido")
+Font.registerHyphenationCallback(word => [word])
+
 const SIGNATURE = `data:image/png;base64,${fs.readFileSync(path.join(process.cwd(), "public", "firma-marcelo-valencia.png")).toString("base64")}`
 
 // Colors
@@ -128,8 +133,133 @@ export type OrderData = {
     results: { fieldId: string; value: string; flagged: boolean }[]
     comments?: string | null
     photos?: { id: string; src: string }[] // src: data URI JPEG
+    structured?: unknown // bloques con formulario propio (Coprológico)
+    macroPhoto?: string | null // data URI de la foto de la muestra del Coprológico
     attachedPdf?: boolean // el resultado es un PDF subido (va en las páginas siguientes)
   }[]
+}
+
+// ── Coprológico (resultado estructurado, ver lib/coprologico.ts) ───────────────────────────────
+const copro = StyleSheet.create({
+  block: { marginTop: 8 },
+  title: { fontSize: 6.5, color: C.ink2, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, paddingBottom: 2, borderBottomWidth: 0.5, borderBottomColor: C.borderLight },
+  macro: { flexDirection: "row", alignItems: "flex-start" },
+  rows: { flex: 1 },
+  row: { flexDirection: "row", paddingVertical: 3, paddingHorizontal: 8, borderBottomWidth: 0.5, borderBottomColor: C.borderLight },
+  label: { width: 120, fontSize: 7.5, color: C.ink2 },
+  value: { flex: 1, fontSize: 8, color: C.ink },
+  // ~3.5 cm de diámetro
+  photo: { width: 99, height: 99, borderRadius: 49.5, objectFit: "cover", marginLeft: 16 },
+  paragraph: { fontSize: 8.5, color: C.ink, lineHeight: 1.45, textAlign: "justify", paddingHorizontal: 8 },
+  plain: { fontSize: 8, color: C.ink, paddingHorizontal: 8 },
+  head: { flexDirection: "row", backgroundColor: C.salvia50, paddingHorizontal: 8, paddingVertical: 4 },
+  colParasito: { flex: 3 },
+  colHpg: { flex: 1 },
+  note: { fontSize: 7, color: C.ink2, fontFamily: "Helvetica-Oblique", paddingHorizontal: 8, marginTop: 3 },
+})
+
+const segmentFont = (s: Segment) =>
+  s.bold && s.italic ? "Helvetica-BoldOblique" : s.bold ? "Helvetica-Bold" : s.italic ? "Helvetica-Oblique" : undefined
+
+function RichText({ text, style }: { text: string; style: Style }) {
+  return (
+    <Text style={style}>
+      {parseMarkup(text).map((s, i) => (
+        <Text key={i} style={segmentFont(s) ? { fontFamily: segmentFont(s) } : {}}>{s.text}</Text>
+      ))}
+    </Text>
+  )
+}
+
+function CoproRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={copro.row}>
+      <Text style={copro.label}>{label}</Text>
+      <RichText text={value || "—"} style={copro.value} />
+    </View>
+  )
+}
+
+function CoproPdf({ data, photo, lead }: { data: CoproData; photo: string | null; lead: React.ReactNode }) {
+  const protozoos = data.protozoos.items.filter(i => i.hallazgo.trim())
+  const huevos = data.flotacion.items.filter(i => i.parasito.trim())
+  return (
+    <View>
+      {/* El título del examen va pegado al primer bloque para que no quede solo al final de una hoja */}
+      <View wrap={false}>
+        {lead}
+        <View style={copro.block}>
+          <Text style={copro.title}>Análisis macroscópico</Text>
+          <View style={copro.macro}>
+            <View style={copro.rows}>
+              <CoproRow label="Consistencia" value={data.consistencia} />
+              <CoproRow label="Color" value={colorLabel(data)} />
+              <CoproRow label="Sangre macroscópica" value={data.sangre} />
+              <CoproRow label="Moco" value={data.moco} />
+              <CoproRow label="Parásitos adultos" value={data.parasitosAdultos} />
+              {data.otros.trim() && <CoproRow label="Otros" value={data.otros} />}
+            </View>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            {photo && <Image src={photo} style={copro.photo} />}
+          </View>
+        </View>
+      </View>
+
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.title}>Análisis microscópico</Text>
+        <RichText text={data.microscopico.trim() || "—"} style={copro.paragraph} />
+      </View>
+
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.title}>Protozoos</Text>
+        {data.protozoos.ninguno || protozoos.length === 0 ? (
+          <Text style={copro.plain}>No se observan</Text>
+        ) : (
+          protozoos.map((p, i) => (
+            // El texto va directo en la fila (envuelto en otra View con flex, react-pdf no calcula su alto)
+            <View key={i} style={copro.row}>
+              <RichText text={p.hallazgo} style={{ ...copro.value, flex: 3 }} />
+              <Text style={{ ...copro.value, flex: 1 }}>{p.cantidad || "—"}</Text>
+            </View>
+          ))
+        )}
+      </View>
+
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.title}>Técnica de flotación</Text>
+        {data.flotacion.ninguno || huevos.length === 0 ? (
+          <Text style={copro.plain}>No se observan huevos</Text>
+        ) : (
+          <>
+            <View style={copro.head}>
+              <View style={copro.colParasito}><Text style={styles.thText}>Parásito</Text></View>
+              <View style={copro.colHpg}><Text style={styles.thText}>HPG (huevos / g)</Text></View>
+            </View>
+            {huevos.map((h, i) => (
+              <View key={i} style={copro.row}>
+                <View style={copro.colParasito}>
+                  <Text style={{ fontSize: 8, color: C.ink, fontFamily: "Helvetica-Oblique" }}>{stripMarkup(h.parasito)}</Text>
+                </View>
+                <View style={copro.colHpg}><Text style={copro.value}>{h.hpg || "—"}</Text></View>
+              </View>
+            ))}
+          </>
+        )}
+      </View>
+
+      <View style={copro.block} wrap={false}>
+        <Text style={copro.plain}>Técnica: {data.tecnica.trim() || TECNICA_DEFAULT}</Text>
+        <Text style={copro.note}>Nota: {NOTA_FIJA}</Text>
+      </View>
+
+      {data.observaciones.trim() && (
+        <View style={copro.block} wrap={false}>
+          <Text style={copro.title}>Observaciones</Text>
+          <RichText text={data.observaciones} style={copro.paragraph} />
+        </View>
+      )}
+    </View>
+  )
 }
 
 function PatientInfo({ label, value }: { label: string; value: string }) {
@@ -195,7 +325,17 @@ export function PdfReport({ order }: { order: OrderData }) {
                   <Text style={styles.attachedNote}>Resultado en el documento adjunto (páginas siguientes).</Text>
                 )}
 
-                {hasSections && exam.template.sections.map((section, si) => (
+                {hasSections && exam.template.sections.map((section, si) => isCoproSection(section.name) ? (
+                  <CoproPdf
+                    key={section.id}
+                    data={readCopro(exam.structured)}
+                    photo={exam.macroPhoto ?? null}
+                    lead={<>
+                      {si === 0 && header}
+                      {exam.template.sections.length > 1 && <Text style={styles.sectionLabel}>{section.name}</Text>}
+                    </>}
+                  />
+                ) : (
                   <View key={section.id} wrap={false}>
                     {si === 0 && header}
                     {exam.template.sections.length > 1 && (
