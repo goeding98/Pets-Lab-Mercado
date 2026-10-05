@@ -12,6 +12,7 @@ import {
 import type { Style } from "@react-pdf/types"
 import { isDescriptiveSection } from "@/lib/sections"
 import { referenceTableFor } from "@/lib/referenceTables"
+import { SITE } from "@/lib/site-config"
 import {
   colorLabel, gramPhrase, isCoproSection, isCoproscopicoSection, NOTA_FIJA, parseMarkup, phLabel, readCopro, readCoproscopico,
   stripMarkup, TECNICA_DEFAULT, type CoproData, type CoproscopicoData, type Segment,
@@ -43,7 +44,7 @@ const C = {
 const styles = StyleSheet.create({
   // paddingBottom reserva el espacio del pie fijo (si no, las filas quedan debajo del pie y el
   // relleno inferior del cuerpo puede pasar solo a una página en blanco)
-  page: { backgroundColor: C.bone, padding: 0, paddingTop: 71, paddingBottom: 44, fontFamily: "Helvetica" },
+  page: { backgroundColor: C.bone, padding: 0, paddingTop: 71, paddingBottom: 54, fontFamily: "Helvetica" },
   header: { position: "absolute", top: 0, left: 0, right: 0, backgroundColor: C.salvia700, paddingHorizontal: 32, paddingVertical: 18, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerLogo: { width: 90, height: 35, objectFit: "contain" },
   headerRight: { alignItems: "flex-end" },
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
   tdFlagMark: { fontSize: 7, color: C.red },
 
   // Footer
-  footer: { position: "absolute", bottom: 18, left: 32, right: 32, flexDirection: "row", justifyContent: "space-between", borderTopWidth: 0.5, borderTopColor: C.borderLight, paddingTop: 8 },
+  footer: { position: "absolute", bottom: 18, left: 32, right: 32, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", borderTopWidth: 0.5, borderTopColor: C.borderLight, paddingTop: 8 },
   footerText: { fontSize: 6.5, color: C.ink2, letterSpacing: 1 },
   footerBold: { fontFamily: "Helvetica-Bold", color: C.salvia700 },
 
@@ -666,9 +667,12 @@ export function PdfReport({ order }: { order: OrderData }) {
 
         {/* Page footer */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>
-            <Text style={styles.footerBold}>Pets &amp; Lab</Text> · Cl. 10 #31-143, Cali · petslab.com.co
-          </Text>
+          <View>
+            <Text style={styles.footerText}>
+              <Text style={styles.footerBold}>Pets &amp; Lab</Text> · {SITE.address} · {SITE.domain}
+            </Text>
+            <Text style={[styles.footerText, { marginTop: 3 }]}>WhatsApp +57 {SITE.phone}</Text>
+          </View>
           <Text style={styles.footerText}>Los resultados son válidos únicamente para esta muestra.</Text>
         </View>
       </Page>
