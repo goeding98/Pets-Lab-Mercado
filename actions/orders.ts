@@ -129,7 +129,8 @@ export async function saveExamResults(
     // Mark exam as completed
     await tx.orderExam.update({
       where: { id: orderExamId },
-      data: { status: "COMPLETADO", completedAt: new Date(), ...(structuredData ? { structured: structuredData } : {}) },
+      // Si se está editando un resultado ya completado, se conserva la fecha en que se completó
+      data: { status: "COMPLETADO", ...(wasComplete ? {} : { completedAt: new Date() }), ...(structuredData ? { structured: structuredData } : {}) },
     })
 
     // Descontar del inventario los insumos de la receta, solo la primera vez que se completa

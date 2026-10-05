@@ -97,6 +97,8 @@ export default function ExamResultForm({
 
   const [values, setValues] = useState<Record<string, string>>(initialValues)
   const [saved, setSaved] = useState(false)
+  // Un examen completado queda bloqueado; "Editar" lo abre para corregir y volver a guardar
+  const [editing, setEditing] = useState(false)
   const hasCoproscopico = exam.template.sections.some(s => isCoproscopicoSection(s.name))
   const hasCopro = hasCoproscopico || exam.template.sections.some(s => isCoproSection(s.name))
   const [copro, setCopro] = useState(() => readCopro(exam.structured))
@@ -246,6 +248,7 @@ export default function ExamResultForm({
       try {
         await saveExamResults(exam.id, results, Object.keys(structured).length ? structured : undefined)
         setSaved(true)
+        setEditing(false)
         router.refresh()
       } catch (err) {
         // Sin esto un fallo del servidor (sesión vencida, timeout de la BD, deploy nuevo) se
@@ -258,7 +261,23 @@ export default function ExamResultForm({
 
   const refTable = referenceTableFor(exam.template.name)
   const isComplete = exam.status === "COMPLETADO"
-  const locked = isComplete || readOnly
+  const locked = (isComplete && !editing) || readOnly
+
+  function startEditing() {
+    setSaved(false)
+    setSaveError(null)
+    setEditing(true)
+  }
+
+  // Descarta lo digitado y vuelve a lo guardado
+  function cancelEditing() {
+    setValues(initialValues)
+    setCopro(readCopro(exam.structured))
+    setCoproscopico(readCoproscopico(exam.structured))
+    setOrina(readOrina(exam.structured))
+    setSaveError(null)
+    setEditing(false)
+  }
 
   return (
     <div className="border border-black/10">
@@ -267,7 +286,27 @@ export default function ExamResultForm({
           <p className="font-serif text-[17px] font-medium tracking-[-0.01em]">{exam.template.name}</p>
           <p className="font-mono text-[8px] tracking-[0.18em] text-salvia-700 uppercase mt-0.5">{exam.template.area}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {isComplete && !readOnly && (
+            editing ? (
+              <button
+                type="button"
+                onClick={cancelEditing}
+                disabled={pending}
+                className="font-mono text-[9px] tracking-[0.15em] uppercase px-3 py-1 border border-black/20 text-ink hover:bg-black/5 disabled:opacity-50"
+              >
+                Cancelar edición
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={startEditing}
+                className="font-mono text-[9px] tracking-[0.15em] uppercase px-3 py-1 border border-salvia-700 text-salvia-700 hover:bg-salvia-700 hover:text-bone transition-colors"
+              >
+                Editar
+              </button>
+            )
+          )}
           <span
             title="Se calcula desde Caja según precio, descuento y valor pagado"
             className={`font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 ${paymentStatus.className}`}
@@ -277,10 +316,16 @@ export default function ExamResultForm({
           <span className={`font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 ${
             isComplete ? "bg-salvia-700 text-bone" : "bg-black/10 text-ink"
           }`}>
-            {isComplete ? "Completado" : "Pendiente"}
+            {isComplete ? (editing ? "Editando" : "Completado") : "Pendiente"}
           </span>
         </div>
       </div>
+
+      {editing && (
+        <p className="bg-amber-50 border-b border-amber-200 px-5 py-2 font-sans text-xs text-ink">
+          Editando un resultado ya completado. Los cambios quedan al dar <strong>Guardar cambios</strong>; el reporte PDF sale con los valores nuevos.
+        </p>
+      )}
 
       <div className="px-5 py-4">
         {exam.template.sections.map(section => (
@@ -448,8 +493,8 @@ export default function ExamResultForm({
             </div>
           ) : null}
 
-          {/* Action buttons: guardar (si no está completado) y subir PDF (siempre, mientras no haya uno) */}
-          {!readOnly && !uploadedPath && (
+          {/* Action buttons: guardar (pendiente o en edición) y subir PDF (mientras no haya uno) */}
+          {!readOnly && (!locked || !uploadedPath) && (
             <div className="flex items-center gap-3 flex-wrap">
               {!locked && (
                 <>
@@ -458,11 +503,12 @@ export default function ExamResultForm({
                     disabled={pending}
                     className="bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.22em] uppercase px-5 py-2.5 hover:bg-salvia-800 transition-colors disabled:opacity-60"
                   >
-                    {pending ? "Guardando…" : "Guardar resultados →"}
+                    {pending ? "Guardando…" : editing ? "Guardar cambios →" : "Guardar resultados →"}
                   </button>
-                  <span className="font-mono text-[9px] text-ink-2 uppercase tracking-widest">o</span>
+                  {!uploadedPath && <span className="font-mono text-[9px] text-ink-2 uppercase tracking-widest">o</span>}
                 </>
               )}
+              {!uploadedPath && (<>
               <input
                 ref={fileRef}
                 type="file"
@@ -477,6 +523,7 @@ export default function ExamResultForm({
               >
                 {uploading ? `Subiendo… ${progress ?? 0}%` : "Subir PDF →"}
               </button>
+              </>)}
               {saved && (
                 <span className="font-mono text-[9px] tracking-[0.15em] text-salvia-700 uppercase">
                   ✓ Guardado
