@@ -5,10 +5,11 @@ import {
   PROTEINAS, TIRA, densidadError, isAbnormal, loteVencido, phOrinaError, speciesKey, upcInterpretacion, upcValue,
   type CatParam, type NumParam, type OrinaConfig, type OrinaData, type Reactivo,
 } from "@/lib/orina"
-import { Select, heading, input, label } from "./CoproForm"
+import { FreeSelect, Select, heading, input, label } from "./CoproForm"
 
 // Formulario del Parcial de Orina (resultado estructurado, ver lib/orina.ts). Lo pinta ExamResultForm
-// en lugar de la tabla de campos cuando la sección es "Parcial de Orina".
+// en lugar de la tabla de campos cuando la sección es "Parcial de Orina". Las listas sugieren opciones
+// pero dejan digitar otro valor (FreeSelect).
 
 const chip = "border border-black/15 bg-white px-2 py-0.5 font-mono text-[10px] text-ink hover:border-salvia-700 hover:text-salvia-700"
 const th = "font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2 pr-3 text-left"
@@ -48,7 +49,7 @@ export default function OrinaForm({
 
   const tiraSelect = (k: "glucosa" | "bilirrubina" | "cetonas" | "sangre" | "nitritos" | "leucocitos") => (
     <Row key={k} refs={refs} param={k} val={value[k]}>
-      <Select value={value[k]} options={TIRA} onChange={v => set(k, v)} disabled={locked} />
+      <FreeSelect value={value[k]} options={TIRA} onChange={v => set(k, v)} disabled={locked} />
     </Row>
   )
 
@@ -57,7 +58,7 @@ export default function OrinaForm({
       {/* Método de recolección: visible arriba */}
       <div className="border border-salvia-700/30 bg-salvia-50/60 px-4 py-3">
         <span className={label}>Método de recolección *</span>
-        <Select value={value.metodo} options={METODO_RECOLECCION} onChange={v => set("metodo", v)} disabled={locked} />
+        <FreeSelect value={value.metodo} options={METODO_RECOLECCION} onChange={v => set("metodo", v)} disabled={locked} />
       </div>
 
       {/* Examen físico */}
@@ -71,14 +72,14 @@ export default function OrinaForm({
               {value.color === "Otro" && <input value={value.colorOtro} onChange={e => set("colorOtro", e.target.value)} disabled={locked} placeholder="¿Cuál?" className={`${input} mt-1`} />}
             </Row>
             <Row refs={refs} param="aspecto" val={value.aspecto}>
-              <Select value={value.aspecto} options={ASPECTO} onChange={v => set("aspecto", v)} disabled={locked} />
+              <FreeSelect value={value.aspecto} options={ASPECTO} onChange={v => set("aspecto", v)} disabled={locked} />
             </Row>
             <Row refs={refs} param="densidad" val={value.densidad}>
               <input type="number" step="0.001" min={1} max={1.08} value={value.densidad} onChange={e => set("densidad", e.target.value)} disabled={locked} placeholder="1.008" className={input} />
               {densidadError(value.densidad) && <span className="block font-sans text-[10px] text-red-600 mt-0.5">{densidadError(value.densidad)}</span>}
             </Row>
             <Row refs={refs} param="olor" val={value.olor}>
-              <Select value={value.olor} options={OLOR} onChange={v => set("olor", v)} disabled={locked} />
+              <FreeSelect value={value.olor} options={OLOR} onChange={v => set("olor", v)} disabled={locked} />
             </Row>
           </tbody>
         </table>
@@ -101,7 +102,7 @@ export default function OrinaForm({
               {phOrinaError(value.ph) && <span className="block font-sans text-[10px] text-red-600 mt-0.5">{phOrinaError(value.ph)}</span>}
             </Row>
             <Row refs={refs} param="proteinas" val={value.proteinas}>
-              <Select value={value.proteinas} options={PROTEINAS} onChange={v => set("proteinas", v)} disabled={locked} />
+              <FreeSelect value={value.proteinas} options={PROTEINAS} onChange={v => set("proteinas", v)} disabled={locked} />
             </Row>
             <Row refs={refs} param="urobilinogeno" val={value.urobilinogeno}>
               <input type="number" step="any" min={0} value={value.urobilinogeno} onChange={e => set("urobilinogeno", e.target.value)} disabled={locked} placeholder="mg/dL" className={input} />
@@ -154,11 +155,11 @@ export default function OrinaForm({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <span className={label}>Test de Héller (proteínas)</span>
-            <Select value={value.heller} options={HELLER} onChange={v => set("heller", v)} disabled={locked} />
+            <FreeSelect value={value.heller} options={HELLER} onChange={v => set("heller", v)} disabled={locked} />
           </div>
           <div>
             <span className={label}>Anillo de Héller (bilirrubina)</span>
-            <Select value={value.anilloHeller} options={ANILLO_HELLER} onChange={v => set("anilloHeller", v)} disabled={locked} />
+            <FreeSelect value={value.anilloHeller} options={ANILLO_HELLER} onChange={v => set("anilloHeller", v)} disabled={locked} />
           </div>
           <div className="sm:col-span-2 border border-black/10 bg-white px-3 py-2.5">
             <span className={label}>Ratio proteína / creatinina (UPC)</span>
@@ -181,24 +182,23 @@ export default function OrinaForm({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2 sm:max-w-xs">
             <span className={label}>Cantidad de sedimento</span>
-            <Select value={sed.cantidad} options={CANTIDAD_SEDIMENTO} onChange={v => setSed("cantidad", v)} disabled={locked} />
+            <FreeSelect value={sed.cantidad} options={CANTIDAD_SEDIMENTO} onChange={v => setSed("cantidad", v)} disabled={locked} />
           </div>
           {([
             ["leucocitos", "Leucocitos (AP)"], ["eritrocitos", "Eritrocitos (AP)"],
             ["transicionales", "Células epiteliales transicionales (AP)"], ["escamosas", "Células escamosas (AP)"],
-            ["renales", "Células renales (AP, opcional)"],
           ] as const).map(([k, t]) => (
             <div key={k}>
               <span className={label}>{t}</span>
-              <Select value={sed[k]} options={POR_CAMPO} onChange={v => setSed(k, v)} disabled={locked} placeholder={k === "renales" ? "No informar" : "Seleccionar…"} />
+              <FreeSelect value={sed[k]} options={POR_CAMPO} onChange={v => setSed(k, v)} disabled={locked} />
             </div>
           ))}
           <div className="sm:col-span-2">
             <span className={label}>Bacterias</span>
             <div className="grid grid-cols-3 gap-2">
-              <Select value={sed.bacterias.grado} options={BACTERIAS_GRADO} onChange={v => setSed("bacterias", { ...sed.bacterias, grado: v })} disabled={locked} />
-              <Select value={sed.bacterias.tipo} options={BACTERIAS_TIPO} onChange={v => setSed("bacterias", { ...sed.bacterias, tipo: v })} disabled={locked || sed.bacterias.grado === "Negativo"} placeholder="Tipo" />
-              <Select value={sed.bacterias.ubicacion} options={BACTERIAS_UBICACION} onChange={v => setSed("bacterias", { ...sed.bacterias, ubicacion: v })} disabled={locked || sed.bacterias.grado === "Negativo"} placeholder="Libres / fagocitadas" />
+              <FreeSelect value={sed.bacterias.grado} options={BACTERIAS_GRADO} onChange={v => setSed("bacterias", { ...sed.bacterias, grado: v })} disabled={locked} />
+              <FreeSelect value={sed.bacterias.tipo} options={BACTERIAS_TIPO} onChange={v => setSed("bacterias", { ...sed.bacterias, tipo: v })} disabled={locked || sed.bacterias.grado === "Negativo"} placeholder="Tipo" />
+              <FreeSelect value={sed.bacterias.ubicacion} options={BACTERIAS_UBICACION} onChange={v => setSed("bacterias", { ...sed.bacterias, ubicacion: v })} disabled={locked || sed.bacterias.grado === "Negativo"} placeholder="Libres / fagocitadas" />
             </div>
             <p className="font-sans text-[10px] text-ink-2 mt-1">{LEYENDA_BACTERIAS}</p>
           </div>
@@ -214,7 +214,7 @@ export default function OrinaForm({
               <div className="space-y-1.5">
                 {sed.cilindros.items.map((it, i) => (
                   <div key={i} className="flex gap-2 items-center">
-                    <Select value={it.tipo} options={CILINDROS} onChange={v => setSed("cilindros", { ...sed.cilindros, items: sed.cilindros.items.map((x, j) => j === i ? { ...x, tipo: v } : x) })} disabled={locked} placeholder="Tipo" />
+                    <FreeSelect value={it.tipo} options={CILINDROS} onChange={v => setSed("cilindros", { ...sed.cilindros, items: sed.cilindros.items.map((x, j) => j === i ? { ...x, tipo: v } : x) })} disabled={locked} placeholder="Tipo" />
                     <input value={it.cantidad} onChange={e => setSed("cilindros", { ...sed.cilindros, items: sed.cilindros.items.map((x, j) => j === i ? { ...x, cantidad: e.target.value } : x) })} disabled={locked} placeholder="Cant. (ej. 0–2 AP)" className={`${input} w-32`} />
                     {!locked && <button type="button" onClick={() => setSed("cilindros", { ...sed.cilindros, items: sed.cilindros.items.filter((_, j) => j !== i) })} className="font-mono text-[9px] text-red-600">✕</button>}
                   </div>
@@ -235,11 +235,8 @@ export default function OrinaForm({
               <div className="space-y-1.5">
                 {sed.cristales.items.map((it, i) => (
                   <div key={i} className="flex gap-2 items-center">
-                    <Select value={it.tipo} options={CRISTALES} onChange={v => setSed("cristales", { ...sed.cristales, items: sed.cristales.items.map((x, j) => j === i ? { ...x, tipo: v } : x) })} disabled={locked} placeholder="Tipo" />
-                    <select value={it.cantidad} onChange={e => setSed("cristales", { ...sed.cristales, items: sed.cristales.items.map((x, j) => j === i ? { ...x, cantidad: e.target.value } : x) })} disabled={locked} className={`${input} w-24`}>
-                      <option value="">Cant.</option>
-                      {CRUCES.map(c => <option key={c}>{c}</option>)}
-                    </select>
+                    <FreeSelect value={it.tipo} options={CRISTALES} onChange={v => setSed("cristales", { ...sed.cristales, items: sed.cristales.items.map((x, j) => j === i ? { ...x, tipo: v } : x) })} disabled={locked} placeholder="Tipo" />
+                    <FreeSelect value={it.cantidad} options={CRUCES} onChange={v => setSed("cristales", { ...sed.cristales, items: sed.cristales.items.map((x, j) => j === i ? { ...x, cantidad: v } : x) })} disabled={locked} placeholder="Cant." className="w-28 shrink-0" />
                     {!locked && <button type="button" onClick={() => setSed("cristales", { ...sed.cristales, items: sed.cristales.items.filter((_, j) => j !== i) })} className="font-mono text-[9px] text-red-600">✕</button>}
                   </div>
                 ))}

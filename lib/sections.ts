@@ -10,6 +10,7 @@
 // - toda sección "Interpretación" (Citologías Óticas, Malassezia) y la "Citología de Efusión" del Citoquímico
 // - "Test de Héller (Proteinuria Cualitativa)" y "Coloración de Wright (Sedimento Urinario)" del
 //   Parcial de Orina, y "Coloración de Wright (Heces)" del Coproscópico (no la de Malassezia, que tiene rangos)
+// - la sección "Observaciones" del Raspado de Piel ("Raspado de Piel — Observaciones" en los perfiles)
 const DESCRIPTIVE_SECTIONS = [
   /morfolog[ií]a y observaciones/i,
   /^hemopar[aá]sitos$/i,
@@ -19,6 +20,7 @@ const DESCRIPTIVE_SECTIONS = [
   /^interpretaci[oó]n$/i, // Citologías Óticas, Citología de Piel, Coloración para Malassezia (solo texto)
   /^citolog[ií]a de efusi[oó]n$/i, // Citoquímico de Líquido
   /coloraci[oó]n de wright \((sedimento urinario|heces)\)/i, // Parcial de Orina (y perfiles) y Coproscópico
+  /^(raspado de piel — )?observaciones$/i, // Raspado de Piel (y su copia en los Perfiles Dermatológicos)
 ]
 const DESCRIPTIVE_EXAMS = [
   /gota gruesa/i,

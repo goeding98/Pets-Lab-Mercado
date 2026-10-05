@@ -82,9 +82,15 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   el formulario (`app/(lab)/muestras/[id]/ExamResultForm.tsx`), o (b) subiendo un PDF ya
   hecho externamente. El botón "PDF" de la orden genera un reporte combinado que fusiona
   (con `pdf-lib`) el reporte generado de los exámenes con resultados capturados + las
-  páginas de cada PDF subido (`lib/reportPdf.ts`, usado por ambas rutas de PDF).
+  páginas de cada PDF subido (`lib/reportPdf.ts`, usado por ambas rutas de PDF). Un examen puede
+  tener las dos cosas (se puede subir PDF también a uno ya completado): salen sus resultados y
+  además las páginas del PDF. El PDF va **directo del navegador a Blob** (`@vercel/blob/client`
+  `upload`, token en `api/upload/[examId]/token`, hasta 50 MB) y luego se registra con POST JSON
+  `{url, name}` a `api/upload/[examId]` (verifica con `head` que sea un PDF de
+  `uploads/<examId>/`). No volver a mandar el archivo por la función: Vercel corta a 4.5 MB.
+  Eliminar el PDF deja el examen completado si tiene resultados capturados; si no, vuelve a pendiente.
 - Secciones de texto libre (Morfología y Observaciones del hemograma, Hemoparásitos/gota gruesa,
-  Extendido de Sangre Periférica, Citología de Piel, Citología Conjuntival, Citología de Masa (y Masa Adicional), Conclusión de Citología de Líquidos, secciones "Interpretación", Citología de Efusión, Test de Héller y Wright de orina y heces — también dentro de los perfiles) se muestran
+  Extendido de Sangre Periférica, Citología de Piel, Citología Conjuntival, Citología de Masa (y Masa Adicional), Conclusión de Citología de Líquidos, secciones "Interpretación", Citología de Efusión, Test de Héller y Wright de orina y heces, Observaciones del Raspado de Piel — también dentro de los perfiles) se muestran
   solo como Parámetro + Descripción, con filas altas, en el formulario y en el PDF. La lista vive en
   `lib/sections.ts: isDescriptiveSection` (por nombre de sección o de examen); agregar ahí las nuevas.
 - Rangos de referencia (`app/(lab)/rangos/`, `actions/ranges.ts`, permiso `rangos`: solo ADMIN —
@@ -99,18 +105,20 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   resultados ya guardados.
 - Coprológico = resultado estructurado, no por campos (`lib/coprologico.ts`, formulario
   `components/CoproForm.tsx`, PDF `CoproPdf` en `components/PdfReport.tsx`): macroscópico con selectores
-  + foto de la muestra (`ExamPhoto.role = "COPRO_MACRO"`, una sola, circular en el PDF), microscópico
-  con **negrita**/*cursiva* y frases rápidas, protozoos, flotación (parásito + HPG), técnica, nota fija
-  y observaciones. Se guarda en `OrderExam.structured.copro`. El examen y los perfiles que lo incluyen
+  + foto de la muestra (`ExamPhoto.role = "COPRO_MACRO"`, una sola, circular en el PDF), tabla
+  "Examen microscópico" de 2 columnas (microbiota, glóbulos rojos, restos, leucocitos, levaduras,
+  protozoarios, otros con *cursiva*, técnica de flotación = parásito + HPG), técnica, nota fija y
+  observaciones. Se guarda en `OrderExam.structured.copro`. El examen y los perfiles que lo incluyen
   tienen una sección marcador "Coprológico" sin campos (`scripts/coprologico-estructurado.ts`).
-  Coproscópico = todo el Coprológico + "Examen microscópico" (tabla 2 columnas) + tabla "Coproscópico"
-  (pH 4–9, almidones, grasa, sangre oculta, Wright/Gram con frase automática) en
-  `structured.coproscopico` (`components/CoproscopicoFields.tsx`); sección marcador "Coproscópico"
+  Coproscópico = exactamente lo mismo + tabla "Coproscópico" (pH 4–9, almidones, grasa, sangre oculta,
+  Wright/Gram con frase automática) en `structured.coproscopico` (`components/CoproscopicoFields.tsx`);
+  el Coprológico no lleva esa tabla. Sección marcador "Coproscópico"
   (`scripts/coproscopico-estructurado.ts`; la de "Sangre Oculta en Heces" se llama "Sangre Oculta").
 - Parcial de Orina = resultado estructurado (`lib/orina.ts`, `components/OrinaForm.tsx`, `OrinaPdf` en
   `PdfReport.tsx`), en `structured.orina`; sección marcador "Parcial de Orina" en el examen y en los
   perfiles Renal Completo, Diabético, Geriátrico e Integral (`scripts/orina-estructurado.ts`). Método
-  de recolección y tirilla obligatorios. Referencias por especie (texto + qué es normal / mín-máx, que
+  de recolección y tirilla obligatorios. Las listas son sugerencias: se puede digitar otro valor
+  (`FreeSelect` de `CoproForm.tsx`; `readOrina` acepta cualquier texto). Referencias por especie (texto + qué es normal / mín-máx, que
   define la negrita) y cortes del UPC en `LabSetting` "orina" (`lib/settings.ts: getOrinaConfig`),
   editables en /rangos; no fijarlos en el código. UPC = proteína (tirilla, o medida aparte) /
   creatinina urinaria. Reactivos = items de Inventario con lote y vencimiento; con lote vencido no se

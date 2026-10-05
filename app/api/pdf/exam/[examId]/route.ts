@@ -42,9 +42,11 @@ export async function GET(
   }
 
   const hasNotes = !!orderExam.comments || orderExam.photos.some(p => !p.role)
+  const captured = orderExam.results.some(r => r.value.trim()) || orderExam.structured !== null
 
-  // PDF subido sin comentarios ni fotos: se sirve tal cual (proxy del Blob para conservar el nombre)
-  if (orderExam.uploadedPdfPath?.startsWith("http") && !hasNotes) {
+  // PDF subido sin resultados capturados, comentarios ni fotos: se sirve tal cual (proxy del Blob para
+  // conservar el nombre)
+  if (orderExam.uploadedPdfPath?.startsWith("http") && !hasNotes && !captured) {
     const blob = await get(orderExam.uploadedPdfPath, { access: "private" })
     if (blob?.stream) {
       return new NextResponse(blob.stream as unknown as BodyInit, {

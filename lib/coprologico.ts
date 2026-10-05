@@ -13,6 +13,9 @@ export const CONSISTENCIA = ["Formada", "Pastosa", "Blanda", "Semilíquida", "L�
 export const COLOR = ["Marrón", "Marrón oscuro", "Amarillo", "Verde", "Negro / melena", "Rojizo", "Gris / arcilla", "Otro"]
 export const PRESENCIA = ["Ausente", "Presente - escasa", "Presente - moderada", "Presente - abundante"]
 export const CANTIDAD = ["+", "++", "+++"]
+export const MICROBIOTA = ["Normal", "Ligeramente aumentada", "Aumentada", "Disminuida"]
+export const CRUCES = ["Negativo", "+", "++", "+++"]
+export const LEUCOCITOS_DEFAULT = "Se observan __ por campo de 40X"
 
 // Hallazgos de protozoos sugeridos (con formato: el género va en cursiva)
 export const PROTOZOOS = [
@@ -31,17 +34,6 @@ export const PARASITOS_FLOTACION = [
 export const TECNICA_DEFAULT = "Frotis directo – Miniflotac – Flotación con solución saturada"
 export const NOTA_FIJA = "La interpretación de este examen de laboratorio corresponde única y exclusivamente al médico veterinario."
 
-// Frases rápidas del análisis microscópico: un clic inserta la frase con la opción elegida
-export const FRASES: { label: string; options: string[]; build: (o: string) => string }[] = [
-  { label: "Flora bacteriana", options: ["normal", "disminuida", "aumentada"], build: o => `Flora bacteriana ${o}.` },
-  { label: "Bacilos esporulados (Clostridium sp.)", options: CANTIDAD, build: o => `Bacilos esporulados compatibles con *Clostridium sp.*: ${o}.` },
-  { label: "Reacción leucocitaria", options: ["ausente", "leve", "moderada", "severa"], build: o => `Reacción leucocitaria ${o}.` },
-  { label: "Blastoconidias (levaduriformes)", options: ["escasa", "moderada", "abundante"], build: o => `Blastoconidias compatibles con hongos levaduriformes en ${o} cantidad.` },
-  { label: "Fibra vegetal", options: CANTIDAD, build: o => `Fibra vegetal: ${o}.` },
-  { label: "Almidones", options: CANTIDAD, build: o => `Almidones: ${o}.` },
-  { label: "Grasa", options: CANTIDAD, build: o => `Grasa: ${o}.` },
-  { label: "Fibras musculares no digeridas", options: CANTIDAD, build: o => `Fibras musculares no digeridas: ${o}.` },
-]
 
 export type CoproData = {
   consistencia: string
@@ -51,8 +43,14 @@ export type CoproData = {
   moco: string
   parasitosAdultos: string
   otros: string
-  microscopico: string
+  // Examen microscópico (tabla de 2 columnas; igual en Coprológico y Coproscópico)
+  microbiota: string
+  globulosRojos: string
+  restos: string
+  leucocitos: string
+  levaduras: string
   protozoos: { ninguno: boolean; items: { hallazgo: string; cantidad: string }[] }
+  microOtros: string
   flotacion: { ninguno: boolean; items: { parasito: string; hpg: string }[] }
   tecnica: string
   observaciones: string
@@ -66,8 +64,13 @@ export const COPRO_DEFAULT: CoproData = {
   moco: "Ausente",
   parasitosAdultos: "No se observan",
   otros: "",
-  microscopico: "",
+  microbiota: "Normal",
+  globulosRojos: "Negativo",
+  restos: "Negativo",
+  leucocitos: LEUCOCITOS_DEFAULT,
+  levaduras: "Negativo",
   protozoos: { ninguno: true, items: [] },
+  microOtros: "",
   flotacion: { ninguno: true, items: [] },
   tecnica: TECNICA_DEFAULT,
   observaciones: "",
@@ -83,6 +86,8 @@ export function readCopro(structured: unknown): CoproData {
     Array.isArray(v) ? v.slice(0, 30).filter(x => x && typeof x === "object").map(x => map(x as Record<string, unknown>)) : []
   const block = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : {})
   const proto = block(raw.protozoos), flot = block(raw.flotacion)
+  const D = COPRO_DEFAULT
+  const pick = (v: unknown, options: string[], fallback: string) => (typeof v === "string" && options.includes(v) ? v : fallback)
   return {
     consistencia: str(raw.consistencia, 100),
     color: str(raw.color, 100),
@@ -91,11 +96,16 @@ export function readCopro(structured: unknown): CoproData {
     moco: str(raw.moco, 100) || COPRO_DEFAULT.moco,
     parasitosAdultos: typeof raw.parasitosAdultos === "string" ? str(raw.parasitosAdultos, 500) : COPRO_DEFAULT.parasitosAdultos,
     otros: str(raw.otros, 1000),
-    microscopico: str(raw.microscopico, 8000),
+    microbiota: pick(raw.microbiota, MICROBIOTA, D.microbiota),
+    globulosRojos: pick(raw.globulosRojos, CRUCES, D.globulosRojos),
+    restos: pick(raw.restos, CRUCES, D.restos),
+    leucocitos: typeof raw.leucocitos === "string" ? str(raw.leucocitos, 300) : D.leucocitos,
+    levaduras: pick(raw.levaduras, CRUCES, D.levaduras),
     protozoos: {
       ninguno: proto.ninguno !== false,
       items: list(proto.items, x => ({ hallazgo: str(x.hallazgo, 200), cantidad: str(x.cantidad, 10) })),
     },
+    microOtros: str(raw.microOtros, 2000),
     flotacion: {
       ninguno: flot.ninguno !== false,
       items: list(flot.items, x => ({ parasito: str(x.parasito, 200), hpg: str(x.hpg, 20) })),
@@ -124,17 +134,14 @@ export function parseMarkup(input: string): Segment[] {
 }
 export const stripMarkup = (s: string) => s.replace(/\*\*([^*]+)\*\*|\*([^*]+)\*/g, (_m, b, i) => b ?? i)
 
-// ── Coproscópico = todo el Coprológico + "Examen Microscópico" + tabla "Coproscópico" ───────────
-// Se guarda en OrderExam.structured.coproscopico (el bloque del coprológico va en .copro).
+// ── Coproscópico = todo el Coprológico (macro + Examen microscópico) + tabla "Coproscópico" ─────
+// La tabla se guarda en OrderExam.structured.coproscopico (lo del coprológico va en .copro).
 // "<examen> — Coproscópico" si viene dentro de una promoción; la sección de "Sangre Oculta en Heces"
 // se llama "Sangre Oculta" para no confundirse.
 export const isCoproscopicoSection = (sectionName: string) => /(^|— )coprosc[oó]pico$/i.test(sectionName.trim())
 
-export const MICROBIOTA = ["Normal", "Ligeramente aumentada", "Aumentada", "Disminuida"]
-export const CRUCES = ["Negativo", "+", "++", "+++"]
 export const POSITIVO_CRUCES = ["Negativo", "Positivo +", "Positivo ++", "Positivo +++"]
 export const SANGRE_OCULTA = ["Negativo", "Positivo"]
-export const LEUCOCITOS_DEFAULT = "Se observan __ por campo de 40X"
 
 export const GRAM = [
   { key: "bacilosGramPos", label: "Bacilos Gram positivos" },
@@ -146,14 +153,6 @@ export const GRAM = [
 export type GramKey = (typeof GRAM)[number]["key"]
 
 export type CoproscopicoData = {
-  microbiota: string
-  globulosRojos: string
-  restos: string
-  leucocitos: string
-  levaduras: string
-  protozoarios: { ninguno: boolean; items: { hallazgo: string; cantidad: string }[] }
-  otros: string
-  helmintos: { ninguno: boolean; items: { parasito: string; hpg: string }[] }
   ph: string
   almidones: string
   grasa: string
@@ -163,14 +162,6 @@ export type CoproscopicoData = {
 }
 
 export const COPROSCOPICO_DEFAULT: CoproscopicoData = {
-  microbiota: "Normal",
-  globulosRojos: "Negativo",
-  restos: "Negativo",
-  leucocitos: LEUCOCITOS_DEFAULT,
-  levaduras: "Negativo",
-  protozoarios: { ninguno: true, items: [] },
-  otros: "",
-  helmintos: { ninguno: true, items: [] },
   ph: "",
   almidones: "Negativo",
   grasa: "Negativo",
@@ -185,18 +176,8 @@ export function readCoproscopico(structured: unknown): CoproscopicoData {
   const D = COPROSCOPICO_DEFAULT
   const pick = (v: unknown, options: string[], fallback: string) => (typeof v === "string" && options.includes(v) ? v : fallback)
   const block = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : {})
-  const list = <T,>(v: unknown, map: (x: Record<string, unknown>) => T): T[] =>
-    Array.isArray(v) ? v.slice(0, 30).filter(x => x && typeof x === "object").map(x => map(x as Record<string, unknown>)) : []
-  const proto = block(raw.protozoarios), helm = block(raw.helmintos), gram = block(raw.gram)
+  const gram = block(raw.gram)
   return {
-    microbiota: pick(raw.microbiota, MICROBIOTA, D.microbiota),
-    globulosRojos: pick(raw.globulosRojos, CRUCES, D.globulosRojos),
-    restos: pick(raw.restos, CRUCES, D.restos),
-    leucocitos: typeof raw.leucocitos === "string" ? str(raw.leucocitos, 300) : D.leucocitos,
-    levaduras: pick(raw.levaduras, CRUCES, D.levaduras),
-    protozoarios: { ninguno: proto.ninguno !== false, items: list(proto.items, x => ({ hallazgo: str(x.hallazgo, 200), cantidad: str(x.cantidad, 10) })) },
-    otros: str(raw.otros, 2000),
-    helmintos: { ninguno: helm.ninguno !== false, items: list(helm.items, x => ({ parasito: str(x.parasito, 200), hpg: str(x.hpg, 20) })) },
     ph: str(raw.ph, 10),
     almidones: pick(raw.almidones, POSITIVO_CRUCES, D.almidones),
     grasa: pick(raw.grasa, POSITIVO_CRUCES, D.grasa),

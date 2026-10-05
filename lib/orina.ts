@@ -134,7 +134,6 @@ export type OrinaData = {
     eritrocitos: string
     transicionales: string
     escamosas: string
-    renales: string
     bacterias: { grado: string; tipo: string; ubicacion: string }
     cilindros: Lista<{ tipo: string; cantidad: string }>
     cristales: Lista<{ tipo: string; cantidad: string }>
@@ -150,7 +149,7 @@ export const ORINA_DEFAULT: OrinaData = {
   reactivo: null, metodos: METODOS_DEFAULT,
   heller: "Negativo", anilloHeller: "Negativo", proteinaMgDl: "",
   sedimento: {
-    cantidad: "", leucocitos: "0–2", eritrocitos: "0–2", transicionales: "0–2", escamosas: "0–2", renales: "",
+    cantidad: "", leucocitos: "0–2", eritrocitos: "0–2", transicionales: "0–2", escamosas: "0–2",
     bacterias: { grado: "Negativo", tipo: "", ubicacion: "" },
     cilindros: { ninguno: true, items: [] },
     cristales: { ninguno: true, items: [] },
@@ -160,7 +159,8 @@ export const ORINA_DEFAULT: OrinaData = {
 }
 
 const str = (v: unknown, max = 300) => (typeof v === "string" ? v.slice(0, max) : "")
-const pick = (v: unknown, options: string[], fb: string) => (typeof v === "string" && options.includes(v) ? v : fb)
+// Las listas son sugerencias: se acepta cualquier texto digitado (vacío / ausente -> valor por defecto)
+const free = (v: unknown, fb: string, max = 120) => (typeof v === "string" ? v.slice(0, max) : fb)
 
 export function readOrina(structured: unknown): OrinaData {
   const raw = (structured && typeof structured === "object" ? (structured as Record<string, unknown>).orina : null) as Record<string, unknown> | null
@@ -170,39 +170,39 @@ export function readOrina(structured: unknown): OrinaData {
   const list = <T,>(v: unknown, map: (x: Record<string, unknown>) => T): T[] =>
     Array.isArray(v) ? v.slice(0, 20).filter(x => x && typeof x === "object").map(x => map(x as Record<string, unknown>)) : []
   const sed = o(raw.sedimento), bact = o(sed.bacterias), cil = o(sed.cilindros), cri = o(sed.cristales), re = o(raw.reactivo)
-  const tira = (k: string) => pick(raw[k], TIRA, "Negativo")
-  const campo = (k: string, fb: string) => pick(sed[k], POR_CAMPO, fb)
+  const tira = (k: string) => free(raw[k], "Negativo")
+  const campo = (k: string, fb: string) => free(sed[k], fb)
   return {
-    metodo: pick(raw.metodo, METODO_RECOLECCION, ""),
-    color: pick(raw.color, COLOR_ORINA, ""),
+    metodo: free(raw.metodo, ""),
+    color: free(raw.color, ""),
     colorOtro: str(raw.colorOtro, 100),
-    aspecto: pick(raw.aspecto, ASPECTO, ""),
+    aspecto: free(raw.aspecto, ""),
     densidad: str(raw.densidad, 10),
-    olor: pick(raw.olor, OLOR, D.olor),
+    olor: free(raw.olor, D.olor),
     glucosa: tira("glucosa"), bilirrubina: tira("bilirrubina"), cetonas: tira("cetonas"),
     sangre: tira("sangre"), nitritos: tira("nitritos"), leucocitos: tira("leucocitos"),
     ph: str(raw.ph, 10),
-    proteinas: pick(raw.proteinas, PROTEINAS, "Negativo"),
+    proteinas: free(raw.proteinas, "Negativo"),
     urobilinogeno: str(raw.urobilinogeno, 10),
     creatinina: str(raw.creatinina, 10),
     reactivo: typeof re.id === "string" && re.id
       ? { id: re.id, nombre: str(re.nombre, 120), marca: str(re.marca, 120), lote: str(re.lote, 60), vence: str(re.vence, 10) }
       : null,
     metodos: typeof raw.metodos === "string" ? str(raw.metodos, 300) : D.metodos,
-    heller: pick(raw.heller, HELLER, "Negativo"),
-    anilloHeller: pick(raw.anilloHeller, ANILLO_HELLER, "Negativo"),
+    heller: free(raw.heller, "Negativo"),
+    anilloHeller: free(raw.anilloHeller, "Negativo"),
     proteinaMgDl: str(raw.proteinaMgDl, 10),
     sedimento: {
-      cantidad: pick(sed.cantidad, CANTIDAD_SEDIMENTO, ""),
+      cantidad: free(sed.cantidad, ""),
       leucocitos: campo("leucocitos", "0–2"), eritrocitos: campo("eritrocitos", "0–2"),
-      transicionales: campo("transicionales", "0–2"), escamosas: campo("escamosas", "0–2"), renales: campo("renales", ""),
+      transicionales: campo("transicionales", "0–2"), escamosas: campo("escamosas", "0–2"),
       bacterias: {
-        grado: pick(bact.grado, BACTERIAS_GRADO, "Negativo"),
-        tipo: pick(bact.tipo, BACTERIAS_TIPO, ""),
-        ubicacion: pick(bact.ubicacion, BACTERIAS_UBICACION, ""),
+        grado: free(bact.grado, "Negativo"),
+        tipo: free(bact.tipo, ""),
+        ubicacion: free(bact.ubicacion, ""),
       },
-      cilindros: { ninguno: cil.ninguno !== false, items: list(cil.items, x => ({ tipo: pick(x.tipo, CILINDROS, ""), cantidad: str(x.cantidad, 30) })) },
-      cristales: { ninguno: cri.ninguno !== false, items: list(cri.items, x => ({ tipo: pick(x.tipo, CRISTALES, ""), cantidad: pick(x.cantidad, CRUCES, "") })) },
+      cilindros: { ninguno: cil.ninguno !== false, items: list(cil.items, x => ({ tipo: free(x.tipo, ""), cantidad: str(x.cantidad, 30) })) },
+      cristales: { ninguno: cri.ninguno !== false, items: list(cri.items, x => ({ tipo: free(x.tipo, ""), cantidad: free(x.cantidad, "", 30) })) },
       otros: str(sed.otros, 1000),
     },
     observaciones: str(raw.observaciones, 4000),

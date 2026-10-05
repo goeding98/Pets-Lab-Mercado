@@ -2,13 +2,14 @@
 import { Fragment, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
-  CANTIDAD, COLOR, CONSISTENCIA, FRASES, NOTA_FIJA, PARASITOS_FLOTACION, PRESENCIA, PROTOZOOS,
+  CANTIDAD, COLOR, CONSISTENCIA, CRUCES, MICROBIOTA, NOTA_FIJA, PARASITOS_FLOTACION, PRESENCIA, PROTOZOOS,
   parseMarkup, stripMarkup, type CoproData,
 } from "@/lib/coprologico"
 import { uploadExamPhoto } from "@/lib/imageCompress"
 
-// Formulario del Coprológico (resultado estructurado, ver lib/coprologico.ts). Lo pinta
-// ExamResultForm en lugar de la tabla de campos cuando la sección es "Coprológico".
+// Formulario del Coprológico (resultado estructurado, ver lib/coprologico.ts): macroscópico + foto,
+// tabla "Examen microscópico", técnica y observaciones. Lo pinta ExamResultForm en lugar de la tabla
+// de campos cuando la sección es "Coprológico" o "Coproscópico" (este agrega su tabla en `extra`).
 
 export const input = "border border-black/20 bg-white px-2 py-1.5 text-xs font-sans w-full focus:outline-salvia-700 disabled:bg-black/5 disabled:cursor-default"
 export const label = "block font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase mb-1"
@@ -33,6 +34,40 @@ export function Select({ value, options, onChange, disabled, placeholder = "Sele
     <select value={value} onChange={e => onChange(e.target.value)} disabled={disabled} className={input}>
       <option value="">{placeholder}</option>
       {options.map(o => <option key={o}>{o}</option>)}
+    </select>
+  )
+}
+
+// Opciones sugeridas + "Escribir otro…" para digitar un valor libre (un valor que no está en la
+// lista se muestra directo como texto). "Lista" vuelve a las opciones.
+const OTRO = "__otro__"
+export function FreeSelect({ value, options, onChange, disabled, placeholder = "Seleccionar…", className = "w-full" }: {
+  value: string; options: string[]; onChange: (v: string) => void; disabled: boolean; placeholder?: string; className?: string
+}) {
+  const [typing, setTyping] = useState(false)
+  if (typing || (value !== "" && !options.includes(value))) {
+    return (
+      <div className={`flex gap-1.5 items-center ${className}`}>
+        <input autoFocus={typing} value={value} onChange={e => onChange(e.target.value)} disabled={disabled} placeholder="Escribir…" className={`${input} min-w-0`} />
+        {!disabled && (
+          <button type="button" title="Volver a las opciones" onClick={() => { setTyping(false); onChange("") }}
+            className="font-mono text-[8px] tracking-[0.12em] uppercase text-salvia-700 hover:underline shrink-0">
+            Lista
+          </button>
+        )}
+      </div>
+    )
+  }
+  return (
+    <select
+      value={value}
+      onChange={e => { if (e.target.value === OTRO) { setTyping(true); onChange("") } else onChange(e.target.value) }}
+      disabled={disabled}
+      className={`${input} ${className}`}
+    >
+      <option value="">{placeholder}</option>
+      {options.map(o => <option key={o}>{o}</option>)}
+      <option value={OTRO}>Escribir otro…</option>
     </select>
   )
 }
@@ -97,7 +132,7 @@ function MacroPhoto({ examId, photo, locked }: { examId: string; photo: { id: st
 type Findings = { ninguno: boolean; items: { hallazgo: string; cantidad: string }[] }
 type HpgFindings = { ninguno: boolean; items: { parasito: string; hpg: string }[] }
 
-// "No se observan" o lista de hallazgos con cantidad (+ a +++). Protozoos / Protozoarios.
+// "No se observan" o lista de hallazgos con cantidad (+ a +++). Protozoarios.
 export function FindingsList({ value, onChange, locked, noneLabel = "No se observan" }: {
   value: Findings; onChange: (v: Findings) => void; locked: boolean; noneLabel?: string
 }) {
@@ -136,7 +171,7 @@ export function FindingsList({ value, onChange, locked, noneLabel = "No se obser
   )
 }
 
-// "No se observan" o lista de parásitos (en cursiva) + HPG. Flotación / Helmintos.
+// "No se observan" o lista de parásitos (en cursiva) + HPG. Técnica de flotación.
 export function HpgList({ value, onChange, locked, noneLabel = "No se observan" }: {
   value: HpgFindings; onChange: (v: HpgFindings) => void; locked: boolean; noneLabel?: string
 }) {
@@ -173,6 +208,17 @@ export function HpgList({ value, onChange, locked, noneLabel = "No se observan" 
   )
 }
 
+// Celda de las tablas de 2 columnas (Examen microscópico, Coproscópico)
+export function Cell({ title, children, wide = false }: { title: string; children: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={`p-3 min-h-[72px] ${wide ? "sm:col-span-2" : ""}`}>
+      <span className={label}>{title}</span>
+      {children}
+    </div>
+  )
+}
+export const grid = "grid grid-cols-1 sm:grid-cols-2 border border-black/10 divide-y divide-black/[0.06] sm:divide-y-0 bg-white [&>*]:border-black/[0.06] sm:[&>*:nth-child(odd)]:border-r sm:[&>*:nth-child(n+3)]:border-t"
+
 export default function CoproForm({
   value, onChange, locked, examId, photo, extra,
 }: {
@@ -181,39 +227,9 @@ export default function CoproForm({
   locked: boolean
   examId: string
   photo: { id: string } | null
-  extra?: React.ReactNode // bloques adicionales antes de Observaciones (Coproscópico)
+  extra?: React.ReactNode // tabla adicional después del Examen microscópico (Coproscópico)
 }) {
-  const microRef = useRef<HTMLTextAreaElement>(null)
   const set = <K extends keyof CoproData>(k: K, v: CoproData[K]) => onChange({ ...value, [k]: v })
-
-  // Inserta texto en el cursor del análisis microscópico
-  function insert(text: string) {
-    const el = microRef.current
-    const cur = value.microscopico
-    const start = el?.selectionStart ?? cur.length
-    const end = el?.selectionEnd ?? cur.length
-    const before = cur.slice(0, start)
-    const sep = before && !/\s$/.test(before) ? " " : ""
-    const next = before + sep + text + cur.slice(end)
-    set("microscopico", next)
-    requestAnimationFrame(() => {
-      if (!el) return
-      el.focus()
-      const pos = (before + sep + text).length
-      el.setSelectionRange(pos, pos)
-    })
-  }
-
-  // Envuelve la selección con ** (negrita) o * (cursiva)
-  function wrap(mark: string) {
-    const el = microRef.current
-    if (!el) return
-    const cur = value.microscopico
-    const { selectionStart: s, selectionEnd: e } = el
-    if (s === e) return
-    set("microscopico", cur.slice(0, s) + mark + cur.slice(s, e) + mark + cur.slice(e))
-  }
-
 
   return (
     <div className="space-y-6">
@@ -254,56 +270,46 @@ export default function CoproForm({
         </div>
       </div>
 
-      {/* Análisis microscópico */}
+      {/* Examen microscópico */}
       <div>
-        <p className={heading}>Análisis microscópico</p>
-        {!locked && (
-          <div className="space-y-1.5 mb-3">
-            {FRASES.map(f => (
-              <div key={f.label} className="flex flex-wrap items-center gap-1.5">
-                <span className="font-sans text-[11px] text-ink-2 w-full sm:w-56">{f.label}</span>
-                {f.options.map(o => (
-                  <button key={o} type="button" onClick={() => insert(f.build(o))} className={chip}>{o}</button>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-        {!locked && (
-          <div className="flex items-center gap-2 mb-1.5">
-            <button type="button" onClick={() => wrap("**")} title="Negrita (selecciona el texto)" className={`${chip} font-bold`}>B</button>
-            <button type="button" onClick={() => wrap("*")} title="Cursiva (selecciona el texto)" className={`${chip} italic`}>I</button>
-            <span className="font-sans text-[10px] text-ink-2">Selecciona texto y usa B o I. Los nombres científicos van en cursiva.</span>
-          </div>
-        )}
-        <textarea
-          ref={microRef}
-          rows={5}
-          value={value.microscopico}
-          onChange={e => set("microscopico", e.target.value)}
-          disabled={locked}
-          placeholder="Descripción del análisis microscópico…"
-          className={`${input} resize-y`}
-        />
-        {value.microscopico.trim() && (
-          <p className="font-sans text-xs text-ink mt-2 text-justify leading-relaxed bg-salvia-50/50 border border-black/[0.05] px-3 py-2">
-            <span className="block font-mono text-[8px] tracking-[0.15em] uppercase text-ink-2 mb-1">Así sale en el PDF</span>
-            <Markup text={value.microscopico} />
-          </p>
-        )}
+        <p className={heading}>Examen microscópico</p>
+        <div className={grid}>
+          <Cell title="Microbiota">
+            <Select value={value.microbiota} options={MICROBIOTA} onChange={v => set("microbiota", v)} disabled={locked} />
+          </Cell>
+          <Cell title="Glóbulos rojos">
+            <Select value={value.globulosRojos} options={CRUCES} onChange={v => set("globulosRojos", v)} disabled={locked} />
+          </Cell>
+          <Cell title="Restos alimenticios">
+            <Select value={value.restos} options={CRUCES} onChange={v => set("restos", v)} disabled={locked} />
+          </Cell>
+          <Cell title="Leucocitos">
+            <input value={value.leucocitos} onChange={e => set("leucocitos", e.target.value)} disabled={locked} className={input} />
+          </Cell>
+          <Cell title="Levaduras">
+            <Select value={value.levaduras} options={CRUCES} onChange={v => set("levaduras", v)} disabled={locked} />
+          </Cell>
+          <Cell title="Protozoarios">
+            <FindingsList value={value.protozoos} onChange={v => set("protozoos", v)} locked={locked} />
+          </Cell>
+          <Cell title="Otros">
+            <input
+              value={value.microOtros}
+              onChange={e => set("microOtros", e.target.value)}
+              disabled={locked}
+              placeholder="Ej. Estructuras compatibles con *Clostridium sp.* +"
+              className={input}
+            />
+            <p className="font-sans text-[10px] text-ink-2 mt-1">Nombres científicos entre asteriscos para cursiva: *Clostridium sp.*</p>
+            {value.microOtros.includes("*") && <p className="font-sans text-xs text-ink mt-1"><Markup text={value.microOtros} /></p>}
+          </Cell>
+          <Cell title="Técnica de flotación">
+            <HpgList value={value.flotacion} onChange={v => set("flotacion", v)} locked={locked} noneLabel="No se observan huevos" />
+          </Cell>
+        </div>
       </div>
 
-      {/* Protozoos */}
-      <div>
-        <p className={heading}>Protozoos</p>
-        <FindingsList value={value.protozoos} onChange={v => set("protozoos", v)} locked={locked} />
-      </div>
-
-      {/* Técnica de flotación */}
-      <div>
-        <p className={heading}>Técnica de flotación</p>
-        <HpgList value={value.flotacion} onChange={v => set("flotacion", v)} locked={locked} noneLabel="No se observan huevos" />
-      </div>
+      {extra}
 
       {/* Pie técnico */}
       <div>
@@ -311,8 +317,6 @@ export default function CoproForm({
         <input value={value.tecnica} onChange={e => set("tecnica", e.target.value)} disabled={locked} className={input} />
         <p className="font-sans text-[11px] text-ink-2 italic mt-1.5">Nota: {NOTA_FIJA}</p>
       </div>
-
-      {extra}
 
       {/* Observaciones */}
       <div>

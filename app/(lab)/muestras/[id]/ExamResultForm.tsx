@@ -1,6 +1,7 @@
 "use client"
 import { useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { upload } from "@vercel/blob/client"
 import { saveExamResults } from "@/actions/orders"
 import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
 import { evaluar } from "@/catalogo-pets-lab/calculos"
@@ -107,32 +108,60 @@ export default function ExamResultForm({
   const [uploadedPath, setUploadedPath] = useState<string | null>(exam.uploadedPdfPath)
   const [uploadedName, setUploadedName] = useState<string | null>(exam.uploadedPdfName)
   const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState<number | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const netPrice = computeNetPrice(exam.price, exam.discountType, exam.discountValue)
   const paymentStatus = getPaymentStatus(netPrice, exam.amountPaid)
 
+  // El PDF va directo del navegador a Vercel Blob (sin el límite de 4.5 MB de las funciones) y
+  // después se registra en el examen.
   async function handleUpload(file: File) {
+    setUploadError(null)
+    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
+      setUploadError("El archivo debe ser un PDF.")
+      return
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      setUploadError("El PDF pesa más de 50 MB.")
+      return
+    }
     setUploading(true)
+    setProgress(0)
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      const res = await fetch(`/api/upload/${exam.id}`, { method: "POST", body: fd })
+      const safeName = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9._-]+/g, "-") || "resultado.pdf"
+      const blob = await upload(`uploads/${exam.id}/${safeName}`, file, {
+        access: "private",
+        contentType: "application/pdf",
+        handleUploadUrl: `/api/upload/${exam.id}/token`,
+        onUploadProgress: e => setProgress(Math.round(e.percentage)),
+      })
+      const res = await fetch(`/api/upload/${exam.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: blob.url, name: file.name }),
+      })
       if (!res.ok) throw new Error(await res.text())
       const data = await res.json()
       setUploadedPath(data.path)
       setUploadedName(data.name)
       router.refresh()
-    } catch {
-      alert("No se pudo subir el PDF. Intenta de nuevo.")
+    } catch (err) {
+      console.error(err)
+      setUploadError("No se pudo subir el PDF. Revisa la conexión e intenta de nuevo.")
     } finally {
       setUploading(false)
+      setProgress(null)
+      if (fileRef.current) fileRef.current.value = ""
     }
   }
 
   async function handleRemoveUpload() {
+    if (!confirm("¿Eliminar el PDF adjunto?")) return
     setUploading(true)
+    setUploadError(null)
     try {
       const res = await fetch(`/api/upload/${exam.id}`, { method: "DELETE" })
       if (!res.ok) throw new Error(await res.text())
@@ -140,7 +169,7 @@ export default function ExamResultForm({
       setUploadedName(null)
       router.refresh()
     } catch {
-      alert("No se pudo eliminar el PDF. Intenta de nuevo.")
+      setUploadError("No se pudo eliminar el PDF. Intenta de nuevo.")
     } finally {
       setUploading(false)
     }
@@ -407,7 +436,7 @@ export default function ExamResultForm({
                   {uploadedName}
                 </a>
               </div>
-              {!locked && (
+              {!readOnly && (
                 <button
                   onClick={handleRemoveUpload}
                   disabled={uploading}
@@ -419,17 +448,21 @@ export default function ExamResultForm({
             </div>
           ) : null}
 
-          {/* Action buttons */}
-          {!locked && !uploadedPath && (
+          {/* Action buttons: guardar (si no está completado) y subir PDF (siempre, mientras no haya uno) */}
+          {!readOnly && !uploadedPath && (
             <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={handleSave}
-                disabled={pending}
-                className="bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.22em] uppercase px-5 py-2.5 hover:bg-salvia-800 transition-colors disabled:opacity-60"
-              >
-                {pending ? "Guardando…" : "Guardar resultados →"}
-              </button>
-              <span className="font-mono text-[9px] text-ink-2 uppercase tracking-widest">o</span>
+              {!locked && (
+                <>
+                  <button
+                    onClick={handleSave}
+                    disabled={pending}
+                    className="bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.22em] uppercase px-5 py-2.5 hover:bg-salvia-800 transition-colors disabled:opacity-60"
+                  >
+                    {pending ? "Guardando…" : "Guardar resultados →"}
+                  </button>
+                  <span className="font-mono text-[9px] text-ink-2 uppercase tracking-widest">o</span>
+                </>
+              )}
               <input
                 ref={fileRef}
                 type="file"
@@ -442,7 +475,7 @@ export default function ExamResultForm({
                 disabled={uploading}
                 className="border border-salvia-700 text-salvia-700 font-mono text-[10px] tracking-[0.22em] uppercase px-5 py-2.5 hover:bg-salvia-50 transition-colors disabled:opacity-60"
               >
-                {uploading ? "Subiendo…" : "Subir PDF →"}
+                {uploading ? `Subiendo… ${progress ?? 0}%` : "Subir PDF →"}
               </button>
               {saved && (
                 <span className="font-mono text-[9px] tracking-[0.15em] text-salvia-700 uppercase">
@@ -453,6 +486,9 @@ export default function ExamResultForm({
           )}
           {saveError && (
             <p className="font-sans text-xs text-red-600">{saveError}</p>
+          )}
+          {uploadError && (
+            <p className="font-sans text-xs text-red-600">{uploadError}</p>
           )}
         </div>
 

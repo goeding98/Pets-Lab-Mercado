@@ -34,7 +34,9 @@ export async function buildOrderPdf(
   const done = exams.filter(e => e.status === "COMPLETADO")
   const shown = exams.length > 1 && done.length > 0 ? done : exams
   const hasNotes = (e: ReportExam) => !!e.comments || e.photos.some(p => !p.role)
-  const inReport = shown.filter(e => !e.uploadedPdfPath || hasNotes(e))
+  // Un examen puede tener resultados capturados y además un PDF subido: salen los dos
+  const captured = (e: ReportExam) => e.results.some(r => r.value.trim()) || (e.structured != null && typeof e.structured === "object")
+  const inReport = shown.filter(e => !e.uploadedPdfPath || hasNotes(e) || captured(e))
 
   const merged = await PDFDocument.create()
 
@@ -42,7 +44,8 @@ export async function buildOrderPdf(
     const reportExams = await Promise.all(
       inReport.map(async e => ({
         ...e,
-        attachedPdf: !!e.uploadedPdfPath,
+        attachedPdf: !!e.uploadedPdfPath && !captured(e),
+        extraPdf: !!e.uploadedPdfPath && captured(e),
         macroPhoto: await (async () => {
           const p = e.photos.find(x => x.role === "COPRO_MACRO")
           const bytes = p ? await readBlob(p.url) : null
