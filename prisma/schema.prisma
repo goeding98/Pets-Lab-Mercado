@@ -30,6 +30,7 @@ model Clinic {
   contactName  String? // persona de contacto (registro desde el Portal Vet)
   neighborhood String? // barrio
   city         String?
+  noCharge     Boolean        @default(false) // cliente sin cobro (Pets & Pets): sus resultados nunca se retienen por pago
   users        User[]
   orders       Order[]
   branches     ClinicBranch[]

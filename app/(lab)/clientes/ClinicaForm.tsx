@@ -3,7 +3,7 @@ import { useTransition } from "react"
 import { createClinic, updateClinic } from "@/actions/clinics"
 import type { Clinic } from "@prisma/client"
 
-export default function ClinicaForm({ clinic }: { clinic?: Clinic }) {
+export default function ClinicaForm({ clinic, canSetNoCharge = false }: { clinic?: Clinic; canSetNoCharge?: boolean }) {
   const [pending, startTransition] = useTransition()
   const isEdit = !!clinic
 
@@ -52,6 +52,15 @@ export default function ClinicaForm({ clinic }: { clinic?: Clinic }) {
             <Label>Ciudad</Label>
             <Input name="city" defaultValue={clinic?.city ?? ""} placeholder="Ej. Cali" />
           </div>
+          {canSetNoCharge && (
+          <label className="col-span-2 flex items-start gap-2 font-sans text-sm text-ink cursor-pointer">
+            <input type="checkbox" name="noCharge" value="1" defaultChecked={clinic?.noCharge ?? false} className="mt-1 w-4 h-4 accent-salvia-700" />
+            <span>
+              Cliente sin cobro
+              <span className="block text-[11px] text-ink-2">Sus resultados se entregan siempre, sin esperar pago (ej. Pets &amp; Pets).</span>
+            </span>
+          </label>
+          )}
         </div>
       </fieldset>
 

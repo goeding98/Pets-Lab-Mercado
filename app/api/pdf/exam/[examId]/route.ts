@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db"
 import { get } from "@vercel/blob"
 import { buildOrderPdf } from "@/lib/reportPdf"
 import { getOrinaConfig } from "@/lib/settings"
+import { orderPayment } from "@/lib/payment"
 
 // Los encabezados HTTP no admiten caracteres como "–" o "₃": nombre de archivo solo en ASCII
 const safeFilename = (s: string) =>
@@ -20,7 +21,7 @@ export async function GET(
   const orderExam = await prisma.orderExam.findUnique({
     where: { id: params.examId },
     include: {
-      order: { include: { clinic: true, branch: true, processedBy: true } },
+      order: { include: { clinic: true, branch: true, processedBy: true, exams: { select: { price: true, discountType: true, discountValue: true, amountPaid: true } } } },
       template: {
         include: {
           sections: {
@@ -39,6 +40,10 @@ export async function GET(
   // Las clínicas solo ven exámenes de sus propias órdenes
   if (session.user.role === "CLINIC" && orderExam.order.clinicId !== session.user.clinicId) {
     return new NextResponse("No autorizado", { status: 403 })
+  }
+  // Sin pago no se entrega el resultado (ver lib/payment.ts)
+  if (session.user.role === "CLINIC" && !orderPayment(orderExam.order.exams, orderExam.order.clinic?.noCharge).released) {
+    return new NextResponse("Resultado pendiente de pago: se libera cuando el laboratorio registre el pago.", { status: 402 })
   }
 
   const hasNotes = !!orderExam.comments || orderExam.photos.some(p => !p.role)
@@ -61,7 +66,7 @@ export async function GET(
     }
   }
 
-  const { order, ...exam } = orderExam
+  const { order: { exams: _billing, ...order }, ...exam } = orderExam
   const bytes = await buildOrderPdf({ ...order, orinaConfig: await getOrinaConfig() }, [exam])
 
   return new NextResponse(Buffer.from(bytes), {

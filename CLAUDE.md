@@ -142,6 +142,16 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `/muestras` **no se guarda**: se calcula siempre en el momento con
   `lib/billing.ts: computeNetPrice` + `getPaymentStatus` (precio neto vs. `amountPaid`). No
   reintroduzcas un booleano `paid` manual — ya se quitó a propósito a favor de este cálculo.
+- Pago y entrega del resultado (`lib/payment.ts: orderPayment`, fuente única): la clínica solo ve el
+  resultado (Portal Vet, `api/pdf/[orderId]`, `api/pdf/exam/[examId]`, `api/photos` → 402 si no) cuando la
+  orden está **liberada**: algún pago (parcial basta), nada que cobrar (total 0) o clínica `noCharge`
+  ("cliente sin cobro": solo Pets & Pets; solo ADMIN lo cambia en /clientes). El staff ve todo siempre.
+  Módulo de pago arriba en cada muestra (`PaymentModule.tsx`): total/pagado/saldo y casilla "Pagado"
+  (`actions/payments.ts: setOrderPaid`, permiso `pagos` = todo el personal) que pone `amountPaid` = neto
+  en todos sus exámenes (o 0 al desmarcar) → el resultado se libera solo. "Ya pagó" también al registrar
+  la muestra (`OrderForm paymentOption`, solo staff — excepción a "mismo formulario para ambos"). Al
+  guardar/subir PDF en una orden sin pago sale la alerta de resultado retenido; en /muestras, "Retenido".
+  Las órdenes anteriores al cambio se marcaron pagadas con `scripts/pagos-iniciales.ts`.
 - Inventario (`InventoryItem`, `RecipeItem`, `InventoryMovement`, rutas
   `app/(lab)/inventario/`): cada `ExamTemplate` puede tener una "receta" (`RecipeItem`) que
   define qué insumos y en qué cantidad consume. Al completarse un `OrderExam` (por

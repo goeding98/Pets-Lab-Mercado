@@ -1,11 +1,13 @@
 "use client"
 import { useState, useTransition } from "react"
 import type { ExamTemplate, Clinic } from "@prisma/client"
+import { PAYMENT_METHODS, formatCOP } from "@/lib/payment"
 
 // Formulario de ingreso de una muestra/orden. Lo usan el staff (/muestras/nueva) y las clínicas
 // desde el Portal Vet (/portal-vet/nueva), para que ambos pidan exactamente los mismos datos.
 // Sin `clinics` no se muestra el selector de clínica (en el portal la clínica es la de la sesión y
 // sus sedes llegan en `branches`). Si la clínica tiene sedes, hay que elegir una.
+// `paymentOption` (solo staff) agrega la casilla "Ya pagó": las clínicas no marcan su propio pago.
 
 type BranchOption = { id: string; name: string; address: string }
 
@@ -31,6 +33,7 @@ export default function OrderForm({
   action,
   submitLabel = "Registrar muestra →",
   pendingLabel = "Registrando…",
+  paymentOption = false,
 }: {
   templates: ExamTemplate[]
   clinics?: (Clinic & { branches: BranchOption[] })[]
@@ -38,10 +41,14 @@ export default function OrderForm({
   action: (fd: FormData) => Promise<void>
   submitLabel?: string
   pendingLabel?: string
+  paymentOption?: boolean
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState("")
   const [clinicId, setClinicId] = useState("")
+  const [selected, setSelected] = useState<string[]>([])
+  const total = templates.filter(t => selected.includes(t.id)).reduce((n, t) => n + (t.price ?? 0), 0)
+  const noCharge = clinics?.find(c => c.id === clinicId)?.noCharge ?? false
   const branchOptions = clinics ? clinics.find(c => c.id === clinicId)?.branches ?? [] : ownBranches ?? []
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -155,6 +162,7 @@ export default function OrderForm({
                       type="checkbox"
                       name="templateIds"
                       value={t.id}
+                      onChange={e => setSelected(s => e.target.checked ? [...s, t.id] : s.filter(id => id !== t.id))}
                       className="mt-0.5 accent-salvia-700"
                     />
                     <span className="font-sans text-sm">
@@ -171,6 +179,32 @@ export default function OrderForm({
           ))}
         </div>
       </fieldset>
+
+      {paymentOption && (
+        <fieldset className="border border-black/10 p-5">
+          <legend className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase px-1">Pago</legend>
+          {noCharge ? (
+            <p className="font-sans text-sm text-ink mt-2">Cliente sin cobro: los resultados se entregan siempre.</p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-4 mt-2">
+              <p className="font-sans text-sm text-ink">
+                Total a pagar: <strong>{formatCOP(total)}</strong>
+                <span className="block font-sans text-[11px] text-ink-2">Precios de lista; descuentos se ajustan en Caja.</span>
+              </p>
+              <label className="flex items-center gap-2 font-sans text-sm text-ink cursor-pointer">
+                <input type="checkbox" name="paid" value="1" className="w-4 h-4 accent-salvia-700" />
+                Ya pagó
+              </label>
+              <select name="paymentMethod" defaultValue={PAYMENT_METHODS[0].value} className={`${inputClass} w-auto`}>
+                {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+              <p className="w-full font-sans text-[11px] text-ink-2">
+                Si no ha pagado, el resultado queda retenido (la clínica no lo ve) hasta marcar el pago en la muestra.
+              </p>
+            </div>
+          )}
+        </fieldset>
+      )}
 
       {/* Notes */}
       <div>

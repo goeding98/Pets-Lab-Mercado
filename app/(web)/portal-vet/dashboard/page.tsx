@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import LogoutButton from "./LogoutButton"
+import { formatCOP, orderPayment } from "@/lib/payment"
 
 export const metadata: Metadata = { title: "Portal Vet" }
 
@@ -30,6 +31,8 @@ export default async function PortalVetDashboardPage({
     select: { id: true, name: true },
   })
   const sede = branches.some(b => b.id === searchParams.sede) ? searchParams.sede : undefined
+  const clinic = await prisma.clinic.findUnique({ where: { id: session.user.clinicId }, select: { noCharge: true } })
+  const noCharge = clinic?.noCharge ?? false
   const orders = await prisma.order.findMany({
     where: {
       clinicId: session.user.clinicId,
@@ -57,7 +60,9 @@ export default async function PortalVetDashboardPage({
   }
 
   const totalExams = orders.reduce((n, o) => n + o.exams.length, 0)
-  const ready = orders.filter(o => o.status === "COMPLETADA").length
+  // Un resultado sin pago no se entrega (lib/payment.ts): se ve como "pendiente de pago", sin PDF
+  const held = (o: (typeof orders)[number]) => !orderPayment(o.exams, noCharge).released
+  const ready = orders.filter(o => o.status === "COMPLETADA" && !held(o)).length
 
   return (
     <div className="max-w-wrap mx-auto px-6 lg:px-10 py-10">
@@ -143,7 +148,11 @@ export default async function PortalVetDashboardPage({
 
               <div className="divide-y divide-black/[0.06]">
                 {p.orders.map(o => {
-                  const s = ORDER_STATUS[o.status] ?? { label: o.status, className: "bg-black/10 text-ink" }
+                  const pay = orderPayment(o.exams, noCharge)
+                  const isHeld = !pay.released
+                  const s = isHeld && o.exams.some(e => e.status === "COMPLETADO")
+                    ? { label: "Pendiente de pago", className: "bg-amber-100 text-amber-900" }
+                    : ORDER_STATUS[o.status] ?? { label: o.status, className: "bg-black/10 text-ink" }
                   return (
                     <div key={o.id} className="px-5 py-4 flex flex-wrap items-start gap-x-6 gap-y-3">
                       <div className="w-[130px] shrink-0">
@@ -164,19 +173,25 @@ export default async function PortalVetDashboardPage({
                             />
                             {e.template.name}
                             <span className="font-mono text-[8px] tracking-[0.12em] uppercase text-ink-2">
-                              {e.status === "COMPLETADO" ? "Listo" : "Pendiente"}
+                              {e.status === "COMPLETADO" ? (isHeld ? "Listo · pendiente de pago" : "Listo") : "Pendiente"}
                             </span>
                           </li>
                         ))}
                         {o.requestingVet && (
                           <li className="font-sans text-[11px] text-ink-2 pt-1">Solicita: {o.requestingVet}</li>
                         )}
+                        {isHeld && o.exams.some(e => e.status === "COMPLETADO") && (
+                          <li className="font-sans text-[12px] text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-1.5 mt-2">
+                            El resultado se entrega cuando se registre el pago{pay.balance > 0 ? ` (${formatCOP(pay.balance)})` : ""}.
+                            Comunícate con el laboratorio.
+                          </li>
+                        )}
                       </ul>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className={`font-mono text-[8px] tracking-[0.18em] uppercase px-2 py-1 ${s.className}`}>
                           {s.label}
                         </span>
-                        {o.status === "COMPLETADA" && (
+                        {o.status === "COMPLETADA" && !isHeld && (
                           <a
                             href={`/api/pdf/${o.id}`}
                             target="_blank"

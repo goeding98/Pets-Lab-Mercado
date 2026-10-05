@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { prisma } from "@/lib/db"
 import { computeNetPrice, getPaymentStatus as getExamPaymentStatus } from "@/lib/billing"
+import { orderPayment } from "@/lib/payment"
 
 export const metadata: Metadata = { title: "Muestras" }
 
@@ -107,7 +108,9 @@ export default async function MuestrasPage({
           <tbody>
             {orders.map((order, i) => {
               const s = STATUS_LABELS[order.status] ?? { label: order.status, className: "bg-black/10 text-ink" }
-              const p = getOrderPaymentStatus(order.exams)
+              const p = order.clinic?.noCharge ? { label: "Sin cobro", className: "bg-salvia-50 text-salvia-700" } : getOrderPaymentStatus(order.exams)
+              // Resultado listo pero sin pago: la clínica no lo ve (lib/payment.ts)
+              const retenido = order.exams.some(e => e.status === "COMPLETADO") && !orderPayment(order.exams, order.clinic?.noCharge).released
               return (
                 <tr key={order.id} className={`border-b border-black/[0.06] hover:bg-salvia-50/50 transition-colors ${i % 2 !== 0 ? "bg-black/[0.015]" : ""}`}>
                   <td className="px-4 py-3">
@@ -136,6 +139,11 @@ export default async function MuestrasPage({
                     <span className={`${p.className} font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5`}>
                       {p.label}
                     </span>
+                    {retenido && (
+                      <span className="block w-fit mt-1 font-mono text-[7px] tracking-[0.15em] uppercase bg-red-100 text-red-800 px-1.5 py-0.5" title="Resultado listo pero sin pago: la clínica no lo ve">
+                        Retenido
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/muestras/${order.id}`} className="font-mono text-[9px] tracking-[0.15em] text-salvia-700 hover:underline uppercase">

@@ -9,6 +9,7 @@ export type Permission =
   | "clientes.ver"
   | "clientes.editar"   // crear/editar clínicas (y su usuario del portal)
   | "caja"
+  | "pagos"             // marcar una orden como pagada (libera el resultado a la clínica): todo el personal
   | "inventario"
   | "usuarios"
   | "promociones"       // crear/eliminar promociones (exámenes combinados)
@@ -16,14 +17,14 @@ export type Permission =
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "resultados.editar",
-  "clientes.ver", "clientes.editar", "caja", "inventario", "usuarios", "promociones", "rangos",
+  "clientes.ver", "clientes.editar", "caja", "pagos", "inventario", "usuarios", "promociones", "rangos",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
   STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos"),
-  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones"],
-  DOMICILIARIO: ["muestras.ver", "muestras.crear"],
+  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones", "pagos"],
+  DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos"],
   CLINIC: [],
 }
 

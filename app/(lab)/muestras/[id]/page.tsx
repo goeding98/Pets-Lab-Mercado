@@ -9,6 +9,8 @@ import ExamResultForm from "./ExamResultForm"
 import { isOrinaSection } from "@/lib/orina"
 import { getOrinaConfig } from "@/lib/settings"
 import UpdateStatusButton from "./UpdateStatusButton"
+import PaymentModule from "./PaymentModule"
+import { orderPayment } from "@/lib/payment"
 
 export const metadata: Metadata = { title: "Detalle de muestra" }
 
@@ -45,6 +47,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
 
   const session = await getServerSession(authOptions)
   const canEdit = can(session?.user.role, "resultados.editar")
+  const payment = orderPayment(order.exams, order.clinic?.noCharge ?? false)
 
   // Parcial de Orina: valores de referencia (configurables) y reactivos con lote del inventario
   const hasOrina = order.exams.some(e => e.template.sections.some(s => isOrinaSection(s.name)))
@@ -114,6 +117,14 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
         ))}
       </div>
 
+      <PaymentModule
+        orderId={order.id}
+        payment={payment}
+        hasResults={order.exams.some(e => e.status === "COMPLETADO")}
+        canMark={can(session?.user.role, "pagos")}
+        clinicName={order.clinic?.name ?? null}
+      />
+
       {order.notes && (
         <div className="bg-azul-50 border border-azul-200 px-4 py-3 mb-8">
           <p className="font-mono text-[8px] tracking-[0.2em] text-azul-700 uppercase mb-1">Observaciones</p>
@@ -133,6 +144,8 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
               }}
               species={order.species}
               readOnly={!canEdit}
+              released={payment.released}
+              balance={payment.balance}
               orinaConfig={orinaConfig}
               reagents={reagents}
             />

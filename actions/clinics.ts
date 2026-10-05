@@ -24,6 +24,8 @@ export async function createClinic(formData: FormData) {
       contactName: (formData.get("contactName") as string) || null,
       neighborhood: (formData.get("neighborhood") as string) || null,
       city: (formData.get("city") as string) || null,
+      // Cliente sin cobro: solo ADMIN lo cambia
+      ...(session.user.role === "ADMIN" ? { noCharge: formData.get("noCharge") === "1" } : {}),
     },
   })
 
@@ -66,6 +68,8 @@ export async function updateClinic(id: string, formData: FormData) {
       contactName: (formData.get("contactName") as string) || null,
       neighborhood: (formData.get("neighborhood") as string) || null,
       city: (formData.get("city") as string) || null,
+      // Cliente sin cobro: solo ADMIN lo cambia
+      ...(session.user.role === "ADMIN" ? { noCharge: formData.get("noCharge") === "1" } : {}),
     },
   })
 

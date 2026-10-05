@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { upload } from "@vercel/blob/client"
 import { saveExamResults } from "@/actions/orders"
 import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
+import { formatCOP } from "@/lib/payment"
 import { evaluar } from "@/catalogo-pets-lab/calculos"
 import ExamNotes from "./ExamNotes"
 import { isDescriptiveSection } from "@/lib/sections"
@@ -76,12 +77,16 @@ export default function ExamResultForm({
   exam,
   species,
   readOnly = false,
+  released = true,
+  balance = 0,
   orinaConfig,
   reagents = [],
 }: {
   exam: ExamProp
   species: string
   readOnly?: boolean
+  released?: boolean // ¿la clínica puede ver el resultado? (pago, ver lib/payment.ts)
+  balance?: number // saldo de la orden
   orinaConfig?: OrinaConfig // valores de referencia del Parcial de Orina (LabSetting)
   reagents?: Reactivo[] // reactivos con lote del inventario (control de calidad de la orina)
 }) {
@@ -97,6 +102,8 @@ export default function ExamResultForm({
 
   const [values, setValues] = useState<Record<string, string>>(initialValues)
   const [saved, setSaved] = useState(false)
+  // Tras guardar o subir PDF en una orden sin pago: aviso de que el resultado queda retenido
+  const [heldNotice, setHeldNotice] = useState(false)
   // Un examen completado queda bloqueado; "Editar" lo abre para corregir y volver a guardar
   const [editing, setEditing] = useState(false)
   const hasCoproscopico = exam.template.sections.some(s => isCoproscopicoSection(s.name))
@@ -149,6 +156,7 @@ export default function ExamResultForm({
       const data = await res.json()
       setUploadedPath(data.path)
       setUploadedName(data.name)
+      if (!released) setHeldNotice(true)
       router.refresh()
     } catch (err) {
       console.error(err)
@@ -249,6 +257,7 @@ export default function ExamResultForm({
         await saveExamResults(exam.id, results, Object.keys(structured).length ? structured : undefined)
         setSaved(true)
         setEditing(false)
+        if (!released) setHeldNotice(true)
         router.refresh()
       } catch (err) {
         // Sin esto un fallo del servidor (sesión vencida, timeout de la BD, deploy nuevo) se
@@ -536,6 +545,13 @@ export default function ExamResultForm({
           )}
           {uploadError && (
             <p className="font-sans text-xs text-red-600">{uploadError}</p>
+          )}
+          {heldNotice && !released && (
+            <div role="alert" className="border border-red-300 bg-red-50 px-4 py-3 font-sans text-[13px] text-ink">
+              <strong className="text-red-700">El cliente no ha pagado.</strong> El resultado quedó guardado pero
+              <strong> no se le muestra a la clínica</strong> hasta que se marque el pago
+              {balance > 0 ? ` (${formatCOP(balance)})` : ""} arriba, en el módulo de pago de la muestra.
+            </div>
           )}
         </div>
 

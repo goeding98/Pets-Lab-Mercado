@@ -3,6 +3,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/db"
 import ClinicaForm from "../ClinicaForm"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import BranchManager from "@/components/BranchManager"
 
 export const metadata: Metadata = { title: "Editar clínica" }
@@ -40,7 +42,7 @@ export default async function EditarClinicaPage({ params }: { params: { id: stri
       </section>
 
       <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-3">Datos de la cuenta</p>
-      <ClinicaForm clinic={clinicData} />
+      <ClinicaForm clinic={clinicData} canSetNoCharge={(await getServerSession(authOptions))?.user.role === "ADMIN"} />
     </div>
   )
 }

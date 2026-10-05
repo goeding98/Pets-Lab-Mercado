@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { get, del } from "@vercel/blob"
+import { orderPayment } from "@/lib/payment"
 
 // Sirve una foto de un examen (el blob es privado: se hace proxy con la sesión)
 export async function GET(
@@ -15,13 +16,15 @@ export async function GET(
 
   const photo = await prisma.examPhoto.findUnique({
     where: { id: params.photoId },
-    include: { orderExam: { select: { order: { select: { clinicId: true } } } } },
+    include: { orderExam: { select: { order: { select: { clinicId: true, clinic: { select: { noCharge: true } }, exams: { select: { price: true, discountType: true, discountValue: true, amountPaid: true } } } } } } },
   })
   if (!photo) return new NextResponse("No encontrado", { status: 404 })
 
-  // Las clínicas solo ven fotos de sus propias órdenes
-  if (session.user.role === "CLINIC" && photo.orderExam.order.clinicId !== session.user.clinicId) {
-    return new NextResponse("No autorizado", { status: 403 })
+  // Las clínicas solo ven fotos de sus propias órdenes, y solo con el resultado liberado (pago)
+  if (session.user.role === "CLINIC") {
+    const order = photo.orderExam.order
+    if (order.clinicId !== session.user.clinicId) return new NextResponse("No autorizado", { status: 403 })
+    if (!orderPayment(order.exams, order.clinic?.noCharge).released) return new NextResponse("Resultado pendiente de pago: se libera cuando el laboratorio registre el pago.", { status: 402 })
   }
 
   const blob = await get(photo.url, { access: "private" })

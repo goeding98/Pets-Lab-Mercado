@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { buildOrderPdf } from "@/lib/reportPdf"
 import { getOrinaConfig } from "@/lib/settings"
+import { orderPayment } from "@/lib/payment"
 
 export async function GET(
   req: Request,
@@ -44,6 +45,10 @@ export async function GET(
   if (session.user.role === "CLINIC") {
     if (order.clinic?.id !== session.user.clinicId) {
       return new NextResponse("No autorizado", { status: 403 })
+    }
+    // Sin pago no se entrega el resultado (ver lib/payment.ts)
+    if (!orderPayment(order.exams, order.clinic?.noCharge).released) {
+      return new NextResponse("Resultado pendiente de pago: se libera cuando el laboratorio registre el pago.", { status: 402 })
     }
   }
 
