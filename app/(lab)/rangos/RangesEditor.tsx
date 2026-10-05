@@ -16,6 +16,7 @@ export type MasterExam = {
   id: string
   name: string
   area: string
+  note?: string // aclaración bajo el nombre (ej. a qué exámenes se aplica)
   sections: { name: string; fields: RangeField[] }[]
 }
 
@@ -120,7 +121,10 @@ export default function RangesEditor({ exams }: { exams: MasterExam[] }) {
             {filtered.filter(e => e.area === area).map(exam => (
               <details key={exam.id} open={query.trim() !== ""} className="border border-black/10 bg-white group">
                 <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between">
-                  <span className="font-sans text-sm font-medium text-ink">{exam.name}</span>
+                  <span>
+                    <span className="block font-sans text-sm font-medium text-ink">{exam.name}</span>
+                    {exam.note && <span className="block font-sans text-[11px] text-ink-2 mt-0.5">{exam.note}</span>}
+                  </span>
                   <span className="font-mono text-[8px] tracking-[0.15em] uppercase text-ink-2 group-open:hidden">
                     {exam.sections.reduce((n, s) => n + s.fields.length, 0)} parámetros ›
                   </span>

@@ -60,8 +60,25 @@ export default async function RangosPage() {
       .filter(s => s.fields.length > 0),
   })
 
+  // Hemogramas: bloque propio arriba (adulto, por edad y simple), cada uno con a qué se aplica
+  const HEMOGRAMAS: [string, string][] = [
+    ["Hemograma Completo con Recuento de Reticulocitos", "Adulto. Sus rangos se aplican también al hemograma de todos los perfiles y al Hemograma Simple."],
+    ["Hemograma 0 - 2 Meses", "Cachorros de 0 a 2 meses. Rangos propios."],
+    ["Hemograma 2.5 - 3 Meses", "Cachorros de 2.5 a 3 meses. Rangos propios."],
+    ["Hemograma 4 - 6 Meses", "Cachorros de 4 a 6 meses. Rangos propios."],
+    ["Hemograma Simple / Proteínas Plasmáticas", "Sigue los rangos del Hemograma Completo (adulto): se editan allá."],
+  ]
+  const hemogramas = HEMOGRAMAS
+    .map(([name, note]) => {
+      const t = masters.find(m => m.name === name)
+      return t ? { ...toExam(t, "Hemogramas"), note } : null
+    })
+    .filter((e): e is MasterExam & { note: string } => e !== null)
+  const otros = masters.filter(m => !HEMOGRAMAS.some(([name]) => name === m.name))
+
   const exams: MasterExam[] = [
-    ...masters.map(t => toExam(t, t.area)),
+    ...hemogramas,
+    ...otros.map(t => toExam(t, t.area)),
     // De los perfiles solo los parámetros propios que tienen rango (p. ej. Globulinas)
     ...composites
       .map(t => toExam(t, "Parámetros propios de perfiles"))
