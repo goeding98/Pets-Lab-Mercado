@@ -1,3 +1,4 @@
+import { SITE } from "@/lib/site-config"
 import Nav from "@/components/Nav"
 import Footer from "@/components/Footer"
 
@@ -8,7 +9,7 @@ export default function WebLayout({ children }: { children: React.ReactNode }) {
       <main>{children}</main>
       <Footer />
       <a
-        href="https://wa.me/573152946916"
+        href={SITE.whatsapp}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Contactar por WhatsApp"
