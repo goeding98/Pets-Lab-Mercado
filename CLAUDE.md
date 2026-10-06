@@ -150,7 +150,8 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   navegador comprime las fotos a JPEG ≤1600 px antes de subirlas (límite de 4.5 MB de Vercel).
   Salen en el PDF debajo de los resultados, también para exámenes resueltos con PDF subido.
   El PDF cierra siempre con la firma del Director de Laboratorio (Dr. Marcelo Valencia Vargas,
-  imagen `public/firma-marcelo-valencia.png`, en `components/PdfReport.tsx`), no la de quien procesó.
+  imagen `public/firma-marcelo-valencia.png`, en `components/PdfReport.tsx`), no la de quien procesó; debajo
+  va siempre la del microbiólogo Anderson Yemin Angulo Valencia (`public/firma-anderson-angulo.png`).
   El PDF usa Helvetica: no admite caracteres como "▲", "⁶", "₂", "≥" — usar ASCII/Latin-1 en
   nombres, unidades y rangos.
 - Caja (`app/(lab)/caja/`, `actions/billing.ts`, `lib/billing.ts`): cada `OrderExam` tiene

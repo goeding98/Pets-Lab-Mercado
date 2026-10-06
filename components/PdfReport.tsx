@@ -29,6 +29,7 @@ const LOGO = `data:image/png;base64,${logoBuffer.toString("base64")}`
 Font.registerHyphenationCallback(word => [word])
 
 const SIGNATURE = `data:image/png;base64,${fs.readFileSync(path.join(process.cwd(), "public", "firma-marcelo-valencia.png")).toString("base64")}`
+const SIGNATURE_ANDERSON = `data:image/png;base64,${fs.readFileSync(path.join(process.cwd(), "public", "firma-anderson-angulo.png")).toString("base64")}`
 
 // Colors
 const C = {
@@ -101,6 +102,8 @@ const styles = StyleSheet.create({
   signText: { flex: 1 },
   signSignature: { width: 170, alignItems: "center" },
   signImage: { width: 110, height: 92, objectFit: "contain", marginBottom: -6 },
+  signBlock2: { marginTop: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
+  signImageWide: { width: 140, height: 44, objectFit: "contain", marginBottom: 2 },
   signLine: { width: 160, borderBottomWidth: 0.5, borderBottomColor: C.ink2 },
   signName: { fontSize: 9, color: C.ink, fontFamily: "Helvetica-Bold", marginTop: 3, marginBottom: 2 },
   signRole: { fontSize: 6.5, color: C.salvia700, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "Helvetica-Bold" },
@@ -648,8 +651,9 @@ export function PdfReport({ order }: { order: OrderData }) {
 
           <Text style={styles.attachedNote}>* Valor fuera del rango de referencia.</Text>
 
-          {/* Firma del director de laboratorio (va en todos los reportes) */}
-          <View style={styles.signBlock} wrap={false}>
+          {/* Firmas (van en todos los reportes, siempre juntas): director de laboratorio y microbiólogo */}
+          <View wrap={false}>
+          <View style={styles.signBlock}>
             <View style={styles.signText}>
               <Text style={styles.signRole}>Director de Laboratorio</Text>
               <Text style={styles.signName}>Dr. Marcelo Valencia Vargas</Text>
@@ -662,6 +666,19 @@ export function PdfReport({ order }: { order: OrderData }) {
               <Image src={SIGNATURE} style={styles.signImage} />
               <View style={styles.signLine} />
             </View>
+          </View>
+          <View style={styles.signBlock2}>
+            <View style={styles.signText}>
+              <Text style={styles.signName}>Anderson Yemin Angulo Valencia</Text>
+              <Text style={styles.signDetail}>Microbiólogo</Text>
+              <Text style={styles.signDetail}>Universidad Santiago de Cali</Text>
+            </View>
+            <View style={styles.signSignature}>
+              {/* eslint-disable-next-line jsx-a11y/alt-text */}
+              <Image src={SIGNATURE_ANDERSON} style={styles.signImageWide} />
+              <View style={styles.signLine} />
+            </View>
+          </View>
           </View>
         </View>
 
