@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Promociones" }
 export default async function PromocionesPage() {
   const [promotions, templates] = await Promise.all([
     prisma.examTemplate.findMany({
-      where: { isPromotion: true, active: true },
+      where: { isPromotion: true, isCustom: false, active: true },
       orderBy: { name: "asc" },
       include: {
         promoComponents: { orderBy: { order: "asc" }, include: { template: { select: { name: true } } } },
@@ -17,7 +17,7 @@ export default async function PromocionesPage() {
       },
     }),
     prisma.examTemplate.findMany({
-      where: { isPromotion: false, active: true },
+      where: { isPromotion: false, isCustom: false, active: true },
       orderBy: [{ area: "asc" }, { name: "asc" }],
       select: { id: true, name: true, area: true, turnaround: true, sampleType: true },
     }),

@@ -34,6 +34,7 @@ model Clinic {
   users        User[]
   orders       Order[]
   branches     ClinicBranch[]
+  customExams  ExamTemplate[] @relation("CustomExamClients") // exámenes personalizados para esta clínica
   createdAt    DateTime       @default(now())
 }
 
@@ -119,7 +120,9 @@ model ExamTemplate {
   sampleType      String
   price           Float? // precio de lista; si existe, se precarga en Caja al crear la orden
   description     String? // qué incluye (perfiles) — se muestra al elegir exámenes
-  isPromotion     Boolean              @default(false) // examen combinado creado en /promociones
+  isPromotion     Boolean              @default(false) // examen combinado creado en /promociones (o personalizado)
+  isCustom        Boolean              @default(false) // examen personalizado (/personalizados): solo lo ven los clientes de `clients`
+  clients         Clinic[]             @relation("CustomExamClients")
   active          Boolean              @default(true) // false = retirado: no se ofrece en órdenes nuevas
   sections        ExamSection[]
   orderExams      OrderExam[]

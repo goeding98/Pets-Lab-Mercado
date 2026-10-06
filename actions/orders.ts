@@ -25,19 +25,17 @@ async function validatedOrina(structured: unknown) {
 }
 import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
 import { PAYMENT_METHODS } from "@/lib/payment"
+import { assertOrderableTemplates } from "@/lib/catalog"
 
 export async function createOrder(formData: FormData) {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "muestras.crear")) throw new Error("No autorizado")
 
   const templateIds = formData.getAll("templateIds") as string[]
-  if (templateIds.length === 0) throw new Error("Selecciona al menos un examen")
-
-  const validCount = await prisma.examTemplate.count({ where: { id: { in: templateIds }, active: true } })
-  if (validCount !== templateIds.length) throw new Error("Examen no válido")
-
   const clinicIdRaw = formData.get("clinicId") as string
   const clinicId = clinicIdRaw && clinicIdRaw !== "" ? clinicIdRaw : null
+  // Incluye los personalizados solo si son de esta clínica
+  await assertOrderableTemplates(templateIds, clinicId)
   const branchId = await resolveBranch(clinicId, formData.get("branchId"))
   const listed = await examsWithListPrice(templateIds)
   // "Ya pagó" al registrar (solo el personal con permiso de pagos): se registra el pago completo en Caja

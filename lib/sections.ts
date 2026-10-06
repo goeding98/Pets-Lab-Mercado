@@ -35,9 +35,17 @@ const DESCRIPTIVE_EXAM_SECTIONS: { exam: RegExp; section: RegExp }[] = [
   { exam: /^citolog[ií]a de l[ií]quidos/i, section: /^conclusi[oó]n$/i },
 ]
 
-export function isDescriptiveSection(sectionName: string, examName = ""): boolean {
-  const s = sectionName.trim(), e = examName.trim()
+function matches(s: string, e: string): boolean {
   return DESCRIPTIVE_SECTIONS.some(re => re.test(s))
     || DESCRIPTIVE_EXAMS.some(re => re.test(e))
     || DESCRIPTIVE_EXAM_SECTIONS.some(r => r.exam.test(e) && r.section.test(s))
+}
+
+export function isDescriptiveSection(sectionName: string, examName = ""): boolean {
+  const s = sectionName.trim(), e = examName.trim()
+  if (matches(s, e)) return true
+  // Promociones y personalizados copian las secciones como "<examen componente> — <sección>":
+  // se evalúan como en su examen original
+  const i = s.indexOf(" — ")
+  return i > 0 && matches(s.slice(i + 3).trim(), s.slice(0, i).trim())
 }

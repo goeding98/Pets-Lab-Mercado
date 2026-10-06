@@ -42,7 +42,7 @@ const slug = (s: string) =>
 
 export default async function ServiciosPage() {
   const templates = await prisma.examTemplate.findMany({
-    where: { active: true },
+    where: { active: true, isCustom: false }, // los personalizados son solo para su cliente
     orderBy: { name: "asc" },
     select: { id: true, name: true, area: true, turnaround: true, sampleType: true, description: true },
   })

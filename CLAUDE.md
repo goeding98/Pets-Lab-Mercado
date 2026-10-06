@@ -78,6 +78,15 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   catálogo borra todos los `ExamTemplate`, promociones incluidas. `ExamTemplate.price` (opcional,
   hoy solo se edita en Promociones) se copia a `OrderExam.price` al crear la orden
   (`lib/orders.ts: examsWithListPrice`); después Caja lo edita por orden sin tocar el de lista.
+- Exámenes personalizados (`app/(lab)/personalizados/`, `actions/customExams.ts` + `lib/customExam.ts`,
+  permiso `promociones`): como una promoción (`isPromotion = true`, copia de secciones con `composeSections`,
+  `PromotionComponent`; precio y eliminar con las acciones de promociones) pero con nombre, categoría
+  (`area`) y precio propios, `isCustom = true` y visibles solo para sus clínicas (`ExamTemplate.clients`).
+  Componentes: exámenes simples (no Perfiles, promociones ni personalizados). Toda consulta de exámenes
+  para órdenes debe usar `lib/catalog.ts: catalogWhere(clinicId)` / `assertOrderableTemplates`; en
+  /muestras/nueva `OrderForm` los muestra solo al elegir su clínica; nunca en /servicios ni /promociones.
+  Las secciones copiadas se llaman "<examen> — <sección>": `isDescriptiveSection` las evalúa como en el
+  examen original.
 - Un `OrderExam` se completa de dos formas: (a) capturando resultados campo por campo en
   el formulario (`app/(lab)/muestras/[id]/ExamResultForm.tsx`), o (b) subiendo un PDF ya
   hecho externamente. El botón "PDF" de la orden genera un reporte combinado que fusiona

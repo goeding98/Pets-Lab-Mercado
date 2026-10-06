@@ -35,7 +35,7 @@ export default function OrderForm({
   pendingLabel = "Registrando…",
   paymentOption = false,
 }: {
-  templates: ExamTemplate[]
+  templates: (ExamTemplate & { clients?: { id: string }[] })[]
   clinics?: (Clinic & { branches: BranchOption[] })[]
   branches?: BranchOption[]
   action: (fd: FormData) => Promise<void>
@@ -47,7 +47,10 @@ export default function OrderForm({
   const [error, setError] = useState("")
   const [clinicId, setClinicId] = useState("")
   const [selected, setSelected] = useState<string[]>([])
-  const total = templates.filter(t => selected.includes(t.id)).reduce((n, t) => n + (t.price ?? 0), 0)
+  // Personalizados: en el formulario del staff solo aparecen con su clínica elegida (en el portal ya
+  // llegan filtrados por la clínica de la sesión)
+  const offered = clinics ? templates.filter(t => !t.isCustom || t.clients?.some(c => c.id === clinicId)) : templates
+  const total = offered.filter(t => selected.includes(t.id)).reduce((n, t) => n + (t.price ?? 0), 0)
   const noCharge = clinics?.find(c => c.id === clinicId)?.noCharge ?? false
   const branchOptions = clinics ? clinics.find(c => c.id === clinicId)?.branches ?? [] : ownBranches ?? []
 
@@ -65,11 +68,12 @@ export default function OrderForm({
   // Áreas conocidas en su orden; cualquier área nueva del catálogo va al final
   const areas = [
     ...AREAS,
-    ...Array.from(new Set(templates.map(t => t.area))).filter(a => !AREAS.includes(a)).sort(),
+    ...Array.from(new Set(offered.map(t => t.area))).filter(a => !AREAS.includes(a)).sort(),
   ]
   const byArea = areas.map(area => ({
     area,
-    items: templates.filter(t => t.area === area),
+    // Los personalizados del cliente van primero en su categoría
+    items: offered.filter(t => t.area === area).sort((a, b) => Number(b.isCustom) - Number(a.isCustom)),
   })).filter(g => g.items.length > 0)
 
   return (
@@ -162,11 +166,17 @@ export default function OrderForm({
                       type="checkbox"
                       name="templateIds"
                       value={t.id}
+                      checked={selected.includes(t.id)}
                       onChange={e => setSelected(s => e.target.checked ? [...s, t.id] : s.filter(id => id !== t.id))}
                       className="mt-0.5 accent-salvia-700"
                     />
                     <span className="font-sans text-sm">
                       {t.name}
+                      {t.isCustom && (
+                        <span className="ml-1.5 font-mono text-[7px] tracking-[0.15em] uppercase bg-amber-100 text-amber-900 px-1.5 py-px align-middle">
+                          Personalizado
+                        </span>
+                      )}
                       {t.description && (
                         <span className="block font-sans text-[11px] leading-snug text-ink-2 mt-0.5">Incluye: {t.description}</span>
                       )}

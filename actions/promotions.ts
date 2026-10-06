@@ -15,6 +15,7 @@ async function requirePermission() {
 
 function revalidateCatalog() {
   revalidatePath("/promociones")
+  revalidatePath("/personalizados")
   revalidatePath("/muestras/nueva")
   revalidatePath("/portal-vet/nueva")
   revalidatePath("/inventario/recetas")
@@ -40,7 +41,7 @@ export async function createPromotion(
   }
 
   const found = await prisma.examTemplate.findMany({
-    where: { id: { in: ids }, active: true, isPromotion: false },
+    where: { id: { in: ids }, active: true, isPromotion: false, isCustom: false },
     include: {
       sections: { orderBy: { order: "asc" }, include: { fields: { orderBy: { order: "asc" } } } },
       recipeItems: true,
@@ -78,6 +79,7 @@ export async function updatePromotionPrice(id: string, price: number | null) {
   if (price !== null && (!Number.isFinite(price) || price < 0)) throw new Error("Precio no válido")
   await prisma.examTemplate.update({ where: { id, isPromotion: true }, data: { price } })
   revalidatePath("/promociones")
+  revalidatePath("/personalizados")
 }
 
 // Elimina una promoción. Si ya se usó en alguna orden no se puede borrar (esas órdenes guardan sus

@@ -52,6 +52,7 @@ export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/inventario", "inventario"],
   ["/usuarios", "usuarios"],
   ["/promociones", "promociones"],
+  ["/personalizados", "promociones"], // exámenes personalizados por cliente: mismo permiso que Promociones
   ["/rangos", "rangos"],
 ]
 

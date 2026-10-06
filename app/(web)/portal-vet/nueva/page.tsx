@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import OrderForm from "@/components/OrderForm"
+import { catalogWhere } from "@/lib/catalog"
 import { createPortalOrder } from "../actions"
 
 export const metadata: Metadata = { title: "Nueva solicitud · Portal Vet" }
@@ -14,7 +15,7 @@ export default async function NuevaSolicitudPage() {
   if (!session || session.user.role !== "CLINIC") redirect("/portal-vet")
 
   const [templates, branches] = await Promise.all([
-    prisma.examTemplate.findMany({ where: { active: true }, orderBy: [{ area: "asc" }, { name: "asc" }] }),
+    prisma.examTemplate.findMany({ where: catalogWhere(session.user.clinicId ?? null), orderBy: [{ area: "asc" }, { name: "asc" }] }),
     prisma.clinicBranch.findMany({
       where: { clinicId: session.user.clinicId ?? "" },
       orderBy: { createdAt: "asc" },

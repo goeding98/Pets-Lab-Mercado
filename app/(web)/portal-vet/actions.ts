@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
+import { assertOrderableTemplates } from "@/lib/catalog"
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "")
 
@@ -83,9 +84,7 @@ export async function createPortalOrder(formData: FormData) {
   if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) throw new Error("No autorizado")
 
   const templateIds = formData.getAll("templateIds") as string[]
-  if (templateIds.length === 0) throw new Error("Selecciona al menos un examen")
-  const validCount = await prisma.examTemplate.count({ where: { id: { in: templateIds }, active: true } })
-  if (validCount !== templateIds.length) throw new Error("Examen no válido")
+  await assertOrderableTemplates(templateIds, session.user.clinicId)
 
   const get = (k: string) => ((formData.get(k) as string) ?? "").trim() || null
   const patientName = get("patientName")
