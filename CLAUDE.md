@@ -78,6 +78,11 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   catálogo borra todos los `ExamTemplate`, promociones incluidas. `ExamTemplate.price` (opcional,
   hoy solo se edita en Promociones) se copia a `OrderExam.price` al crear la orden
   (`lib/orders.ts: examsWithListPrice`); después Caja lo edita por orden sin tocar el de lista.
+- Corregir los exámenes de una muestra (`actions/orderExams.ts`, `muestras/[id]/ExamChanger.tsx`, permiso
+  `muestras.crear`, solo personal): cambiar un examen **pendiente** por otro (mismo `OrderExam`, conserva
+  comentarios y fotos), quitarlo (si quedan otros) o agregar uno. Precio = el de lista del nuevo, descuento
+  0; `amountPaid` se conserva (el módulo de pago recalcula el saldo). Opciones con `catalogWhere` de la
+  clínica de la orden. Cada cambio se anota en `Order.notes` con fecha y usuario. Completados no se cambian.
 - Exámenes personalizados (`app/(lab)/personalizados/`, `actions/customExams.ts` + `lib/customExam.ts`,
   permiso `promociones`): como una promoción (`isPromotion = true`, copia de secciones con `composeSections`,
   `PromotionComponent`; precio y eliminar con las acciones de promociones) pero con nombre, categoría

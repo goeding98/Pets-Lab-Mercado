@@ -11,6 +11,8 @@ import { getOrinaConfig } from "@/lib/settings"
 import UpdateStatusButton from "./UpdateStatusButton"
 import PaymentModule from "./PaymentModule"
 import { orderPayment } from "@/lib/payment"
+import { catalogWhere } from "@/lib/catalog"
+import { AddExam, ExamChanger } from "./ExamChanger"
 
 export const metadata: Metadata = { title: "Detalle de muestra" }
 
@@ -48,6 +50,15 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
   const session = await getServerSession(authOptions)
   const canEdit = can(session?.user.role, "resultados.editar")
   const payment = orderPayment(order.exams, order.clinic?.noCharge ?? false)
+  // Corregir exámenes de la muestra (personal): catálogo disponible para la clínica de la orden
+  const canChangeExams = can(session?.user.role, "muestras.crear")
+  const catalog = canChangeExams
+    ? await prisma.examTemplate.findMany({
+        where: catalogWhere(order.clinicId),
+        orderBy: [{ area: "asc" }, { name: "asc" }],
+        select: { id: true, name: true, area: true, price: true, isCustom: true },
+      })
+    : []
 
   // Parcial de Orina: valores de referencia (configurables) y reactivos con lote del inventario
   const hasOrina = order.exams.some(e => e.template.sections.some(s => isOrinaSection(s.name)))
@@ -135,7 +146,17 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
       {/* Exams */}
       <div className="space-y-6">
         {order.exams.map(exam => (
-          <div key={exam.id}>
+          <div key={`${exam.id}-${exam.templateId}`}>
+            {canChangeExams && exam.status === "PENDIENTE" && !exam.uploadedPdfPath && (
+              <ExamChanger
+                examId={exam.id}
+                templateId={exam.templateId}
+                templateName={exam.template.name}
+                currentPrice={exam.price}
+                options={catalog}
+                canRemove={order.exams.length > 1}
+              />
+            )}
             <ExamResultForm
               exam={{
                 ...exam,
@@ -162,6 +183,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
             )}
           </div>
         ))}
+        {canChangeExams && <AddExam orderId={order.id} options={catalog} />}
       </div>
     </div>
   )
