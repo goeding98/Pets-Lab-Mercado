@@ -78,6 +78,11 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   catálogo borra todos los `ExamTemplate`, promociones incluidas. `ExamTemplate.price` (opcional,
   hoy solo se edita en Promociones) se copia a `OrderExam.price` al crear la orden
   (`lib/orders.ts: examsWithListPrice`); después Caja lo edita por orden sin tocar el de lista.
+- Pacientes (`app/(lab)/pacientes/`, permiso `muestras.ver`): no hay tabla Patient; se listan agrupando las
+  órdenes por paciente + especie + tutor + clínica (datos de la más reciente). Los datos se corrigen por
+  muestra con "Editar datos" (`actions/orderInfo.ts`, `OrderInfoEditor.tsx`, permiso `muestras.crear`):
+  paciente, especie, raza, edad, sexo, tutor, clínica, sede y veterinario; anota antes → después en
+  `Order.notes`. No deja cambiar a una clínica que no pueda pedir sus exámenes (personalizados).
 - Corregir los exámenes de una muestra (`actions/orderExams.ts`, `muestras/[id]/ExamChanger.tsx`, permiso
   `muestras.crear`, solo personal): cambiar un examen **pendiente** por otro (mismo `OrderExam`, conserva
   comentarios y fotos), quitarlo (si quedan otros) o agregar uno. Precio = el de lista del nuevo, descuento

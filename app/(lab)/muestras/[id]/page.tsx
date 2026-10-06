@@ -13,6 +13,7 @@ import PaymentModule from "./PaymentModule"
 import { orderPayment } from "@/lib/payment"
 import { catalogWhere } from "@/lib/catalog"
 import { AddExam, ExamChanger } from "./ExamChanger"
+import OrderInfoEditor from "./OrderInfoEditor"
 
 export const metadata: Metadata = { title: "Detalle de muestra" }
 
@@ -59,6 +60,12 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
         select: { id: true, name: true, area: true, price: true, isCustom: true },
       })
     : []
+  const clinicOptions = canChangeExams
+    ? await prisma.clinic.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, branches: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, address: true } } },
+      })
+    : []
 
   // Parcial de Orina: valores de referencia (configurables) y reactivos con lote del inventario
   const hasOrina = order.exams.some(e => e.template.sections.some(s => isOrinaSection(s.name)))
@@ -99,7 +106,18 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
             {order.sex && <span>{order.sex === "M" ? "Macho" : "Hembra"}</span>}
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
+          {canChangeExams && (
+            <OrderInfoEditor
+              orderId={order.id}
+              clinics={clinicOptions}
+              initial={{
+                patientName: order.patientName, species: order.species, breed: order.breed ?? "", age: order.age ?? "",
+                sex: order.sex ?? "", ownerName: order.ownerName ?? "", requestingVet: order.requestingVet ?? "",
+                clinicId: order.clinicId ?? "", branchId: order.branchId ?? "",
+              }}
+            />
+          )}
           {canEdit && <UpdateStatusButton orderId={order.id} currentStatus={order.status} />}
           {order.status === "COMPLETADA" && (
             <a
@@ -139,7 +157,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
       {order.notes && (
         <div className="bg-azul-50 border border-azul-200 px-4 py-3 mb-8">
           <p className="font-mono text-[8px] tracking-[0.2em] text-azul-700 uppercase mb-1">Observaciones</p>
-          <p className="font-sans text-sm text-ink">{order.notes}</p>
+          <p className="font-sans text-sm text-ink whitespace-pre-line">{order.notes}</p>
         </div>
       )}
 

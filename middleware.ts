@@ -36,6 +36,7 @@ export const config = {
     "/portal-vet/:path*",
     "/dashboard/:path*",
     "/muestras/:path*",
+    "/pacientes/:path*",
     "/usuarios/:path*",
     "/clientes/:path*",
     "/inventario/:path*",

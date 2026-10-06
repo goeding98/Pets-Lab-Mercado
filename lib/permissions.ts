@@ -45,6 +45,7 @@ export function can(role: string | undefined | null, permission: Permission): bo
 export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/muestras/nueva", "muestras.crear"],
   ["/muestras", "muestras.ver"],
+  ["/pacientes", "muestras.ver"],
   ["/dashboard", "panel"],
   ["/clientes/nueva", "clientes.editar"],
   ["/clientes", "clientes.ver"],
