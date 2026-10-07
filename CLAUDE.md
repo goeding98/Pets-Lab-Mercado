@@ -8,8 +8,11 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
 
 - `app/(web)/` — sitio público de marketing (Inicio, Servicios, Veterinarios, Nosotros,
   Contacto) + **Portal Vet** (`app/(web)/portal-vet/`, botón "Portal Vet" del `Nav`) para
-  clínicas: registro público (crea `Clinic` + usuario `CLINIC` que entra con su correo; las
-  clínicas creadas por el staff en `/clientes` siguen entrando con el nombre de la clínica),
+  clínicas: registro público (crea `Clinic` + usuario `CLINIC` que entra con su correo). Las clínicas
+  creadas por el personal en `/clientes` también entran con su correo (obligatorio al crearlas) y la clave
+  inicial `lib/portalAccount.ts: DEFAULT_PORTAL_PASSWORD` (123456789); la ficha de la clínica muestra el
+  usuario y permite restablecer la clave. Las cuentas antiguas sin correo (`@portal.petslab`) entran con el
+  nombre de la clínica,
   lista de exámenes por paciente y "Nueva solicitud". `/resultados` solo redirige ahí.
 - Sedes (`ClinicBranch`): una clínica = una cuenta/NIT con una o varias sedes (dirección). El registro
   del Portal Vet crea la sede principal con la dirección (+ sedes extra opcionales); la clínica

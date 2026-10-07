@@ -6,16 +6,25 @@ import ClinicaForm from "../ClinicaForm"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import BranchManager from "@/components/BranchManager"
+import PortalAccess from "./PortalAccess"
+import { can } from "@/lib/permissions"
+import { isInternalPortalEmail } from "@/lib/portalAccount"
 
 export const metadata: Metadata = { title: "Editar clínica" }
 
 export default async function EditarClinicaPage({ params }: { params: { id: string } }) {
   const clinic = await prisma.clinic.findUnique({
     where: { id: params.id },
-    include: { branches: { orderBy: { createdAt: "asc" }, include: { _count: { select: { orders: true } } } } },
+    include: {
+      branches: { orderBy: { createdAt: "asc" }, include: { _count: { select: { orders: true } } } },
+      users: { where: { role: "CLINIC" }, select: { email: true }, take: 1 },
+    },
   })
   if (!clinic) notFound()
-  const { branches, ...clinicData } = clinic
+  const { branches, users, ...clinicData } = clinic
+  const session = await getServerSession(authOptions)
+  // Cuentas antiguas sin correo entran con el nombre de la clínica
+  const portalLogin = users[0] ? (isInternalPortalEmail(users[0].email) ? clinic.name : users[0].email) : null
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-2xl">
@@ -27,6 +36,11 @@ export default async function EditarClinicaPage({ params }: { params: { id: stri
         </div>
         <h1 className="font-serif text-[28px] font-medium tracking-[-0.02em] mt-1">{clinic.name}</h1>
       </div>
+
+      <section className="mb-8">
+        <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-2">Acceso al Portal Vet</p>
+        <PortalAccess clinicId={clinic.id} login={portalLogin} canReset={can(session?.user.role, "clientes.editar")} />
+      </section>
 
       <section className="mb-8">
         <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-1">Sedes ({branches.length})</p>
@@ -42,7 +56,7 @@ export default async function EditarClinicaPage({ params }: { params: { id: stri
       </section>
 
       <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-3">Datos de la cuenta</p>
-      <ClinicaForm clinic={clinicData} canSetNoCharge={(await getServerSession(authOptions))?.user.role === "ADMIN"} />
+      <ClinicaForm clinic={clinicData} canSetNoCharge={session?.user.role === "ADMIN"} />
     </div>
   )
 }

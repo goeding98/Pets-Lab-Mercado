@@ -1,16 +1,21 @@
 "use client"
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 import { createClinic, updateClinic } from "@/actions/clinics"
 import type { Clinic } from "@prisma/client"
 
 export default function ClinicaForm({ clinic, canSetNoCharge = false }: { clinic?: Clinic; canSetNoCharge?: boolean }) {
   const [pending, startTransition] = useTransition()
+  const [error, setError] = useState("")
   const isEdit = !!clinic
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    startTransition(() => isEdit ? updateClinic(clinic.id, fd) : createClinic(fd))
+    setError("")
+    startTransition(async () => {
+      const res = await (isEdit ? updateClinic(clinic.id, fd) : createClinic(fd))
+      if (res?.error) setError(res.error)
+    })
   }
 
   return (
@@ -33,8 +38,13 @@ export default function ClinicaForm({ clinic, canSetNoCharge = false }: { clinic
             <Input name="phone" defaultValue={clinic?.phone ?? ""} placeholder="Ej. 602 123 4567" />
           </div>
           <div className="col-span-2">
-            <Label>Email</Label>
-            <Input name="email" type="email" defaultValue={clinic?.email ?? ""} placeholder="Ej. contacto@clinica.com" />
+            <Label>Email{isEdit ? "" : " *"}</Label>
+            <Input name="email" type="email" required={!isEdit} defaultValue={clinic?.email ?? ""} placeholder="Ej. contacto@clinica.com" />
+            {!isEdit && (
+              <p className="font-sans text-[11px] text-ink-2 mt-1">
+                Se le crea la cuenta del Portal Vet: entra con este correo y la clave <strong>123456789</strong>.
+              </p>
+            )}
           </div>
           <div className="col-span-2">
             <Label>Persona de contacto</Label>
@@ -63,6 +73,8 @@ export default function ClinicaForm({ clinic, canSetNoCharge = false }: { clinic
           )}
         </div>
       </fieldset>
+
+      {error && <p className="font-sans text-sm text-red-600">{error}</p>}
 
       <button
         type="submit"
