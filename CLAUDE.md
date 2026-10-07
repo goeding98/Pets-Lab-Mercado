@@ -89,7 +89,7 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   0; `amountPaid` se conserva (el módulo de pago recalcula el saldo). Opciones con `catalogWhere` de la
   clínica de la orden. Cada cambio se anota en `Order.notes` con fecha y usuario. Completados no se cambian.
 - Exámenes personalizados (`app/(lab)/personalizados/`, `actions/customExams.ts` + `lib/customExam.ts`,
-  permiso `promociones`): como una promoción (`isPromotion = true`, copia de secciones con `composeSections`,
+  permiso `personalizados`: ADMIN, STAFF y COMERCIAL): como una promoción (`isPromotion = true`, copia de secciones con `composeSections`,
   `PromotionComponent`; precio y eliminar con las acciones de promociones) pero con nombre, categoría
   (`area`) y precio propios, `isCustom = true` y visibles solo para sus clínicas (`ExamTemplate.clients`).
   Componentes: exámenes simples (no Perfiles, promociones ni personalizados). Toda consulta de exámenes

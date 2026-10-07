@@ -13,7 +13,7 @@ import { createCustomExamCore } from "@/lib/customExam"
 
 async function requirePermission() {
   const session = await getServerSession(authOptions)
-  if (!session || !can(session.user.role, "promociones")) throw new Error("No autorizado")
+  if (!session || !can(session.user.role, "personalizados")) throw new Error("No autorizado")
 }
 
 function revalidateCatalog() {

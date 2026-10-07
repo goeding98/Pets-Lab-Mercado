@@ -13,17 +13,18 @@ export type Permission =
   | "inventario"
   | "usuarios"
   | "promociones"       // crear/eliminar promociones (exámenes combinados)
+  | "personalizados"    // exámenes personalizados por cliente (/personalizados): médicos, microbiólogos y comercial
   | "rangos"            // rangos de referencia de los exámenes maestros (solo ADMIN: jefe médico y administradores)
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "resultados.editar",
-  "clientes.ver", "clientes.editar", "caja", "pagos", "inventario", "usuarios", "promociones", "rangos",
+  "clientes.ver", "clientes.editar", "caja", "pagos", "inventario", "usuarios", "promociones", "personalizados", "rangos",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
   STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos"),
-  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones", "pagos"],
+  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones", "personalizados", "pagos"],
   DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos"],
   CLINIC: [],
 }
@@ -53,7 +54,7 @@ export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/inventario", "inventario"],
   ["/usuarios", "usuarios"],
   ["/promociones", "promociones"],
-  ["/personalizados", "promociones"], // exámenes personalizados por cliente: mismo permiso que Promociones
+  ["/personalizados", "personalizados"],
   ["/rangos", "rangos"],
 ]
 

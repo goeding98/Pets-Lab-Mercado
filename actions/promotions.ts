@@ -8,6 +8,16 @@ import { combinedTurnaround, composeSections } from "@/lib/composeTemplate"
 
 const PROMO_AREA = "Promociones"
 
+// Precio y eliminar sirven también para los personalizados (isCustom): esos se permiten con
+// "personalizados" (médicos y microbiólogos no manejan Promociones)
+async function requireForTemplate(id: string) {
+  const session = await getServerSession(authOptions)
+  if (!session) throw new Error("No autorizado")
+  if (can(session.user.role, "promociones")) return
+  const t = await prisma.examTemplate.findUnique({ where: { id }, select: { isCustom: true } })
+  if (!t?.isCustom || !can(session.user.role, "personalizados")) throw new Error("No autorizado")
+}
+
 async function requirePermission() {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "promociones")) throw new Error("No autorizado")
@@ -75,7 +85,7 @@ export async function createPromotion(
 }
 
 export async function updatePromotionPrice(id: string, price: number | null) {
-  await requirePermission()
+  await requireForTemplate(id)
   if (price !== null && (!Number.isFinite(price) || price < 0)) throw new Error("Precio no válido")
   await prisma.examTemplate.update({ where: { id, isPromotion: true }, data: { price } })
   revalidatePath("/promociones")
@@ -85,7 +95,7 @@ export async function updatePromotionPrice(id: string, price: number | null) {
 // Elimina una promoción. Si ya se usó en alguna orden no se puede borrar (esas órdenes guardan sus
 // resultados contra estos campos): se retira, deja de ofrecerse en órdenes nuevas.
 export async function deletePromotion(id: string): Promise<{ archived: boolean }> {
-  await requirePermission()
+  await requireForTemplate(id)
 
   const promo = await prisma.examTemplate.findUnique({
     where: { id },
