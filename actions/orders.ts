@@ -160,3 +160,40 @@ export async function saveExamResults(
   revalidatePath("/dashboard")
   revalidatePath("/inventario")
 }
+
+// Borrador: guarda lo digitado de un examen pendiente sin completarlo (no descuenta inventario, no sale
+// al cliente ni en el reporte de la orden). Sin validaciones de cierre (orina, pH): se validan al guardar
+// el resultado final. Al abrir el examen se ve lo guardado.
+export async function saveExamDraft(
+  orderExamId: string,
+  results: { fieldId: string; value: string; flagged: boolean }[],
+  structured?: { copro?: unknown; coproscopico?: unknown; orina?: unknown },
+): Promise<{ error?: string; savedAt?: string }> {
+  const session = await getServerSession(authOptions)
+  if (!session || !can(session.user.role, "resultados.editar")) return { error: "No autorizado" }
+
+  const current = await prisma.orderExam.findUnique({ where: { id: orderExamId }, select: { status: true, orderId: true } })
+  if (!current) return { error: "Examen no encontrado" }
+  if (current.status === "COMPLETADO") return { error: "El examen ya está completado: usa Guardar cambios." }
+
+  const structuredData = structured && Object.keys(structured).length
+    ? {
+        ...(structured.copro !== undefined ? { copro: readCopro(structured) } : {}),
+        ...(structured.coproscopico !== undefined ? { coproscopico: readCoproscopico(structured) } : {}),
+        ...(structured.orina !== undefined ? { orina: readOrina(structured) } : {}),
+      }
+    : undefined
+
+  await prisma.$transaction(async tx => {
+    await tx.examResult.deleteMany({ where: { orderExamId } })
+    const filled = results.filter(r => r.value !== "")
+    if (filled.length) await tx.examResult.createMany({ data: filled.map(r => ({ orderExamId, ...r })) })
+    if (structuredData) await tx.orderExam.update({ where: { id: orderExamId }, data: { structured: structuredData } })
+    // Empezar a trabajar una muestra recibida la pasa a "en proceso"
+    await tx.order.updateMany({ where: { id: current.orderId, status: "RECIBIDA" }, data: { status: "EN_PROCESO" } })
+  }, { maxWait: 10000, timeout: 20000 })
+
+  revalidatePath(`/muestras/${current.orderId}`)
+  revalidatePath("/muestras")
+  return { savedAt: new Date().toLocaleTimeString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit" }) }
+}

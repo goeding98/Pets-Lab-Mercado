@@ -31,8 +31,10 @@ export async function buildOrderPdf(
 ): Promise<Uint8Array> {
   // En el reporte de la orden solo van los exámenes completados (un pendiente saldría vacío); si se
   // pide un solo examen, o ninguno está completo, van todos.
-  const done = exams.filter(e => e.status === "COMPLETADO")
-  const shown = exams.length > 1 && done.length > 0 ? done : exams
+  // Un examen pendiente puede tener un borrador guardado: nunca sale en un reporte (va vacío)
+  const finalOnly = exams.map(e => (e.status && e.status !== "COMPLETADO" ? { ...e, results: [], structured: null } : e))
+  const done = finalOnly.filter(e => e.status === "COMPLETADO")
+  const shown = finalOnly.length > 1 && done.length > 0 ? done : finalOnly
   const hasNotes = (e: ReportExam) => !!e.comments || e.photos.some(p => !p.role)
   // Un examen puede tener resultados capturados y además un PDF subido: salen los dos
   const captured = (e: ReportExam) => e.results.some(r => r.value.trim()) || (e.structured != null && typeof e.structured === "object")

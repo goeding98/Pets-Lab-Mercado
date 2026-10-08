@@ -15,6 +15,8 @@ import { catalogWhere } from "@/lib/catalog"
 import { AddExam, ExamChanger } from "./ExamChanger"
 import OrderInfoEditor from "./OrderInfoEditor"
 import WhatsAppButton from "./WhatsAppButton"
+import ExamTabs from "./ExamTabs"
+import { TrackOpenSample } from "@/components/OpenSamplesBar"
 import { headers } from "next/headers"
 import { makeShareToken } from "@/lib/shareLink"
 import { formatCOP } from "@/lib/payment"
@@ -183,6 +185,16 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
 
       {/* Exams */}
       <div className="space-y-6">
+        <TrackOpenSample id={order.id} orderNumber={order.orderNumber} patientName={order.patientName} />
+        <ExamTabs
+          orderId={order.id}
+          tabs={order.exams.map(e => ({
+            id: e.id,
+            name: e.template.name,
+            status: e.status,
+            hasDraft: e.status !== "COMPLETADO" && (e.results.length > 0 || e.structured != null),
+          }))}
+        >
         {order.exams.map(exam => (
           <div key={`${exam.id}-${exam.templateId}`}>
             {canChangeExams && exam.status === "PENDIENTE" && !exam.uploadedPdfPath && (
@@ -227,6 +239,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
             )}
           </div>
         ))}
+        </ExamTabs>
         {canChangeExams && <AddExam orderId={order.id} options={catalog} />}
       </div>
     </div>

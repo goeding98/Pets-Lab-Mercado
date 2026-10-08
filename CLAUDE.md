@@ -111,6 +111,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `{url, name}` a `api/upload/[examId]` (verifica con `head` que sea un PDF de
   `uploads/<examId>/`). No volver a mandar el archivo por la función: Vercel corta a 4.5 MB.
   Eliminar el PDF deja el examen completado si tiene resultados capturados; si no, vuelve a pendiente.
+- Borrador (`actions/orders.ts: saveExamDraft`, botón "Guardar borrador"): guarda `ExamResult`/`structured` de un
+  examen **pendiente** sin completarlo (sin inventario, sin validaciones de cierre; RECIBIDA → EN_PROCESO). Un
+  borrador nunca sale en un PDF (`lib/reportPdf.ts` vacía los pendientes); se descarta si el examen se cambia por
+  otro o se resuelve subiendo un PDF. Pestañas: `muestras/[id]/ExamTabs.tsx` (un examen por pestaña, todos montados
+  para no perder lo digitado) y `components/OpenSamplesBar.tsx` en el layout del LIMS (muestras abiertas en
+  localStorage; avisa si hay cambios sin guardar, `lib/unsavedWork.ts`, al usar un enlace interno o cerrar).
 - Secciones de texto libre (Morfología y Observaciones del hemograma, Hemoparásitos/gota gruesa,
   Extendido de Sangre Periférica, Citología de Piel, Citología Conjuntival, Citología de Masa (y Masa Adicional), Conclusión de Citología de Líquidos, secciones "Interpretación", Citología de Efusión, Test de Héller y Wright de orina y heces, Observaciones del Raspado de Piel — también dentro de los perfiles) se muestran
   solo como Parámetro + Descripción, con filas altas, en el formulario y en el PDF. La lista vive en

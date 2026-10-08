@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { Prisma } from "@prisma/client"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
@@ -37,9 +38,12 @@ export async function POST(
   const wasComplete = existing.status === "COMPLETADO"
 
   await prisma.$transaction(async tx => {
+    // Un examen pendiente se resuelve con el PDF: su borrador (si había) no es un resultado final
+    if (!wasComplete) await tx.examResult.deleteMany({ where: { orderExamId: params.examId } })
     await tx.orderExam.update({
       where: { id: params.examId },
       data: {
+        ...(wasComplete ? {} : { structured: Prisma.DbNull }),
         uploadedPdfPath: url,
         uploadedPdfName: fileName,
         status: "COMPLETADO",

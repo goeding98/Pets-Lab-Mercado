@@ -1,8 +1,9 @@
 "use client"
-import { useState, useTransition, useRef } from "react"
+import { useEffect, useMemo, useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { upload } from "@vercel/blob/client"
-import { saveExamResults } from "@/actions/orders"
+import { saveExamDraft, saveExamResults } from "@/actions/orders"
+import { setUnsaved } from "@/lib/unsavedWork"
 import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
 import { formatCOP } from "@/lib/payment"
 import { evaluar } from "@/catalogo-pets-lab/calculos"
@@ -113,6 +114,16 @@ export default function ExamResultForm({
   const hasOrina = exam.template.sections.some(s => isOrinaSection(s.name))
   const [orina, setOrina] = useState(() => readOrina(exam.structured))
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Borrador: lo digitado se guarda sin completar el examen (actions/orders.ts: saveExamDraft)
+  const [hasDraft, setHasDraft] = useState(exam.results.length > 0 || exam.structured != null)
+  const [draftAt, setDraftAt] = useState<string | null>(null)
+  const [drafting, startDraft] = useTransition()
+  // Cambios sin guardar: se compara lo que hay en pantalla con lo último guardado
+  const snapshot = useMemo(() => JSON.stringify({ values, copro, coproscopico, orina }), [values, copro, coproscopico, orina])
+  const [savedSnapshot, setSavedSnapshot] = useState(snapshot)
+  const dirty = snapshot !== savedSnapshot
+  useEffect(() => { setUnsaved(exam.id, dirty) }, [exam.id, dirty])
+  useEffect(() => () => setUnsaved(exam.id, false), [exam.id])
   const [pending, startTransition] = useTransition()
   const [uploadedPath, setUploadedPath] = useState<string | null>(exam.uploadedPdfPath)
   const [uploadedName, setUploadedName] = useState<string | null>(exam.uploadedPdfName)
@@ -235,6 +246,33 @@ export default function ExamResultForm({
     setSaved(false)
   }
 
+  function handleDraft() {
+    const results = allFields.map(f => {
+      const value = f.fieldType === "calculated" ? getCalcValue(f) : (values[f.id] ?? "")
+      return { fieldId: f.id, value, flagged: isOutOfRange(value, refFor(f)) }
+    })
+    const structured = {
+      ...(hasCopro ? { copro } : {}),
+      ...(hasCoproscopico ? { coproscopico } : {}),
+      ...(hasOrina ? { orina } : {}),
+    }
+    const current = snapshot
+    setSaveError(null)
+    startDraft(async () => {
+      try {
+        const res = await saveExamDraft(exam.id, results, Object.keys(structured).length ? structured : undefined)
+        if (res.error) return setSaveError(res.error)
+        setSavedSnapshot(current)
+        setHasDraft(true)
+        setDraftAt(res.savedAt ?? null)
+        router.refresh()
+      } catch (err) {
+        console.error(err)
+        setSaveError("No se pudo guardar el borrador. Revisa la conexión; lo digitado sigue en pantalla.")
+      }
+    })
+  }
+
   function handleSave() {
     const results = allFields.map(f => {
       const value = f.fieldType === "calculated" ? getCalcValue(f) : (values[f.id] ?? "")
@@ -255,6 +293,7 @@ export default function ExamResultForm({
     startTransition(async () => {
       try {
         await saveExamResults(exam.id, results, Object.keys(structured).length ? structured : undefined)
+        setSavedSnapshot(snapshot)
         setSaved(true)
         setEditing(false)
         if (!released) setHeldNotice(true)
@@ -284,6 +323,7 @@ export default function ExamResultForm({
     setCopro(readCopro(exam.structured))
     setCoproscopico(readCoproscopico(exam.structured))
     setOrina(readOrina(exam.structured))
+    setSavedSnapshot(JSON.stringify({ values: initialValues, copro: readCopro(exam.structured), coproscopico: readCoproscopico(exam.structured), orina: readOrina(exam.structured) }))
     setSaveError(null)
     setEditing(false)
   }
@@ -325,7 +365,7 @@ export default function ExamResultForm({
           <span className={`font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 ${
             isComplete ? "bg-salvia-700 text-bone" : "bg-black/10 text-ink"
           }`}>
-            {isComplete ? (editing ? "Editando" : "Completado") : "Pendiente"}
+            {isComplete ? (editing ? "Editando" : "Completado") : hasDraft ? "Borrador" : "Pendiente"}
           </span>
         </div>
       </div>
@@ -514,6 +554,16 @@ export default function ExamResultForm({
                   >
                     {pending ? "Guardando…" : editing ? "Guardar cambios →" : "Guardar resultados →"}
                   </button>
+                  {!isComplete && (
+                    <button
+                      onClick={handleDraft}
+                      disabled={drafting || pending}
+                      title="Guarda lo digitado sin completar el examen (no sale al cliente ni descuenta inventario)"
+                      className="border border-black/25 text-ink font-mono text-[10px] tracking-[0.22em] uppercase px-5 py-2.5 hover:bg-black/[0.03] transition-colors disabled:opacity-60"
+                    >
+                      {drafting ? "Guardando…" : "Guardar borrador"}
+                    </button>
+                  )}
                   {!uploadedPath && <span className="font-mono text-[9px] text-ink-2 uppercase tracking-widest">o</span>}
                 </>
               )}
@@ -533,6 +583,11 @@ export default function ExamResultForm({
                 {uploading ? `Subiendo… ${progress ?? 0}%` : "Subir PDF →"}
               </button>
               </>)}
+              {!isComplete && (dirty ? (
+                <span className="font-mono text-[9px] tracking-[0.15em] text-amber-700 uppercase">● Sin guardar</span>
+              ) : draftAt ? (
+                <span className="font-mono text-[9px] tracking-[0.15em] text-salvia-700 uppercase">✓ Borrador guardado {draftAt}</span>
+              ) : null)}
               {saved && (
                 <span className="font-mono text-[9px] tracking-[0.15em] text-salvia-700 uppercase">
                   ✓ Guardado

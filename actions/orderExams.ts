@@ -1,5 +1,6 @@
 "use server"
 import { revalidatePath } from "next/cache"
+import { Prisma } from "@prisma/client"
 import { getServerSession } from "next-auth"
 import { del } from "@vercel/blob"
 import { authOptions } from "@/lib/auth"
@@ -62,10 +63,12 @@ export async function changeOrderExam(orderExamId: string, templateId: string): 
     await assertOrderableTemplates([templateId], exam.order.clinicId)
     const next = await listPrice(templateId)
     await prisma.$transaction([
+      // El borrador (si había) era de los campos del examen anterior: se descarta
+      prisma.examResult.deleteMany({ where: { orderExamId } }),
       // Se cambia en el mismo registro: conserva comentarios y fotos de la muestra
       prisma.orderExam.update({
         where: { id: orderExamId },
-        data: { templateId, price: next.price, discountType: "VALOR", discountValue: 0 },
+        data: { templateId, price: next.price, discountType: "VALOR", discountValue: 0, structured: Prisma.DbNull },
       }),
       prisma.order.update({
         where: { id: exam.order.id },
