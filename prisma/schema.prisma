@@ -231,3 +231,25 @@ model LabSetting {
   value     Json
   updatedAt DateTime @updatedAt
 }
+
+// Registro de muestras eliminadas (solo ADMIN, con motivo obligatorio): la orden se borra pero queda
+// quién, cuándo, por qué y una copia de sus datos y resultados (snapshot).
+model DeletedOrder {
+  id            String   @id @default(cuid())
+  orderNumber   String
+  patientName   String
+  species       String
+  ownerName     String?
+  clinicName    String?
+  branchName    String?
+  exams         String // nombres de los exámenes
+  total         Float    @default(0) // precio neto total
+  paid          Float    @default(0)
+  status        String // estado de la orden al borrarla
+  orderedAt     DateTime // fecha de creación de la orden
+  reason        String
+  deletedById   String?
+  deletedByName String
+  deletedAt     DateTime @default(now())
+  snapshot      Json // orden completa con exámenes y resultados
+}

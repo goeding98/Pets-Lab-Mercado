@@ -3,6 +3,9 @@ import Link from "next/link"
 import { prisma } from "@/lib/db"
 import { computeNetPrice, getPaymentStatus as getExamPaymentStatus } from "@/lib/billing"
 import { orderPayment } from "@/lib/payment"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { can } from "@/lib/permissions"
 
 export const metadata: Metadata = { title: "Muestras" }
 
@@ -61,6 +64,11 @@ export default async function MuestrasPage({
         <div>
           <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase">Muestras</p>
           <h1 className="font-serif text-[28px] font-medium tracking-[-0.02em] mt-1">Órdenes de laboratorio</h1>
+          {can((await getServerSession(authOptions))?.user.role, "muestras.eliminar") && (
+            <Link href="/muestras/eliminadas" className="font-mono text-[9px] tracking-[0.15em] uppercase text-ink-2 hover:text-ink hover:underline">
+              Ver muestras eliminadas →
+            </Link>
+          )}
         </div>
         <Link
           href="/muestras/nueva"

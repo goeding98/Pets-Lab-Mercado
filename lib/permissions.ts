@@ -5,6 +5,7 @@ export type Permission =
   | "panel"             // /dashboard
   | "muestras.ver"      // listado y detalle de muestras, descargar PDFs
   | "muestras.crear"    // registrar una muestra nueva
+  | "muestras.eliminar" // borrar una muestra (con motivo; queda registro en DeletedOrder): solo ADMIN
   | "resultados.editar" // capturar resultados, subir/quitar PDF, cambiar estado de la orden
   | "clientes.ver"
   | "clientes.editar"   // crear/editar clínicas (y su usuario del portal)
@@ -17,13 +18,13 @@ export type Permission =
   | "rangos"            // rangos de referencia de los exámenes maestros (solo ADMIN: jefe médico y administradores)
 
 const ALL: Permission[] = [
-  "panel", "muestras.ver", "muestras.crear", "resultados.editar",
+  "panel", "muestras.ver", "muestras.crear", "muestras.eliminar", "resultados.editar",
   "clientes.ver", "clientes.editar", "caja", "pagos", "inventario", "usuarios", "promociones", "personalizados", "rangos",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
-  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos"),
+  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar"),
   COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones", "personalizados", "pagos"],
   DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos"],
   CLINIC: [],
@@ -45,6 +46,7 @@ export function can(role: string | undefined | null, permission: Permission): bo
 // Permiso requerido para entrar a cada ruta del LIMS (el prefijo más específico primero)
 export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/muestras/nueva", "muestras.crear"],
+  ["/muestras/eliminadas", "muestras.eliminar"],
   ["/muestras", "muestras.ver"],
   ["/pacientes", "muestras.ver"],
   ["/dashboard", "panel"],

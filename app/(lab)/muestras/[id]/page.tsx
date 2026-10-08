@@ -16,6 +16,7 @@ import { AddExam, ExamChanger } from "./ExamChanger"
 import OrderInfoEditor from "./OrderInfoEditor"
 import WhatsAppButton from "./WhatsAppButton"
 import ExamTabs from "./ExamTabs"
+import DeleteOrderButton from "./DeleteOrderButton"
 import { TrackOpenSample } from "@/components/OpenSamplesBar"
 import { headers } from "next/headers"
 import { makeShareToken } from "@/lib/shareLink"
@@ -135,6 +136,14 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
                 sex: order.sex ?? "", ownerName: order.ownerName ?? "", requestingVet: order.requestingVet ?? "",
                 clinicId: order.clinicId ?? "", branchId: order.branchId ?? "",
               }}
+            />
+          )}
+          {can(session?.user.role, "muestras.eliminar") && (
+            <DeleteOrderButton
+              orderId={order.id}
+              orderNumber={order.orderNumber}
+              patientName={order.patientName}
+              summary={`${order.exams.length} ${order.exams.length === 1 ? "examen" : "exámenes"}: ${order.exams.map(e => e.template.name).join(", ")} · ${order.exams.filter(e => e.status === "COMPLETADO").length} completados · Total ${formatCOP(payment.total)}, pagado ${formatCOP(payment.paid)}`}
             />
           )}
           {canEdit && <UpdateStatusButton orderId={order.id} currentStatus={order.status} />}

@@ -86,6 +86,10 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   muestra con "Editar datos" (`actions/orderInfo.ts`, `OrderInfoEditor.tsx`, permiso `muestras.crear`):
   paciente, especie, raza, edad, sexo, tutor, clínica, sede y veterinario; anota antes → después en
   `Order.notes`. No deja cambiar a una clínica que no pueda pedir sus exámenes (personalizados).
+- Eliminar una muestra (`actions/deleteOrder.ts`, `muestras/[id]/DeleteOrderButton.tsx`, permiso `muestras.eliminar`:
+  solo ADMIN): diálogo con motivo obligatorio (≥10 caracteres). Antes de borrar se guarda `DeletedOrder` (quién,
+  cuándo, por qué, totales y `snapshot` con exámenes y resultados); se ve en `/muestras/eliminadas`. Borra en cascada
+  exámenes/resultados/fotos y sus archivos del Blob; el inventario ya consumido no se devuelve.
 - Corregir los exámenes de una muestra (`actions/orderExams.ts`, `muestras/[id]/ExamChanger.tsx`, permiso
   `muestras.crear`, solo personal): cambiar un examen **pendiente** por otro (mismo `OrderExam`, conserva
   comentarios y fotos), quitarlo (si quedan otros) o agregar uno. Precio = el de lista del nuevo, descuento

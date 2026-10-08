@@ -28,6 +28,11 @@ function write(list: OpenSample[]) {
 
 const LEAVE_MSG = "Hay resultados sin guardar en esta muestra. ¿Salir sin guardar? (Puedes usar Guardar borrador.)"
 
+// Quita una muestra de la barra (ej. al eliminarla)
+export function removeOpenSample(id: string) {
+  write(read().filter(s => s.id !== id))
+}
+
 // Lo pinta la página de la muestra: la agrega (o actualiza) en la barra
 export function TrackOpenSample(sample: OpenSample) {
   useEffect(() => {
