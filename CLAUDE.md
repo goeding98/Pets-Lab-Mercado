@@ -175,6 +175,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   la muestra (`OrderForm paymentOption`, solo staff — excepción a "mismo formulario para ambos"). Al
   guardar/subir PDF en una orden sin pago sale la alerta de resultado retenido; en /muestras, "Retenido".
   Las órdenes anteriores al cambio se marcaron pagadas con `scripts/pagos-iniciales.ts`.
+- Enviar resultado por WhatsApp (`muestras/[id]/WhatsAppButton.tsx`, junto a "PDF" de la orden y "PDF
+  individual"): abre `wa.me/<número>` con un mensaje y un enlace firmado al PDF `/r/<token>` (`lib/shareLink.ts`,
+  HMAC con NEXTAUTH_SECRET, vence en 60 días, sin sesión; `app/r/[token]/route.ts` vuelve a aplicar la regla de
+  pago). WhatsApp no adjunta archivos desde un enlace, por eso va el link. Número = teléfono de la sede o de la
+  clínica (`lib/whatsapp.ts` agrega el 57); editable al enviar y se puede guardar en la clínica. El WhatsApp es
+  obligatorio en el registro del Portal Vet y al crear clínicas. Bloqueado si la orden está retenida por pago.
 - Inventario (`InventoryItem`, `RecipeItem`, `InventoryMovement`, rutas
   `app/(lab)/inventario/`): cada `ExamTemplate` puede tener una "receta" (`RecipeItem`) que
   define qué insumos y en qué cantidad consume. Al completarse un `OrderExam` (por

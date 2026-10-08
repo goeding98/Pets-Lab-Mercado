@@ -14,6 +14,10 @@ import { orderPayment } from "@/lib/payment"
 import { catalogWhere } from "@/lib/catalog"
 import { AddExam, ExamChanger } from "./ExamChanger"
 import OrderInfoEditor from "./OrderInfoEditor"
+import WhatsAppButton from "./WhatsAppButton"
+import { headers } from "next/headers"
+import { makeShareToken } from "@/lib/shareLink"
+import { formatCOP } from "@/lib/payment"
 
 export const metadata: Metadata = { title: "Detalle de muestra" }
 
@@ -60,6 +64,19 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
         select: { id: true, name: true, area: true, price: true, isCustom: true },
       })
     : []
+  // Enviar por WhatsApp: enlace firmado al PDF (sin sesión) + número de la sede o de la clínica
+  const host = headers().get("host") ?? "www.petslab.com.co"
+  const base = `${host.startsWith("localhost") ? "http" : "https"}://${host}`
+  const wa = {
+    phone: order.branch?.phone || order.clinic?.phone || null,
+    clinicId: order.clinicId,
+    branchId: order.branchId,
+    canSavePhone: can(session?.user.role, "clientes.editar"),
+    greetingName: order.requestingVet || order.clinic?.contactName || order.clinic?.name || null,
+    patientName: order.patientName,
+    orderNumber: order.orderNumber,
+    blockedReason: payment.released ? undefined : `Resultado retenido: pendiente de pago (${formatCOP(payment.balance)})`,
+  }
   const clinicOptions = canChangeExams
     ? await prisma.clinic.findMany({
         orderBy: { name: "asc" },
@@ -128,6 +145,9 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
               PDF →
             </a>
           )}
+          {order.status === "COMPLETADA" && (
+            <WhatsAppButton {...wa} shareUrl={`${base}/r/${makeShareToken({ kind: "o", id: order.id })}`} what="los resultados" />
+          )}
         </div>
       </div>
 
@@ -189,7 +209,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
               reagents={reagents}
             />
             {exam.status === "COMPLETADO" && (
-              <div className="flex justify-end mt-1.5">
+              <div className="flex justify-end gap-2 mt-1.5">
                 <a
                   href={`/api/pdf/exam/${exam.id}`}
                   target="_blank"
@@ -197,6 +217,12 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
                 >
                   {exam.uploadedPdfPath ? "PDF adjunto →" : "PDF individual →"}
                 </a>
+                <WhatsAppButton
+                  {...wa}
+                  small
+                  shareUrl={`${base}/r/${makeShareToken({ kind: "e", id: exam.id })}`}
+                  what={`el resultado de ${exam.template.name}`}
+                />
               </div>
             )}
           </div>

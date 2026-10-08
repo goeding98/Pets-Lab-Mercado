@@ -34,8 +34,8 @@ export default function ClinicaForm({ clinic, canSetNoCharge = false }: { clinic
             <Input name="nit" defaultValue={clinic?.nit ?? ""} placeholder="Ej. 900.123.456-7" />
           </div>
           <div>
-            <Label>Teléfono</Label>
-            <Input name="phone" defaultValue={clinic?.phone ?? ""} placeholder="Ej. 602 123 4567" />
+            <Label>WhatsApp / celular{isEdit ? "" : " *"}</Label>
+            <Input name="phone" type="tel" required={!isEdit} defaultValue={clinic?.phone ?? ""} placeholder="Ej. 310 780 0332" />
           </div>
           <div className="col-span-2">
             <Label>Email{isEdit ? "" : " *"}</Label>

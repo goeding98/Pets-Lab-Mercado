@@ -22,14 +22,16 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
   const address = get("address")
   const neighborhood = get("neighborhood")
   const city = get("city")
+  const phone = get("phone").slice(0, 30)
   const password = (formData.get("password") as string) ?? ""
   const confirm = (formData.get("confirmPassword") as string) ?? ""
 
-  if (!email || !contactName || !nit || !name || !address || !neighborhood || !city) {
+  if (!email || !contactName || !nit || !name || !address || !neighborhood || !city || !phone) {
     return { error: "Completa todos los campos." }
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "El correo no es válido." }
   if (onlyDigits(nit).length < 5) return { error: "El NIT o cédula no es válido." }
+  if (onlyDigits(phone).length < 10) return { error: "El WhatsApp no es válido (ej. 310 780 0332)." }
   if (password.length < 8) return { error: "La contraseña debe tener al menos 8 caracteres." }
   if (password !== confirm) return { error: "Las contraseñas no coinciden." }
 
@@ -51,7 +53,7 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
   const all = (k: string) => formData.getAll(k).map(v => String(v).trim())
   const [extraNames, extraAddresses, extraNeighborhoods, extraCities] = ["extraName", "extraAddress", "extraNeighborhood", "extraCity"].map(all)
   const branches = [
-    { name: get("branchName") || "Principal", address, neighborhood, city },
+    { name: get("branchName") || "Principal", address, neighborhood, city, phone },
     ...extraNames.map((n, i) => ({ name: n, address: extraAddresses[i] ?? "", neighborhood: extraNeighborhoods[i] || null, city: extraCities[i] || null })),
   ]
   if (branches.some(b => !b.name || !b.address)) return { error: "Cada sede necesita nombre y dirección." }
@@ -62,6 +64,7 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
       name,
       nit,
       email,
+      phone,
       address,
       contactName,
       neighborhood,

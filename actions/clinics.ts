@@ -111,3 +111,14 @@ export async function resetClinicPassword(clinicId: string): Promise<{ error?: s
   })
   return {}
 }
+
+// Guarda el WhatsApp de la clínica (y de la sede, si no tenía) desde el botón de enviar resultado
+export async function saveClinicPhone(clinicId: string, branchId: string | null, phone: string): Promise<{ error?: string }> {
+  await requireEditor()
+  const clean = phone.trim().slice(0, 30)
+  if (clean.replace(/\D/g, "").length < 10) return { error: "Número no válido." }
+  await prisma.clinic.update({ where: { id: clinicId }, data: { phone: clean } })
+  if (branchId) await prisma.clinicBranch.updateMany({ where: { id: branchId, clinicId, phone: null }, data: { phone: clean } })
+  revalidatePath(`/clientes/${clinicId}`)
+  return {}
+}
