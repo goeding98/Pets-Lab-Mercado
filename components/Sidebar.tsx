@@ -27,8 +27,11 @@ function activeHref(path: string, hrefs: string[]) {
     .sort((a, b) => b.length - a.length)[0]
 }
 
-function NavContent({ userName, role, path }: { userName: string; role: string; path: string }) {
-  const items = NAV.filter(({ perm }) => can(role, perm))
+function NavContent({ userName, role, path, finance }: { userName: string; role: string; path: string; finance: boolean }) {
+  const items = [
+    ...(finance ? [{ href: "/finanzas", label: "Finanzas" }] : []),
+    ...NAV.filter(({ perm }) => can(role, perm)),
+  ]
   const current = activeHref(path, items.map(i => i.href))
   return (
     <>
@@ -60,7 +63,7 @@ function NavContent({ userName, role, path }: { userName: string; role: string; 
   )
 }
 
-export default function Sidebar({ userName, role }: { userName: string; role: string }) {
+export default function Sidebar({ userName, role, finance = false }: { userName: string; role: string; finance?: boolean }) {
   const path = usePathname()
   const [open, setOpen] = useState(false)
 
@@ -115,7 +118,7 @@ export default function Sidebar({ userName, role }: { userName: string; role: st
                 </svg>
               </button>
             </div>
-            <NavContent userName={userName} role={role} path={path} />
+            <NavContent userName={userName} role={role} path={path} finance={finance} />
           </aside>
         </div>
       )}
@@ -126,7 +129,7 @@ export default function Sidebar({ userName, role }: { userName: string; role: st
           <Image src="/logos/pets-lab-cream.png" alt="Pets & Lab" width={130} height={50} className="object-contain" />
           <p className="font-mono text-[8px] tracking-[0.18em] text-bone/50 mt-2 uppercase">LIMS</p>
         </div>
-        <NavContent userName={userName} role={role} path={path} />
+        <NavContent userName={userName} role={role} path={path} finance={finance} />
       </aside>
     </>
   )

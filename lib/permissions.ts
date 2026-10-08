@@ -38,6 +38,13 @@ export const ROLE_LABELS: Record<string, string> = {
   CLINIC: "Clínica",
 }
 
+// Dashboard financiero (/finanzas): solo los dueños (Michel y Guillermo), por correo — Marcelo también
+// es ADMIN pero no lo ve. Lo revisan el middleware, el menú y la página.
+export const FINANCE_EMAILS = ["michel@petspets.co", "guillermo@petspets.co"]
+export function canSeeFinance(role: string | undefined | null, email: string | undefined | null): boolean {
+  return role === "ADMIN" && !!email && FINANCE_EMAILS.includes(email.trim().toLowerCase())
+}
+
 export function can(role: string | undefined | null, permission: Permission): boolean {
   if (!role) return false
   return ROLE_PERMISSIONS[role]?.includes(permission) ?? false

@@ -191,6 +191,11 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   pago). WhatsApp no adjunta archivos desde un enlace, por eso va el link. Número = teléfono de la sede o de la
   clínica (`lib/whatsapp.ts` agrega el 57); editable al enviar y se puede guardar en la clínica. El WhatsApp es
   obligatorio en el registro del Portal Vet y al crear clínicas. Bloqueado si la orden está retenida por pago.
+- Dashboard financiero (`app/(lab)/finanzas/`, `lib/finance.ts`, CSV en `/finanzas/csv`): solo Michel y Guillermo
+  (`lib/permissions.ts: FINANCE_EMAILS` + `canSeeFinance`, revisado en middleware, menú y página; Marcelo es ADMIN
+  pero no lo ve). Venta = precio neto de Caja el día que se registra la muestra (Bogotá); recaudado = `amountPaid`
+  (no hay fecha de pago); Pets & Pets (noCharge) no suma a ventas, va aparte; procesados = `completedAt`. Compara
+  contra el período anterior de igual duración. Gráficos SVG propios (`finanzas/Charts.tsx`), una serie por gráfico.
 - Inventario (`InventoryItem`, `RecipeItem`, `InventoryMovement`, rutas
   `app/(lab)/inventario/`): cada `ExamTemplate` puede tener una "receta" (`RecipeItem`) que
   define qué insumos y en qué cantidad consume. Al completarse un `OrderExam` (por

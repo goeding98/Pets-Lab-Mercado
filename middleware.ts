@@ -1,6 +1,6 @@
 import { getToken } from "next-auth/jwt"
 import { NextRequest, NextResponse } from "next/server"
-import { can, homeFor, routePermission } from "@/lib/permissions"
+import { can, canSeeFinance, homeFor, routePermission } from "@/lib/permissions"
 
 export async function middleware(req: NextRequest) {
   const token = await getToken({ req })
@@ -16,6 +16,13 @@ export async function middleware(req: NextRequest) {
     if (!token || token.role !== "CLINIC") {
       return NextResponse.redirect(new URL(token ? homeFor(token.role) : "/portal-vet", req.url))
     }
+    return NextResponse.next()
+  }
+
+  // Dashboard financiero: solo los dueños (lib/permissions.ts: FINANCE_EMAILS)
+  if (pathname === "/finanzas" || pathname.startsWith("/finanzas/")) {
+    if (!token) return NextResponse.redirect(new URL("/login", req.url))
+    if (!canSeeFinance(token.role, token.email)) return NextResponse.redirect(new URL(homeFor(token.role), req.url))
     return NextResponse.next()
   }
 
@@ -44,5 +51,6 @@ export const config = {
     "/promociones/:path*",
     "/personalizados/:path*",
     "/rangos/:path*",
+    "/finanzas/:path*",
   ],
 }
