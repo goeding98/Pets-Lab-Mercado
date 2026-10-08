@@ -6,6 +6,7 @@ import { saveExamDraft, saveExamResults } from "@/actions/orders"
 import { setUnsaved } from "@/lib/unsavedWork"
 import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
 import { formatCOP } from "@/lib/payment"
+import { getRangeStatus } from "@/lib/rangeStatus"
 import { evaluar } from "@/catalogo-pets-lab/calculos"
 import ExamNotes from "./ExamNotes"
 import { isDescriptiveSection } from "@/lib/sections"
@@ -57,17 +58,7 @@ type ExamProp = {
   results: { fieldId: string; value: string; flagged: boolean }[]
 }
 
-type RangeStatus = "normal" | "low" | "high"
-
-function getRangeStatus(value: string, ref: string | null): RangeStatus {
-  if (!ref || !value || isNaN(Number(value))) return "normal"
-  const num = Number(value)
-  const match = ref.match(/^([\d.]+)\s*[–-]\s*([\d.]+)/)
-  if (!match) return "normal"
-  if (num < Number(match[1])) return "low"
-  if (num > Number(match[2])) return "high"
-  return "normal"
-}
+// Misma regla y colores que el PDF (lib/rangeStatus.ts): bajo = azul, alto = rojo
 
 function isOutOfRange(value: string, ref: string | null): boolean {
   const s = getRangeStatus(value, ref)

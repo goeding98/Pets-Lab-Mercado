@@ -1,3 +1,5 @@
+import { Fragment } from "react"
+import { RANGE_COLORS, getRangeStatus, refForSpecies } from "@/lib/rangeStatus"
 import path from "path"
 import fs from "fs"
 import {
@@ -69,7 +71,8 @@ const styles = StyleSheet.create({
   tableHead: { flexDirection: "row", backgroundColor: C.salvia50, paddingHorizontal: 8, paddingVertical: 4 },
   tableRow: { flexDirection: "row", paddingHorizontal: 8, paddingVertical: 3.5, borderBottomWidth: 0.5, borderBottomColor: C.borderLight },
   tableRowAlt: { backgroundColor: "#f8faf8" },
-  tableRowFlagged: { backgroundColor: "#fff5f5" },
+  tableRowLow: { backgroundColor: "#eff5ff" },
+  tableRowHigh: { backgroundColor: "#fff5f5" },
 
   colParam: { flex: 2.5 },
   colUnit: { flex: 0.8 },
@@ -84,8 +87,8 @@ const styles = StyleSheet.create({
   thText: { fontSize: 6, color: C.ink2, letterSpacing: 1.2, textTransform: "uppercase" },
   tdText: { fontSize: 8, color: C.ink },
   tdMono: { fontSize: 7.5, color: C.ink2 },
-  tdFlagged: { fontSize: 8, color: C.red, fontFamily: "Helvetica-Bold" },
-  tdFlagMark: { fontSize: 7, color: C.red },
+  tdLow: { fontSize: 8, color: RANGE_COLORS.low, fontFamily: "Helvetica-Bold" },
+  tdHigh: { fontSize: 8, color: RANGE_COLORS.high, fontFamily: "Helvetica-Bold" },
 
   // Footer
   footer: { position: "absolute", bottom: 18, left: 32, right: 32, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", borderTopWidth: 0.5, borderTopColor: C.borderLight, paddingTop: 8 },
@@ -95,8 +98,11 @@ const styles = StyleSheet.create({
   attachedNote: { fontSize: 8, color: C.ink2, marginTop: 8, fontFamily: "Helvetica-Oblique" },
   notesLabel: { fontSize: 6.5, color: C.ink2, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 10, marginBottom: 4 },
   notesText: { fontSize: 8.5, color: C.ink, lineHeight: 1.4 },
-  photoGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 6 },
-  photo: { width: 250, height: 188, objectFit: "contain", marginRight: 10, marginBottom: 10, backgroundColor: C.salvia50 },
+  photoGrid: { flexDirection: "row", marginTop: 6 },
+  // Marco de tamaño fijo: la foto se ajusta adentro sin deformarse (si el Image define su propio tamaño,
+  // react-pdf mide la foto original y empuja el examen entero a la hoja siguiente)
+  photoFrame: { width: 250, height: 188, marginRight: 10, marginBottom: 10, backgroundColor: C.salvia50, alignItems: "center", justifyContent: "center" },
+  photo: { maxWidth: 250, maxHeight: 188, objectFit: "contain" },
 
   signBlock: { marginTop: 24, paddingTop: 16, borderTopWidth: 0.5, borderTopColor: C.borderLight, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
   signText: { flex: 1 },
@@ -507,8 +513,11 @@ export function PdfReport({ order }: { order: OrderData }) {
             const hasSections = !exam.attachedPdf && exam.template.sections.length > 0
             const refTable = referenceTableFor(exam.template.name)
             return (
-              // Los perfiles no caben en una página: el examen puede partirse, pero cada sección va entera
-              <View key={exam.id} style={styles.examBlock}>
+              // Los perfiles no caben en una página: el examen puede partirse, pero cada sección va entera.
+              // Comentarios y fotos van FUERA del bloque del examen: si quedaban dentro y no cabían en la hoja,
+              // react-pdf movía el examen completo a la siguiente y dejaba la página en blanco.
+              <Fragment key={exam.id}>
+              <View>
                 {/* El título va dentro del bloque (sin partir) de la primera sección: si la tabla no cabe
                     en la hoja, pasan juntos a la siguiente en vez de dejar el título solo al final */}
                 {!hasSections && <View wrap={false} minPresenceAhead={40}>{header}</View>}
@@ -575,7 +584,9 @@ export function PdfReport({ order }: { order: OrderData }) {
                     {section.fields.map((field, fi) => {
                       const result = resultMap[field.id]
                       const value = result?.value ?? "—"
-                      const flagged = result?.flagged ?? false
+                      // Igual que en el formulario: se evalúa con el rango de la especie (bajo azul, alto rojo)
+                      const status = getRangeStatus(result?.value, refForSpecies(order.species, field))
+                      const flagged = status !== "normal"
 
                       return (
                         <View
@@ -583,13 +594,13 @@ export function PdfReport({ order }: { order: OrderData }) {
                           style={[
                             styles.tableRow,
                             fi % 2 !== 0 ? styles.tableRowAlt : {},
-                            flagged ? styles.tableRowFlagged : {},
+                            status === "low" ? styles.tableRowLow : status === "high" ? styles.tableRowHigh : {},
                           ]}
                         >
                           <View style={styles.colParam}><Text style={styles.tdText}>{field.name}</Text></View>
                           <View style={styles.colUnit}><Text style={styles.tdMono}>{field.unit ?? ""}</Text></View>
                           <View style={styles.colResult}>
-                            <Text style={flagged ? styles.tdFlagged : styles.tdText}>
+                            <Text style={status === "low" ? styles.tdLow : status === "high" ? styles.tdHigh : styles.tdText}>
                               {value}{flagged ? " *" : ""}
                             </Text>
                           </View>
@@ -625,6 +636,7 @@ export function PdfReport({ order }: { order: OrderData }) {
                 {exam.extraPdf && (
                   <Text style={styles.attachedNote}>Se adjunta además un documento (páginas siguientes).</Text>
                 )}
+              </View>
 
                 {exam.comments && (
                   <View wrap={false}>
@@ -640,17 +652,22 @@ export function PdfReport({ order }: { order: OrderData }) {
                       {row === 0 && <Text style={styles.notesLabel}>Fotos</Text>}
                       <View style={styles.photoGrid}>
                         {exam.photos!.slice(row * 2, row * 2 + 2).map(p => (
-                          // eslint-disable-next-line jsx-a11y/alt-text
-                          <Image key={p.id} src={p.src} style={styles.photo} />
+                          <View key={p.id} style={styles.photoFrame}>
+                            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                            <Image src={p.src} style={styles.photo} />
+                          </View>
                         ))}
                       </View>
                     </View>
                   ))}
-              </View>
+                <View style={styles.examBlock} />
+              </Fragment>
             )
           })}
 
-          <Text style={styles.attachedNote}>* Valor fuera del rango de referencia.</Text>
+          <Text style={styles.attachedNote}>
+            * Valor fuera del rango de referencia: <Text style={{ color: RANGE_COLORS.low }}>azul = bajo</Text>, <Text style={{ color: RANGE_COLORS.high }}>rojo = alto</Text>.
+          </Text>
 
           {/* Firmas (van en todos los reportes, siempre juntas): director de laboratorio y microbiólogo */}
           <View wrap={false}>
