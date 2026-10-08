@@ -216,6 +216,25 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
                 canRemove={order.exams.length > 1}
               />
             )}
+            {/* PDF y WhatsApp solo de este examen (ej. enviar el hemograma aunque el coprológico siga pendiente) */}
+            {exam.status === "COMPLETADO" && (
+              <div className="flex flex-wrap items-center justify-end gap-2 mb-1.5">
+                <span className="font-mono text-[8px] tracking-[0.15em] uppercase text-ink-2 mr-1">Solo este examen:</span>
+                <a
+                  href={`/api/pdf/exam/${exam.id}`}
+                  target="_blank"
+                  className="bg-ink text-bone font-mono text-[9px] tracking-[0.18em] uppercase px-3 py-1.5 hover:bg-ink/80 transition-colors"
+                >
+                  {exam.uploadedPdfPath ? "PDF adjunto →" : "PDF →"}
+                </a>
+                <WhatsAppButton
+                  {...wa}
+                  small
+                  shareUrl={`${base}/r/${makeShareToken({ kind: "e", id: exam.id })}`}
+                  what={`el resultado de ${exam.template.name}`}
+                />
+              </div>
+            )}
             <ExamResultForm
               exam={{
                 ...exam,
@@ -229,23 +248,6 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
               orinaConfig={orinaConfig}
               reagents={reagents}
             />
-            {exam.status === "COMPLETADO" && (
-              <div className="flex justify-end gap-2 mt-1.5">
-                <a
-                  href={`/api/pdf/exam/${exam.id}`}
-                  target="_blank"
-                  className="font-mono text-[9px] tracking-[0.18em] text-ink-2 hover:text-ink uppercase border border-black/15 px-3 py-1.5 hover:bg-black/[0.03] transition-colors"
-                >
-                  {exam.uploadedPdfPath ? "PDF adjunto →" : "PDF individual →"}
-                </a>
-                <WhatsAppButton
-                  {...wa}
-                  small
-                  shareUrl={`${base}/r/${makeShareToken({ kind: "e", id: exam.id })}`}
-                  what={`el resultado de ${exam.template.name}`}
-                />
-              </div>
-            )}
           </div>
         ))}
         </ExamTabs>

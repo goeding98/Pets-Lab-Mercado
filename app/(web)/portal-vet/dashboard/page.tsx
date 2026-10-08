@@ -175,6 +175,16 @@ export default async function PortalVetDashboardPage({
                             <span className="font-mono text-[8px] tracking-[0.12em] uppercase text-ink-2">
                               {e.status === "COMPLETADO" ? (isHeld ? "Listo · pendiente de pago" : "Listo") : "Pendiente"}
                             </span>
+                            {/* PDF solo de este examen, aunque los demás de la solicitud sigan pendientes */}
+                            {e.status === "COMPLETADO" && !isHeld && (
+                              <a
+                                href={`/api/pdf/exam/${e.id}`}
+                                target="_blank"
+                                className="font-mono text-[8px] tracking-[0.15em] uppercase text-salvia-700 border border-salvia-700/40 px-1.5 py-0.5 hover:bg-salvia-50"
+                              >
+                                PDF
+                              </a>
+                            )}
                           </li>
                         ))}
                         {o.requestingVet && (
