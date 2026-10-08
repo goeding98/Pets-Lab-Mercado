@@ -156,7 +156,8 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   creatinina urinaria. Reactivos = items de Inventario con lote y vencimiento; con lote vencido no se
   valida (chequeo en cliente y en `saveExamResults`, con los datos del inventario).
 - Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial
-  por especie), en formulario y PDF: `lib/referenceTables.ts`, por nombre de examen.
+  por especie; SDMA: Normal / Elevado / Probabilidad de enfermedad renal + nota de hemólisis), en formulario y
+  PDF: `lib/referenceTables.ts`, por nombre de examen (con `note` opcional). SDMA creado con `scripts/agregar-sdma.ts`.
 - Al final de cada examen de una orden hay "Comentarios y fotos" (`ExamNotes.tsx`):
   `OrderExam.comments` y `ExamPhoto` (blob privado, subida en `api/upload/[examId]/photos`, se
   sirve por `api/photos/[photoId]`). Se pueden editar aunque el examen esté completado. El

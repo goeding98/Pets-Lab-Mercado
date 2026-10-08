@@ -618,6 +618,7 @@ export function PdfReport({ order }: { order: OrderData }) {
                         ))}
                       </View>
                     ))}
+                    {!!refTable.note && <Text style={styles.attachedNote}>{refTable.note}</Text>}
                   </View>
                 )}
 

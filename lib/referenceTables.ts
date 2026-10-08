@@ -6,6 +6,7 @@ export type ReferenceTable = {
   title: string
   columns: string[]
   rows: string[][]
+  note?: string // nota fija debajo de la tabla (ej. interferencias)
 }
 
 const TABLES: { exam: RegExp; table: ReferenceTable }[] = [
@@ -18,6 +19,19 @@ const TABLES: { exam: RegExp; table: ReferenceTable }[] = [
         ["Preprandial", "0 – 14.9 µmol/L", "0 – 6.9 µmol/L"],
         ["Postprandial", "0 – 29.0 µmol/L", "0 – 14.9 µmol/L"],
       ],
+    },
+  },
+  {
+    exam: /^sdma$/i,
+    table: {
+      title: "Valores de referencia SDMA",
+      columns: ["Resultado", "Interpretación"],
+      rows: [
+        ["<= 14 ug/dL", "Normal"],
+        ["14.1 – 19.9 ug/dL", "Elevado (comprobar evidencia de enfermedad renal)"],
+        ["> 20.0 ug/dL", "Probabilidad de enfermedad renal"],
+      ],
+      note: "La hemólisis y la lipemia de los sueros producen alteración en los resultados de las pruebas enzimáticas.",
     },
   },
 ]

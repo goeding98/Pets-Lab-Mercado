@@ -633,6 +633,7 @@ export default function ExamResultForm({
                 ))}
               </tbody>
             </table>
+            {refTable.note && <p className="font-sans text-[11px] text-ink-2 italic mt-2">{refTable.note}</p>}
           </div>
         )}
 
