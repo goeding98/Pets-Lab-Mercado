@@ -16,9 +16,10 @@ const TABLES: { exam: RegExp; table: ReferenceTable }[] = [
       title: "BA - Referencia de patología",
       columns: ["Condición", "Caninos", "Felinos"],
       rows: [
-        ["Preprandial", "0 – 14.9 µmol/L", "0 – 6.9 µmol/L"],
-        ["Postprandial", "0 – 29.0 µmol/L", "0 – 14.9 µmol/L"],
+        ["Preprandial (en ayuno)", "0 – 14.9 µmol/L", "0 – 6.9 µmol/L"],
+        ["Postprandial (2 h después de comer)", "0 – 29.0 µmol/L", "0 – 14.9 µmol/L"],
       ],
+      note: "Preprandial: muestra tomada en ayuno, antes de comer (ayuno de 12 horas). Postprandial: muestra tomada 2 horas después de que el paciente come.",
     },
   },
   {
