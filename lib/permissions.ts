@@ -10,6 +10,7 @@ export type Permission =
   | "clientes.ver"
   | "clientes.editar"   // crear/editar clínicas (y su usuario del portal)
   | "caja"
+  | "facturacion"       // /facturacion: órdenes por facturar (sin Pets & Pets), marcar facturadas — ADMIN y CONTADOR
   | "pagos"             // marcar una orden como pagada (libera el resultado a la clínica): todo el personal
   | "inventario"
   | "usuarios"
@@ -19,14 +20,15 @@ export type Permission =
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "muestras.eliminar", "resultados.editar",
-  "clientes.ver", "clientes.editar", "caja", "pagos", "inventario", "usuarios", "promociones", "personalizados", "rangos",
+  "clientes.ver", "clientes.editar", "caja", "facturacion", "pagos", "inventario", "usuarios", "promociones", "personalizados", "rangos",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
-  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar"),
+  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion"),
   COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones", "personalizados", "pagos"],
   DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos"],
+  CONTADOR: ["facturacion"], // la contadora: solo Facturación
   CLINIC: [],
 }
 
@@ -35,6 +37,7 @@ export const ROLE_LABELS: Record<string, string> = {
   STAFF: "Staff (microbiólogo)",
   COMERCIAL: "Comercial",
   DOMICILIARIO: "Domiciliario",
+  CONTADOR: "Contador(a)",
   CLINIC: "Clínica",
 }
 
@@ -60,6 +63,7 @@ export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/clientes/nueva", "clientes.editar"],
   ["/clientes", "clientes.ver"],
   ["/caja", "caja"],
+  ["/facturacion", "facturacion"],
   ["/inventario", "inventario"],
   ["/usuarios", "usuarios"],
   ["/promociones", "promociones"],
@@ -75,5 +79,6 @@ export function routePermission(pathname: string): Permission | null {
 // Página de inicio de cada rol tras iniciar sesión
 export function homeFor(role: string | undefined | null): string {
   if (role === "CLINIC") return "/portal-vet/dashboard"
+  if (role === "CONTADOR") return "/facturacion"
   return can(role, "panel") ? "/dashboard" : "/muestras"
 }

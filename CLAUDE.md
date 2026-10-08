@@ -192,6 +192,11 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   pago). WhatsApp no adjunta archivos desde un enlace, por eso va el link. Número = teléfono de la sede o de la
   clínica (`lib/whatsapp.ts` agrega el 57); editable al enviar y se puede guardar en la clínica. El WhatsApp es
   obligatorio en el registro del Portal Vet y al crear clínicas. Bloqueado si la orden está retenida por pago.
+- Facturación (`app/(lab)/facturacion/`, `lib/invoicing.ts`, `actions/invoicing.ts`, CSV en `/facturacion/csv`; permiso
+  `facturacion`: ADMIN y rol **CONTADOR**, que solo ve este módulo y entra directo ahí): órdenes con valor a cobrar,
+  sin Pets & Pets (noCharge), agrupadas por cliente con nombre, NIT, teléfono, correo y dirección (de la clínica; sin
+  clínica = particular a nombre del tutor). Se marcan facturadas con número (`Order.invoiceNumber/invoicedAt/
+  invoicedByName`; una factura puede cubrir varias órdenes) y se puede deshacer. Pestañas Por facturar / Facturadas.
 - Dashboard financiero (`app/(lab)/finanzas/`, `lib/finance.ts`, CSV en `/finanzas/csv`): solo Michel y Guillermo
   (`lib/permissions.ts: FINANCE_EMAILS` + `canSeeFinance`, revisado en middleware, menú y página; Marcelo es ADMIN
   pero no lo ve). Venta = precio neto de Caja el día que se registra la muestra (Bogotá); recaudado = `amountPaid`

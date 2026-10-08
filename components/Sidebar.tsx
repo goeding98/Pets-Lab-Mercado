@@ -17,6 +17,7 @@ const NAV: { href: string; label: string; perm: Permission }[] = [
   { href: "/rangos", label: "Rangos de referencia", perm: "rangos" },
   { href: "/usuarios", label: "Usuarios", perm: "usuarios" },
   { href: "/caja", label: "Caja", perm: "caja" },
+  { href: "/facturacion", label: "Facturación", perm: "facturacion" },
   { href: "/inventario", label: "Inventario", perm: "inventario" },
 ]
 

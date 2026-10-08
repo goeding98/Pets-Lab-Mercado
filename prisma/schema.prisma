@@ -53,27 +53,31 @@ model ClinicBranch {
 }
 
 model Order {
-  id            String        @id @default(cuid())
-  orderNumber   String        @unique
-  patientName   String
-  species       String // Canino | Felino | Otro
-  breed         String?
-  age           String?
-  sex           String? // M | H | ND
-  ownerName     String?
-  clinicId      String?
-  clinic        Clinic?       @relation(fields: [clinicId], references: [id])
-  branchId      String?
-  branch        ClinicBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  requestingVet String?
-  processedById String?
-  processedBy   User?         @relation("ProcessedBy", fields: [processedById], references: [id])
-  status        String        @default("RECIBIDA") // SOLICITADA (desde el portal, aún sin recibir) | RECIBIDA | EN_PROCESO | COMPLETADA
-  source        String        @default("LAB") // LAB (registrada por el staff) | PORTAL (solicitada por la clínica)
-  notes         String?
-  exams         OrderExam[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  orderNumber    String        @unique
+  patientName    String
+  species        String // Canino | Felino | Otro
+  breed          String?
+  age            String?
+  sex            String? // M | H | ND
+  ownerName      String?
+  clinicId       String?
+  clinic         Clinic?       @relation(fields: [clinicId], references: [id])
+  branchId       String?
+  branch         ClinicBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  requestingVet  String?
+  processedById  String?
+  processedBy    User?         @relation("ProcessedBy", fields: [processedById], references: [id])
+  status         String        @default("RECIBIDA") // SOLICITADA (desde el portal, aún sin recibir) | RECIBIDA | EN_PROCESO | COMPLETADA
+  source         String        @default("LAB") // LAB (registrada por el staff) | PORTAL (solicitada por la clínica)
+  // Facturación (/facturacion): la contadora marca la orden como facturada con su número de factura
+  invoiceNumber  String?
+  invoicedAt     DateTime?
+  invoicedByName String?
+  notes          String?
+  exams          OrderExam[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model OrderExam {

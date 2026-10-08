@@ -49,6 +49,7 @@ export default function RegisterForm({ clinics }: { clinics: Clinic[] }) {
           <option value="ADMIN">Admin</option>
           <option value="COMERCIAL">Comercial</option>
           <option value="DOMICILIARIO">Domiciliario</option>
+          <option value="CONTADOR">Contador(a) — solo Facturación</option>
           <option value="CLINIC">Clínica</option>
         </select>
       </div>
