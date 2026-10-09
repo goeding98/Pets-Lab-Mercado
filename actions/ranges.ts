@@ -60,6 +60,36 @@ export async function updateFieldName(fieldId: string, name: string): Promise<{ 
   return { copies: copies.count }
 }
 
+// Cambia el nombre de un examen maestro. Donde está copiado (perfiles, promociones, personalizados) sus
+// secciones se llaman "<examen> — <sección>" y el "Incluye" de los personalizados lista los nombres: se
+// actualizan también. Las órdenes ya hechas muestran el nombre nuevo (van por id).
+export async function updateExamName(templateId: string, name: string): Promise<{ error?: string; copies?: number }> {
+  const session = await getServerSession(authOptions)
+  if (!session || !can(session.user.role, "rangos")) return { error: "No autorizado" }
+
+  const value = clean(name)
+  if (!value) return { error: "El nombre no puede quedar vacío" }
+  const t = await prisma.examTemplate.findUnique({ where: { id: templateId }, select: { name: true, isPromotion: true } })
+  if (!t) return { error: "Examen no encontrado" }
+  if (t.isPromotion) return { error: "Las promociones y personalizados se renombran en su módulo" }
+  if (value === t.name) return {}
+  if (await prisma.examTemplate.findFirst({ where: { id: { not: templateId }, active: true, isCustom: false, name: { equals: value, mode: "insensitive" } } })) {
+    return { error: "Ya existe otro examen activo con ese nombre" }
+  }
+
+  const prefix = `${t.name} — `
+  const sections = await prisma.examSection.findMany({ where: { name: { startsWith: prefix } }, select: { id: true, name: true, templateId: true } })
+  const customs = await prisma.examTemplate.findMany({ where: { isCustom: true, description: { contains: t.name } }, select: { id: true, description: true } })
+  await prisma.$transaction([
+    prisma.examTemplate.update({ where: { id: templateId }, data: { name: value } }),
+    ...sections.map(s => prisma.examSection.update({ where: { id: s.id }, data: { name: `${value} — ${s.name.slice(prefix.length)}` } })),
+    ...customs.map(c => prisma.examTemplate.update({ where: { id: c.id }, data: { description: c.description!.split(t.name).join(value) } })),
+  ])
+  revalidatePath("/rangos")
+  revalidatePath("/servicios")
+  return { copies: new Set(sections.map(s => s.templateId)).size }
+}
+
 // Valores de referencia por especie y cortes del UPC del Parcial de Orina (LabSetting "orina")
 export async function saveOrinaConfig(config: unknown): Promise<{ error?: string }> {
   const session = await getServerSession(authOptions)

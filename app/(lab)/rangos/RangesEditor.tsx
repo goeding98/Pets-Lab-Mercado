@@ -1,6 +1,6 @@
 "use client"
 import { useMemo, useState, useTransition } from "react"
-import { updateFieldName, updateFieldRanges } from "@/actions/ranges"
+import { updateExamName, updateFieldName, updateFieldRanges } from "@/actions/ranges"
 
 export type RangeField = {
   id: string
@@ -124,6 +124,49 @@ function FieldRow({ field }: { field: RangeField }) {
   )
 }
 
+// Renombrar el examen (también donde está copiado: perfiles, promociones, personalizados)
+function ExamNameEditor({ id, name }: { id: string; name: string }) {
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState(name)
+  const [current, setCurrent] = useState(name)
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  function save() {
+    setMessage(null)
+    startTransition(async () => {
+      try {
+        const res = await updateExamName(id, value)
+        if (res.error) return setMessage({ ok: false, text: res.error })
+        setCurrent(value.trim())
+        setOpen(false)
+        setMessage({ ok: true, text: res.copies ? `Nombre cambiado · también en ${res.copies} perfil(es) o promoción(es)` : "Nombre del examen cambiado" })
+      } catch {
+        setMessage({ ok: false, text: "No se pudo guardar. Recarga e intenta de nuevo." })
+      }
+    })
+  }
+
+  return (
+    <div className="mb-2">
+      {open ? (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <input value={value} onChange={e => setValue(e.target.value)} autoFocus
+            onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setOpen(false) }}
+            className="border border-black/20 bg-white px-2 py-1 text-xs font-sans w-full max-w-lg focus:outline-salvia-700" />
+          <button type="button" onClick={save} disabled={pending || !value.trim() || value.trim() === current}
+            className="bg-salvia-700 text-bone font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-1 disabled:opacity-40">{pending ? "…" : "OK"}</button>
+          <button type="button" onClick={() => { setOpen(false); setValue(current) }} className="font-mono text-[8px] tracking-[0.15em] uppercase text-ink-2">Cancelar</button>
+        </span>
+      ) : (
+        <button type="button" onClick={() => { setValue(current); setOpen(true) }}
+          className="font-mono text-[8px] tracking-[0.15em] uppercase text-salvia-700 hover:underline">Renombrar examen</button>
+      )}
+      {message && <p className={`font-sans text-[11px] mt-1 ${message.ok ? "text-salvia-700" : "text-red-600"}`}>{message.text}</p>}
+    </div>
+  )
+}
+
 export default function RangesEditor({ exams }: { exams: MasterExam[] }) {
   const [query, setQuery] = useState("")
 
@@ -166,6 +209,7 @@ export default function RangesEditor({ exams }: { exams: MasterExam[] }) {
                   </span>
                 </summary>
                 <div className="px-4 pb-4">
+                  <ExamNameEditor id={exam.id} name={exam.name} />
                   {exam.sections.map(section => (
                     <div key={section.name} className="mt-2">
                       {exam.sections.length > 1 && (
