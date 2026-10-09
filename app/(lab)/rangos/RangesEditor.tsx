@@ -1,6 +1,6 @@
 "use client"
 import { useMemo, useState, useTransition } from "react"
-import { updateFieldRanges } from "@/actions/ranges"
+import { updateFieldName, updateFieldRanges } from "@/actions/ranges"
 
 export type RangeField = {
   id: string
@@ -30,6 +30,25 @@ function FieldRow({ field }: { field: RangeField }) {
   const [pending, startTransition] = useTransition()
   const dirty = canine !== saved.canine || feline !== saved.feline
   const readOnly = field.editedIn !== null
+  // Renombrar el parámetro (maestro + copias)
+  const [name, setName] = useState(field.name)
+  const [renaming, setRenaming] = useState(false)
+  const [draftName, setDraftName] = useState(field.name)
+
+  function saveName() {
+    setMessage(null)
+    startTransition(async () => {
+      try {
+        const res = await updateFieldName(field.id, draftName)
+        if (res.error) return setMessage({ ok: false, text: res.error })
+        setName(draftName.trim())
+        setRenaming(false)
+        setMessage({ ok: true, text: res.copies ? `Nombre cambiado · también en ${res.copies} ${res.copies === 1 ? "copia" : "copias"}` : "Nombre cambiado" })
+      } catch {
+        setMessage({ ok: false, text: "No se pudo guardar. Recarga e intenta de nuevo." })
+      }
+    })
+  }
 
   function save() {
     setMessage(null)
@@ -50,7 +69,24 @@ function FieldRow({ field }: { field: RangeField }) {
   return (
     <tr className="border-t border-black/[0.05] align-top">
       <td className="py-2 pr-3 font-sans text-xs text-ink">
-        {field.name}
+        {renaming ? (
+          <span className="flex flex-wrap items-center gap-1.5 mb-1">
+            <input value={draftName} onChange={e => setDraftName(e.target.value)} autoFocus
+              onKeyDown={e => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setRenaming(false) }}
+              className="border border-black/20 bg-white px-2 py-1 text-xs font-sans w-56 focus:outline-salvia-700" />
+            <button type="button" onClick={saveName} disabled={pending || !draftName.trim() || draftName.trim() === name}
+              className="bg-salvia-700 text-bone font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-1 disabled:opacity-40">OK</button>
+            <button type="button" onClick={() => { setRenaming(false); setDraftName(name) }} className="font-mono text-[8px] tracking-[0.15em] uppercase text-ink-2">Cancelar</button>
+          </span>
+        ) : (
+          <>
+            {name}
+            {!readOnly && (
+              <button type="button" onClick={() => { setDraftName(name); setRenaming(true) }} title="Cambiar el nombre del parámetro"
+                className="ml-1.5 font-mono text-[8px] tracking-[0.12em] uppercase text-salvia-700 hover:underline">Renombrar</button>
+            )}
+          </>
+        )}
         {field.unit && <span className="font-mono text-[10px] text-ink-2 ml-1.5">{field.unit}</span>}
         {!readOnly && field.copies > 0 && (
           <span className="block font-mono text-[8px] tracking-[0.12em] uppercase text-salvia-700 mt-0.5">

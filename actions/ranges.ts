@@ -40,6 +40,26 @@ export async function updateFieldRanges(
   return { copies: copies.count }
 }
 
+// Cambia el nombre de un parámetro maestro y de todas sus copias (perfiles, promociones). Los resultados
+// ya guardados no cambian (van por id); los PDF nuevos salen con el nombre nuevo.
+export async function updateFieldName(fieldId: string, name: string): Promise<{ error?: string; copies?: number }> {
+  const session = await getServerSession(authOptions)
+  if (!session || !can(session.user.role, "rangos")) return { error: "No autorizado" }
+
+  const value = clean(name)
+  if (!value) return { error: "El nombre no puede quedar vacío" }
+  const field = await prisma.examField.findUnique({ where: { id: fieldId }, select: { sourceFieldId: true } })
+  if (!field) return { error: "Parámetro no encontrado" }
+  if (field.sourceFieldId) return { error: "Este parámetro es copia de otro: renómbralo en su examen maestro" }
+
+  const [, copies] = await prisma.$transaction([
+    prisma.examField.update({ where: { id: fieldId }, data: { name: value } }),
+    prisma.examField.updateMany({ where: { sourceFieldId: fieldId }, data: { name: value } }),
+  ])
+  revalidatePath("/rangos")
+  return { copies: copies.count }
+}
+
 // Valores de referencia por especie y cortes del UPC del Parcial de Orina (LabSetting "orina")
 export async function saveOrinaConfig(config: unknown): Promise<{ error?: string }> {
   const session = await getServerSession(authOptions)
