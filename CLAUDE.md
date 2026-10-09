@@ -127,7 +127,8 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `lib/sections.ts: isDescriptiveSection` (por nombre de sección o de examen); agregar ahí las nuevas.
 - Rangos de referencia (`app/(lab)/rangos/`, `actions/ranges.ts`, permiso `rangos`: solo ADMIN —
   el jefe médico Marcelo Valencia es ADMIN): lista los exámenes maestros (activos, no perfiles ni
-  promociones) y edita refCanine/refFeline (y el nombre del parámetro: "Renombrar", `updateFieldName`). Cada parámetro copiado (perfiles, promociones, Hemograma
+  promociones) y edita refCanine/refFeline (y los nombres: "Renombrar" parámetro → `updateFieldName`, "Renombrar examen" → `updateExamName`, que
+  también ajusta las secciones "<examen> — …" de perfiles/promociones y el "Incluye" de personalizados). Cada parámetro copiado (perfiles, promociones, Hemograma
   Simple, Bilirrubinas Diferenciadas, Electrolitos, TPT+TP, PCR combinados) tiene
   `ExamField.sourceFieldId` → su parámetro maestro; guardar en el maestro actualiza todas las copias.
   Las copias no se editan aparte. Vínculos creados con `scripts/vincular-rangos.ts` (idempotente;
