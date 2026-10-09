@@ -147,6 +147,9 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Wright/Gram con frase automática) en `structured.coproscopico` (`components/CoproscopicoFields.tsx`);
   el Coprológico no lleva esa tabla. Sección marcador "Coproscópico"
   (`scripts/coproscopico-estructurado.ts`; la de "Sangre Oculta en Heces" se llama "Sangre Oculta").
+  Coprológico Seriado (`lib/coproSeriado.ts`, $30.000): 3 secciones "Muestra N — Coprológico"; un examen puede tener
+  varios bloques de coprológico: el 1 va en `structured.copro` y el resto en `structured.coproSerie` (`readCoproAt`),
+  foto por bloque (`coproPhotoRole`: COPRO_MACRO, COPRO_MACRO_2…) y `fecha` de la muestra (opcional) en cada bloque.
 - Parcial de Orina = resultado estructurado (`lib/orina.ts`, `components/OrinaForm.tsx`, `OrinaPdf` en
   `PdfReport.tsx`), en `structured.orina`; sección marcador "Parcial de Orina" en el examen y en los
   perfiles Renal Completo, Diabético, Geriátrico e Integral (`scripts/orina-estructurado.ts`). Método

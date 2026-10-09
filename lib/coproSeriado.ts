@@ -3,7 +3,8 @@ import type { PrismaClient } from "@prisma/client"
 // Producto "Coprológico Seriado": 3 coprológicos (uno por muestra, cada uno de un día diferente) en un solo
 // examen de Coproparasitología, $30.000. Cada bloque es una sección marcador "Muestra N — Coprológico"
 // (sin campos; resultado estructurado, ver lib/coprologico.ts: readCoproAt). Copia tiempo de entrega,
-// muestra y receta (x3) del Coprológico. Idempotente: si ya existe, no hace nada.
+// muestra y receta (x3) del Coprológico. Idempotente: si ya existe, no hace nada. Ya creado en producción
+// (9 oct 2026); se deja para recrearlo en otra base si hiciera falta.
 export const COPRO_SERIADO_NAME = "Coprológico Seriado"
 
 export async function createCoproSeriado(prisma: PrismaClient): Promise<string> {
