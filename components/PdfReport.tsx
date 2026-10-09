@@ -16,7 +16,7 @@ import { isDescriptiveSection } from "@/lib/sections"
 import { referenceTableFor } from "@/lib/referenceTables"
 import { SITE } from "@/lib/site-config"
 import {
-  colorLabel, gramPhrase, isCoproSection, isCoproscopicoSection, NOTA_FIJA, parseMarkup, phLabel, readCopro, readCoproscopico,
+  colorLabel, coproPhotoRole, gramPhrase, isCoproSection, isCoproscopicoSection, NOTA_FIJA, parseMarkup, phLabel, readCoproAt, readCoproscopico,
   stripMarkup, TECNICA_DEFAULT, type CoproData, type CoproscopicoData, type Segment,
 } from "@/lib/coprologico"
 import {
@@ -153,7 +153,7 @@ export type OrderData = {
     comments?: string | null
     photos?: { id: string; src: string }[] // src: data URI JPEG
     structured?: unknown // bloques con formulario propio (Coprológico)
-    macroPhoto?: string | null // data URI de la foto de la muestra del Coprológico
+    macroPhotos?: Record<string, string> // data URI de la foto de la muestra del Coprológico, por role (COPRO_MACRO, COPRO_MACRO_2…)
     attachedPdf?: boolean // el resultado es un PDF subido (va en las páginas siguientes)
     extraPdf?: boolean // tiene resultados capturados y además un PDF subido (va en las páginas siguientes)
   }[]
@@ -385,7 +385,12 @@ function OrinaPdf({ d, species, config, lead }: { d: OrinaData; species: string;
   )
 }
 
+// Posición de una sección entre las secciones de coprológico del examen (0 en un coprológico normal)
+const coproIndex = (sections: { id: string; name: string }[], section: { id: string }) =>
+  sections.filter(s => isCoproSection(s.name) || isCoproscopicoSection(s.name)).findIndex(s => s.id === section.id)
+
 function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string | null; lead: React.ReactNode; extra?: React.ReactNode }) {
+  const fecha = data.fecha ? data.fecha.split("-").reverse().join("/") : ""
   const protozoos = data.protozoos.items.filter(i => i.hallazgo.trim())
   const huevos = data.flotacion.items.filter(i => i.parasito.trim())
   return (
@@ -393,6 +398,7 @@ function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string
       {/* El título del examen va pegado al primer bloque para que no quede solo al final de una hoja */}
       <View wrap={false}>
         {lead}
+        {!!fecha && <Text style={[copro.plain, { marginTop: 6 }]}>Fecha de la muestra: <Text style={{ fontFamily: "Helvetica-Bold" }}>{fecha}</Text></Text>}
         <View style={copro.block}>
           <Text style={copro.title}>Análisis macroscópico</Text>
           <View style={copro.macro}>
@@ -540,8 +546,8 @@ export function PdfReport({ order }: { order: OrderData }) {
                 ) : isCoproSection(section.name) || isCoproscopicoSection(section.name) ? (
                   <CoproPdf
                     key={section.id}
-                    data={readCopro(exam.structured)}
-                    photo={exam.macroPhoto ?? null}
+                    data={readCoproAt(exam.structured, coproIndex(exam.template.sections, section))}
+                    photo={exam.macroPhotos?.[coproPhotoRole(coproIndex(exam.template.sections, section))] ?? null}
                     extra={isCoproscopicoSection(section.name) ? <CoproscopicoPdf d={readCoproscopico(exam.structured)} /> : undefined}
                     lead={<>
                       {si === 0 && header}

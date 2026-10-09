@@ -72,7 +72,7 @@ export function FreeSelect({ value, options, onChange, disabled, placeholder = "
   )
 }
 
-function MacroPhoto({ examId, photo, locked }: { examId: string; photo: { id: string } | null; locked: boolean }) {
+function MacroPhoto({ examId, photo, locked, role }: { examId: string; photo: { id: string } | null; locked: boolean; role: string }) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
@@ -80,7 +80,7 @@ function MacroPhoto({ examId, photo, locked }: { examId: string; photo: { id: st
   async function upload(file: File) {
     setBusy(true)
     try {
-      await uploadExamPhoto(examId, file, "COPRO_MACRO")
+      await uploadExamPhoto(examId, file, role)
       router.refresh()
     } catch {
       alert("No se pudo subir la foto. Intenta de nuevo.")
@@ -220,7 +220,7 @@ export function Cell({ title, children, wide = false }: { title: string; childre
 export const grid = "grid grid-cols-1 sm:grid-cols-2 border border-black/10 divide-y divide-black/[0.06] sm:divide-y-0 bg-white [&>*]:border-black/[0.06] sm:[&>*:nth-child(odd)]:border-r sm:[&>*:nth-child(n+3)]:border-t"
 
 export default function CoproForm({
-  value, onChange, locked, examId, photo, extra,
+  value, onChange, locked, examId, photo, extra, photoRole = "COPRO_MACRO", askDate = false,
 }: {
   value: CoproData
   onChange: (v: CoproData) => void
@@ -228,11 +228,21 @@ export default function CoproForm({
   examId: string
   photo: { id: string } | null
   extra?: React.ReactNode // tabla adicional después del Examen microscópico (Coproscópico)
+  photoRole?: string // foto de la muestra de este bloque (Coprológico Seriado: "COPRO_MACRO_2", "_3"…)
+  askDate?: boolean // pedir la fecha de la muestra (siempre visible en el Seriado)
 }) {
   const set = <K extends keyof CoproData>(k: K, v: CoproData[K]) => onChange({ ...value, [k]: v })
 
   return (
     <div className="space-y-6">
+      {/* Fecha de la muestra (Coprológico Seriado: cada muestra es de un día distinto) */}
+      {(askDate || value.fecha) && (
+        <div className="flex flex-wrap items-center gap-2 bg-salvia-50/60 border border-black/[0.06] px-3 py-2">
+          <span className={`${label} mb-0`}>Fecha de la muestra</span>
+          <input type="date" value={value.fecha} onChange={e => set("fecha", e.target.value)} disabled={locked} className={`${input} w-44`} />
+        </div>
+      )}
+
       {/* Análisis macroscópico */}
       <div>
         <p className={heading}>Análisis macroscópico</p>
@@ -266,7 +276,7 @@ export default function CoproForm({
               <input value={value.otros} onChange={e => set("otros", e.target.value)} disabled={locked} className={input} />
             </div>
           </div>
-          <MacroPhoto examId={examId} photo={photo} locked={locked} />
+          <MacroPhoto examId={examId} photo={photo} locked={locked} role={photoRole} />
         </div>
       </div>
 

@@ -54,6 +54,7 @@ export type CoproData = {
   flotacion: { ninguno: boolean; items: { parasito: string; hpg: string }[] }
   tecnica: string
   observaciones: string
+  fecha: string // fecha de la muestra (YYYY-MM-DD, opcional; en el Coprológico Seriado cada muestra es de un día)
 }
 
 export const COPRO_DEFAULT: CoproData = {
@@ -74,14 +75,32 @@ export const COPRO_DEFAULT: CoproData = {
   flotacion: { ninguno: true, items: [] },
   tecnica: TECNICA_DEFAULT,
   observaciones: "",
+  fecha: "",
 }
 
 const str = (v: unknown, max = 4000) => (typeof v === "string" ? v.slice(0, max) : "")
 
 // Normaliza lo que venga de la base o del navegador (campos faltantes -> valor por defecto)
 export function readCopro(structured: unknown): CoproData {
-  const raw = (structured && typeof structured === "object" ? (structured as Record<string, unknown>).copro : null) as Record<string, unknown> | null
-  if (!raw || typeof raw !== "object") return structuredClone(COPRO_DEFAULT)
+  const raw = structured && typeof structured === "object" ? (structured as Record<string, unknown>).copro : null
+  return normalizeCopro(raw)
+}
+
+// Coprológico Seriado (y cualquier examen con varias secciones "… — Coprológico"): el bloque 1 va en
+// structured.copro (igual que un coprológico normal) y el bloque i en structured.coproSerie[i]. La foto de
+// la muestra del bloque 1 es role "COPRO_MACRO"; la del bloque i, "COPRO_MACRO_<i+1>".
+export function readCoproAt(structured: unknown, i: number): CoproData {
+  if (i === 0) return readCopro(structured)
+  const serie = structured && typeof structured === "object" ? (structured as Record<string, unknown>).coproSerie : null
+  return normalizeCopro(Array.isArray(serie) ? serie[i] : null)
+}
+export const readCoproSerie = (structured: unknown, n: number) => Array.from({ length: Math.max(1, n) }, (_, i) => readCoproAt(structured, i))
+export const coproPhotoRole = (i: number) => (i === 0 ? "COPRO_MACRO" : `COPRO_MACRO_${i + 1}`)
+export const isCoproPhotoRole = (role: string | null | undefined) => !!role && /^COPRO_MACRO(_\d{1,2})?$/.test(role)
+
+export function normalizeCopro(input: unknown): CoproData {
+  const raw = (input && typeof input === "object" ? input : null) as Record<string, unknown> | null
+  if (!raw) return structuredClone(COPRO_DEFAULT)
   const list = <T,>(v: unknown, map: (x: Record<string, unknown>) => T): T[] =>
     Array.isArray(v) ? v.slice(0, 30).filter(x => x && typeof x === "object").map(x => map(x as Record<string, unknown>)) : []
   const block = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : {})
@@ -112,6 +131,7 @@ export function readCopro(structured: unknown): CoproData {
     },
     tecnica: typeof raw.tecnica === "string" ? str(raw.tecnica, 300) : TECNICA_DEFAULT,
     observaciones: str(raw.observaciones, 4000),
+    fecha: /^\d{4}-\d{2}-\d{2}$/.test(str(raw.fecha, 10)) ? str(raw.fecha, 10) : "",
   }
 }
 

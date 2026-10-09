@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { consumeInventoryForExam } from "@/lib/inventory"
-import { phError, readCopro, readCoproscopico } from "@/lib/coprologico"
+import { normalizeCopro, phError, readCopro, readCoproscopico } from "@/lib/coprologico"
 import { orinaErrors, readOrina } from "@/lib/orina"
 
 // Parcial de Orina: el reactivo se toma del inventario (lote y vencimiento actuales, no los del
@@ -96,7 +96,7 @@ export async function saveExamComments(orderExamId: string, comments: string) {
 export async function saveExamResults(
   orderExamId: string,
   results: { fieldId: string; value: string; flagged: boolean }[],
-  structured?: { copro?: unknown; coproscopico?: unknown; orina?: unknown },
+  structured?: { copro?: unknown; coproSerie?: unknown; coproscopico?: unknown; orina?: unknown },
 ) {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "resultados.editar")) throw new Error("No autorizado")
@@ -105,6 +105,7 @@ export async function saveExamResults(
   const structuredData = structured && Object.keys(structured).length
     ? {
         ...(structured.copro !== undefined ? { copro: readCopro(structured) } : {}),
+        ...(Array.isArray(structured.coproSerie) ? { coproSerie: structured.coproSerie.slice(0, 10).map(normalizeCopro) } : {}),
         ...(structured.coproscopico !== undefined ? { coproscopico: readCoproscopico(structured) } : {}),
         ...(structured.orina !== undefined ? { orina: await validatedOrina(structured) } : {}),
       }
@@ -167,7 +168,7 @@ export async function saveExamResults(
 export async function saveExamDraft(
   orderExamId: string,
   results: { fieldId: string; value: string; flagged: boolean }[],
-  structured?: { copro?: unknown; coproscopico?: unknown; orina?: unknown },
+  structured?: { copro?: unknown; coproSerie?: unknown; coproscopico?: unknown; orina?: unknown },
 ): Promise<{ error?: string; savedAt?: string }> {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "resultados.editar")) return { error: "No autorizado" }
@@ -179,6 +180,7 @@ export async function saveExamDraft(
   const structuredData = structured && Object.keys(structured).length
     ? {
         ...(structured.copro !== undefined ? { copro: readCopro(structured) } : {}),
+        ...(Array.isArray(structured.coproSerie) ? { coproSerie: structured.coproSerie.slice(0, 10).map(normalizeCopro) } : {}),
         ...(structured.coproscopico !== undefined ? { coproscopico: readCoproscopico(structured) } : {}),
         ...(structured.orina !== undefined ? { orina: readOrina(structured) } : {}),
       }

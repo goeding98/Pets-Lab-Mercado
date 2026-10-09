@@ -11,7 +11,7 @@ import { evaluar } from "@/catalogo-pets-lab/calculos"
 import ExamNotes from "./ExamNotes"
 import { isDescriptiveSection } from "@/lib/sections"
 import { referenceTableFor } from "@/lib/referenceTables"
-import { isCoproSection, isCoproscopicoSection, phError, readCopro, readCoproscopico } from "@/lib/coprologico"
+import { coproPhotoRole, isCoproSection, isCoproscopicoSection, phError, readCoproSerie, readCoproscopico, type CoproData } from "@/lib/coprologico"
 import CoproscopicoFields from "@/components/CoproscopicoFields"
 import OrinaForm from "@/components/OrinaForm"
 import { isOrinaSection, orinaErrors, readOrina, type OrinaConfig, type Reactivo } from "@/lib/orina"
@@ -49,7 +49,7 @@ type ExamProp = {
   comments: string | null
   photos: { id: string; name: string }[]
   structured: unknown // bloques con formulario propio (Coprológico)
-  macroPhoto: { id: string } | null // foto de la muestra del Coprológico
+  macroPhotos: Record<string, { id: string }> // fotos de la muestra del Coprológico, por role (COPRO_MACRO, COPRO_MACRO_2…)
   template: {
     name: string
     area: string
@@ -100,7 +100,12 @@ export default function ExamResultForm({
   const [editing, setEditing] = useState(false)
   const hasCoproscopico = exam.template.sections.some(s => isCoproscopicoSection(s.name))
   const hasCopro = hasCoproscopico || exam.template.sections.some(s => isCoproSection(s.name))
-  const [copro, setCopro] = useState(() => readCopro(exam.structured))
+  // Un bloque de coprológico por cada sección "Coprológico"/"Coproscópico" (el Seriado tiene 3)
+  const coproSections = exam.template.sections.filter(s => isCoproSection(s.name) || isCoproscopicoSection(s.name))
+  const isSerie = coproSections.length > 1
+  const [copros, setCopros] = useState<CoproData[]>(() => readCoproSerie(exam.structured, coproSections.length))
+  const copro = copros[0]
+  const setCoproAt = (i: number, v: CoproData) => setCopros(list => list.map((c, j) => (j === i ? v : c)))
   const [coproscopico, setCoproscopico] = useState(() => readCoproscopico(exam.structured))
   const hasOrina = exam.template.sections.some(s => isOrinaSection(s.name))
   const [orina, setOrina] = useState(() => readOrina(exam.structured))
@@ -110,7 +115,7 @@ export default function ExamResultForm({
   const [draftAt, setDraftAt] = useState<string | null>(null)
   const [drafting, startDraft] = useTransition()
   // Cambios sin guardar: se compara lo que hay en pantalla con lo último guardado
-  const snapshot = useMemo(() => JSON.stringify({ values, copro, coproscopico, orina }), [values, copro, coproscopico, orina])
+  const snapshot = useMemo(() => JSON.stringify({ values, copros, coproscopico, orina }), [values, copros, coproscopico, orina])
   const [savedSnapshot, setSavedSnapshot] = useState(snapshot)
   const dirty = snapshot !== savedSnapshot
   useEffect(() => { setUnsaved(exam.id, dirty) }, [exam.id, dirty])
@@ -243,7 +248,7 @@ export default function ExamResultForm({
       return { fieldId: f.id, value, flagged: isOutOfRange(value, refFor(f)) }
     })
     const structured = {
-      ...(hasCopro ? { copro } : {}),
+      ...(hasCopro ? { copro, ...(isSerie ? { coproSerie: copros } : {}) } : {}),
       ...(hasCoproscopico ? { coproscopico } : {}),
       ...(hasOrina ? { orina } : {}),
     }
@@ -277,7 +282,7 @@ export default function ExamResultForm({
     const orinaInvalid = hasOrina ? orinaErrors(orina) : []
     if (orinaInvalid.length) { setSaveError(orinaInvalid.join(". ") + "."); return }
     const structured = {
-      ...(hasCopro ? { copro } : {}),
+      ...(hasCopro ? { copro, ...(isSerie ? { coproSerie: copros } : {}) } : {}),
       ...(hasCoproscopico ? { coproscopico } : {}),
       ...(hasOrina ? { orina } : {}),
     }
@@ -311,10 +316,10 @@ export default function ExamResultForm({
   // Descarta lo digitado y vuelve a lo guardado
   function cancelEditing() {
     setValues(initialValues)
-    setCopro(readCopro(exam.structured))
+    setCopros(readCoproSerie(exam.structured, coproSections.length))
     setCoproscopico(readCoproscopico(exam.structured))
     setOrina(readOrina(exam.structured))
-    setSavedSnapshot(JSON.stringify({ values: initialValues, copro: readCopro(exam.structured), coproscopico: readCoproscopico(exam.structured), orina: readOrina(exam.structured) }))
+    setSavedSnapshot(JSON.stringify({ values: initialValues, copros: readCoproSerie(exam.structured, coproSections.length), coproscopico: readCoproscopico(exam.structured), orina: readOrina(exam.structured) }))
     setSaveError(null)
     setEditing(false)
   }
@@ -377,15 +382,25 @@ export default function ExamResultForm({
               <OrinaForm value={orina} onChange={v => { setOrina(v); setSaved(false) }} locked={locked} species={species} config={orinaConfig} reagents={reagents} />
             ) : isCoproscopicoSection(section.name) ? (
               <CoproForm
-                value={copro}
-                onChange={v => { setCopro(v); setSaved(false) }}
+                value={copros[coproSections.indexOf(section)]}
+                onChange={v => { setCoproAt(coproSections.indexOf(section), v); setSaved(false) }}
                 locked={locked}
                 examId={exam.id}
-                photo={exam.macroPhoto}
+                photo={exam.macroPhotos[coproPhotoRole(coproSections.indexOf(section))] ?? null}
+                photoRole={coproPhotoRole(coproSections.indexOf(section))}
+                askDate={isSerie}
                 extra={<CoproscopicoFields value={coproscopico} onChange={v => { setCoproscopico(v); setSaved(false) }} locked={locked} />}
               />
             ) : isCoproSection(section.name) ? (
-              <CoproForm value={copro} onChange={v => { setCopro(v); setSaved(false) }} locked={locked} examId={exam.id} photo={exam.macroPhoto} />
+              <CoproForm
+                value={copros[coproSections.indexOf(section)]}
+                onChange={v => { setCoproAt(coproSections.indexOf(section), v); setSaved(false) }}
+                locked={locked}
+                examId={exam.id}
+                photo={exam.macroPhotos[coproPhotoRole(coproSections.indexOf(section))] ?? null}
+                photoRole={coproPhotoRole(coproSections.indexOf(section))}
+                askDate={isSerie}
+              />
             ) : isDescriptiveSection(section.name, exam.template.name) ? (
               <table className="w-full text-xs">
                 <thead>

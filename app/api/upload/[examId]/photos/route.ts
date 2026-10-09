@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { del, put } from "@vercel/blob"
 import { randomUUID } from "crypto"
+import { isCoproPhotoRole } from "@/lib/coprologico"
 
 // Sube una foto a un examen de una orden. El navegador ya la manda comprimida a JPEG
 // (ver ExamResultForm), así cabe en el límite de Vercel y se puede incrustar en el PDF.
@@ -24,8 +25,10 @@ export async function POST(
   const exam = await prisma.orderExam.findUnique({ where: { id: params.examId }, select: { orderId: true } })
   if (!exam) return new NextResponse("Examen no encontrado", { status: 404 })
 
-  // role "COPRO_MACRO": foto de la muestra del Coprológico (una sola; reemplaza la anterior)
-  const role = formData.get("role") === "COPRO_MACRO" ? "COPRO_MACRO" : null
+  // role "COPRO_MACRO" (o "COPRO_MACRO_2", "_3"… en el Coprológico Seriado): foto de la muestra del
+  // Coprológico, una por bloque; reemplaza la anterior
+  const rawRole = formData.get("role")
+  const role = typeof rawRole === "string" && isCoproPhotoRole(rawRole) ? rawRole : null
 
   const blob = await put(`photos/${randomUUID()}.jpg`, file, {
     access: "private",

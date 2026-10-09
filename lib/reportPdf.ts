@@ -3,8 +3,9 @@ import { renderToBuffer } from "@react-pdf/renderer"
 import { get } from "@vercel/blob"
 import { PDFDocument } from "pdf-lib"
 import { PdfReport, type OrderData } from "@/components/PdfReport"
+import { isCoproPhotoRole } from "@/lib/coprologico"
 
-type ReportExam = Omit<OrderData["exams"][number], "photos" | "attachedPdf" | "macroPhoto"> & {
+type ReportExam = Omit<OrderData["exams"][number], "photos" | "attachedPdf" | "macroPhotos"> & {
   uploadedPdfPath: string | null
   status?: string
   photos: { id: string; url: string; role?: string | null }[] // role "COPRO_MACRO" = foto de la muestra del Coprológico
@@ -48,11 +49,13 @@ export async function buildOrderPdf(
         ...e,
         attachedPdf: !!e.uploadedPdfPath && !captured(e),
         extraPdf: !!e.uploadedPdfPath && captured(e),
-        macroPhoto: await (async () => {
-          const p = e.photos.find(x => x.role === "COPRO_MACRO")
-          const bytes = p ? await readBlob(p.url) : null
-          return bytes ? `data:image/jpeg;base64,${bytes.toString("base64")}` : null
-        })(),
+        // Fotos de la muestra del Coprológico, por role (COPRO_MACRO; en el Seriado también _2, _3…)
+        macroPhotos: Object.fromEntries((await Promise.all(
+          e.photos.filter(x => isCoproPhotoRole(x.role)).map(async x => {
+            const bytes = await readBlob(x.url)
+            return bytes ? ([x.role!, `data:image/jpeg;base64,${bytes.toString("base64")}`] as [string, string]) : null
+          }),
+        )).filter((x): x is [string, string] => x !== null)),
         photos: (
           await Promise.all(
             e.photos.filter(p => !p.role).map(async p => {

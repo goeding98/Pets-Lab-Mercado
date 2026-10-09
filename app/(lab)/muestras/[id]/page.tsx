@@ -12,6 +12,7 @@ import UpdateStatusButton from "./UpdateStatusButton"
 import PaymentModule from "./PaymentModule"
 import { orderPayment } from "@/lib/payment"
 import { catalogWhere } from "@/lib/catalog"
+import { isCoproPhotoRole } from "@/lib/coprologico"
 import { AddExam, ExamChanger } from "./ExamChanger"
 import OrderInfoEditor from "./OrderInfoEditor"
 import WhatsAppButton from "./WhatsAppButton"
@@ -239,7 +240,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
               exam={{
                 ...exam,
                 photos: exam.photos.filter(p => !p.role),
-                macroPhoto: exam.photos.find(p => p.role === "COPRO_MACRO") ?? null,
+                macroPhotos: Object.fromEntries(exam.photos.filter(p => isCoproPhotoRole(p.role)).map(p => [p.role!, { id: p.id }])),
               }}
               species={order.species}
               readOnly={!canEdit}
