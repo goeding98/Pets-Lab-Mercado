@@ -2,12 +2,13 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { markInvoiced, unmarkInvoiced } from "@/actions/invoicing"
+import { invoiceInSiigo } from "@/actions/siigo"
 import { formatCOP } from "@/lib/payment"
 import type { InvoiceClient } from "@/lib/invoicing"
 
 // Un cliente en Facturación: sus datos (para la factura), el resumen y sus órdenes con el detalle de
 // exámenes. Se eligen órdenes y se marcan como facturadas con el número de factura.
-export default function ClientCard({ client, defaultOpen }: { client: InvoiceClient; defaultOpen: boolean }) {
+export default function ClientCard({ client, defaultOpen, siigo }: { client: InvoiceClient; defaultOpen: boolean; siigo: boolean }) {
   const router = useRouter()
   const pendingIds = client.orders.filter(o => !o.invoiceNumber).map(o => o.id)
   const [open, setOpen] = useState(defaultOpen)
@@ -16,6 +17,22 @@ export default function ClientCard({ client, defaultOpen }: { client: InvoiceCli
   const [error, setError] = useState("")
   const [pending, startTransition] = useTransition()
   const selTotal = client.orders.filter(o => selected.includes(o.id)).reduce((n, o) => n + o.total, 0)
+
+  // Lo que le falta al cliente para facturarle en Siigo (los particulares sin clínica no van a Siigo desde aquí)
+  const missing = client.isParticular ? ["clínica con NIT"] : [!client.nit && "NIT", !client.billingEmail && "correo de facturación", !client.address && "dirección"].filter(Boolean) as string[]
+  const [done, setDone] = useState("")
+
+  function siigoInvoice() {
+    if (!confirm(`¿Emitir en Siigo la factura electrónica de ${client.name} por ${formatCOP(selTotal)} (${selected.length} ${selected.length === 1 ? "orden" : "órdenes"})? Siigo la envía a la DIAN.`)) return
+    setError("")
+    setDone("")
+    startTransition(async () => {
+      const res = await invoiceInSiigo(selected)
+      if (res.error) return setError(res.error)
+      setDone(`Factura ${res.invoice} emitida en Siigo.`)
+      router.refresh()
+    })
+  }
 
   const toggle = (id: string) => setSelected(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]))
 
@@ -127,11 +144,23 @@ export default function ClientCard({ client, defaultOpen }: { client: InvoiceCli
               <span className="font-sans text-xs text-ink">
                 {selected.length} {selected.length === 1 ? "orden seleccionada" : "órdenes seleccionadas"} · <strong>{formatCOP(selTotal)}</strong>
               </span>
+              {siigo && (
+                <button
+                  type="button"
+                  onClick={siigoInvoice}
+                  disabled={pending || selected.length === 0 || missing.length > 0}
+                  title={missing.length ? `Falta: ${missing.join(", ")}` : "Emite la factura electrónica en Siigo"}
+                  className="ml-auto bg-[#0f5fbd] text-white font-mono text-[9px] tracking-[0.15em] uppercase px-3 py-2 hover:bg-[#0c4f9e] disabled:opacity-40"
+                >
+                  {pending ? "Facturando…" : "Facturar en Siigo"}
+                </button>
+              )}
+              <span className={`font-mono text-[8px] tracking-[0.15em] uppercase text-ink-2 ${siigo ? "" : "ml-auto"}`}>{siigo ? "o a mano:" : "Factura N°:"}</span>
               <input
                 value={invoice}
                 onChange={e => setInvoice(e.target.value)}
                 placeholder="N° de factura (ej. FE-1024)"
-                className="border border-black/20 bg-white px-2 py-1.5 text-xs font-sans w-48 ml-auto"
+                className="border border-black/20 bg-white px-2 py-1.5 text-xs font-sans w-48"
               />
               <button
                 type="button"
@@ -141,7 +170,9 @@ export default function ClientCard({ client, defaultOpen }: { client: InvoiceCli
               >
                 {pending ? "Guardando…" : "Marcar como facturadas"}
               </button>
+              {siigo && missing.length > 0 && <p className="w-full font-sans text-[11px] text-amber-800">Para facturar en Siigo falta: {missing.join(", ")} (se completa en Clientes → la clínica).</p>}
               {error && <p className="w-full font-sans text-xs text-red-600">{error}</p>}
+              {done && <p className="w-full font-sans text-xs text-salvia-700">{done}</p>}
             </div>
           )}
         </div>

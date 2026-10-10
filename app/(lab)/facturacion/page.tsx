@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db"
 import { formatCOP } from "@/lib/payment"
 import { getInvoicing, type InvoiceFilter } from "@/lib/invoicing"
 import ClientCard from "./ClientCard"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { getSiigoSettings, siigoReady } from "@/lib/siigo"
 
 export const metadata: Metadata = { title: "Facturación" }
 export const dynamic = "force-dynamic"
@@ -21,6 +24,8 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
     const p = new URLSearchParams({ estado, ...(filter.desde ? { desde: filter.desde } : {}), ...(filter.hasta ? { hasta: filter.hasta } : {}), ...(filter.cliente ? { cliente: filter.cliente } : {}), ...patch })
     return `?${p}`
   }
+  const session = await getServerSession(authOptions)
+  const siigo = siigoReady(await getSiigoSettings())
   const missing = clients.filter(c => !c.isParticular && (!c.nit || !c.billingEmail || !c.address || !c.phone)).length
 
   return (
@@ -34,6 +39,15 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
         <a href={`/facturacion/csv${qs({})}`} className="border border-black/20 font-mono text-[9px] tracking-[0.18em] uppercase px-4 py-2.5 hover:bg-black/[0.03]">
           Descargar para Excel (CSV) ↓
         </a>
+      </div>
+
+      <div className={`flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 mb-4 border ${siigo ? "border-[#0f5fbd]/30 bg-[#0f5fbd]/[0.05]" : "border-amber-200 bg-amber-50"}`}>
+        <p className="font-sans text-xs text-ink">
+          {siigo ? <>Siigo <strong>conectado</strong>: cada cliente tiene el botón <strong>Facturar en Siigo</strong>.</> : <>Siigo <strong>no está conectado</strong>: por ahora se registra el número de factura a mano.</>}
+        </p>
+        {session?.user.role === "ADMIN" && (
+          <Link href="/facturacion/siigo" className="font-mono text-[9px] tracking-[0.15em] uppercase text-[#0f5fbd] hover:underline">{siigo ? "Configuración de Siigo" : "Conectar Siigo →"}</Link>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -86,7 +100,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
         </p>
       ) : (
         <div className="space-y-3">
-          {clients.map(c => <ClientCard key={c.key} client={c} defaultOpen={clients.length <= 3} />)}
+          {clients.map(c => <ClientCard key={c.key} client={c} defaultOpen={clients.length <= 3} siigo={siigo} />)}
         </div>
       )}
     </div>

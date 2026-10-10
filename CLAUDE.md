@@ -203,6 +203,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   invoicedByName`; una factura puede cubrir varias órdenes) y se puede deshacer. Pestañas Por facturar / Facturadas.
   `Clinic.billingEmail` = "correo de facturación" (para Siigo): por defecto el correo de la clínica; lo cambian la
   clínica (Portal Vet, inicio) y el personal (ficha de la clínica); se pide opcional en el registro.
+- Siigo (`lib/siigo.ts`, `actions/siigo.ts`, `/facturacion/siigo` solo ADMIN): credenciales de integración (usuario API +
+  access key, NO la contraseña web) y valores por defecto (comprobante FV, forma de pago, vendedor, producto, impuesto,
+  plazo, envío por correo) en `LabSetting "siigo"`, la llave cifrada con NEXTAUTH_SECRET. En Facturación, "Facturar en
+  Siigo" (`invoiceInSiigo`): órdenes de una misma clínica → busca/crea el cliente (NIT, DV, dirección, ciudad DANE, correo
+  de facturación) y emite la factura electrónica (un ítem por examen, precio neto); marca las órdenes con el número que
+  devuelve Siigo. Header Partner-Id "PetsLab".
 - Dashboard financiero (`app/(lab)/finanzas/`, `lib/finance.ts`, CSV en `/finanzas/csv`): solo Michel y Guillermo
   (`lib/permissions.ts: FINANCE_EMAILS` + `canSeeFinance`, revisado en middleware, menú y página; Marcelo es ADMIN
   pero no lo ve). Venta = precio neto de Caja el día que se registra la muestra (Bogotá); recaudado = `amountPaid`
