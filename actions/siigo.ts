@@ -46,11 +46,12 @@ export async function loadSiigoCatalogs() {
   }
 }
 
-export async function saveSiigoDefaults(d: Pick<SiigoSettings, "documentId" | "paymentId" | "sellerId" | "productCode" | "taxId" | "taxPercent" | "dueDays" | "sendEmail">): Promise<{ error?: string }> {
+export async function saveSiigoDefaults(d: Pick<SiigoSettings, "documentId" | "paymentCash" | "paymentTransfer" | "paymentCredit" | "sellerId" | "productCode" | "taxId" | "taxPercent" | "dueDays" | "sendEmail">): Promise<{ error?: string }> {
   await requireAdmin()
   const s = await getSiigoSettings()
   if (!s) return { error: "Primero conecta las credenciales." }
-  if (!d.documentId || !d.paymentId || !d.productCode) return { error: "Elige el comprobante, la forma de pago y el producto." }
+  if (!d.documentId || !d.productCode) return { error: "Elige el comprobante y el producto." }
+  if (!d.paymentCash || !d.paymentTransfer || !d.paymentCredit) return { error: "Elige la forma de pago de Siigo para efectivo, transferencia y por cobrar." }
   await saveSiigoSettings({ ...s, ...d, dueDays: Math.max(0, Math.min(120, Math.round(d.dueDays || 0))) })
   revalidatePath("/facturacion/siigo")
   revalidatePath("/facturacion")
@@ -91,6 +92,16 @@ export async function invoiceInSiigo(orderIds: string[]): Promise<{ error?: stri
     description: `${e.template.name} - ${o.patientName} (orden ${o.orderNumber})`,
     price: computeNetPrice(e.price, e.discountType, e.discountValue),
   }))).filter(l => l.price > 0)
+  // Forma de pago según lo registrado en Petslab: lo pagado (efectivo o transferencia) y lo que falta (por cobrar)
+  const split = { cash: 0, transfer: 0, credit: 0 }
+  for (const o of orders) for (const e of o.exams) {
+    const net = computeNetPrice(e.price, e.discountType, e.discountValue)
+    if (net <= 0) continue
+    const paid = Math.min(Math.max(e.amountPaid, 0), net)
+    if (e.paymentMethod === "TRANSFERENCIA") split.transfer += paid
+    else split.cash += paid
+    split.credit += net - paid
+  }
   if (lines.length === 0) return { error: "Estas órdenes no tienen valor a facturar." }
 
   try {
@@ -101,6 +112,7 @@ export async function invoiceInSiigo(orderIds: string[]): Promise<{ error?: stri
         address: c.address ?? branch?.address ?? null, city: c.city ?? branch?.city ?? null, contactName: c.contactName,
       },
       lines,
+      split,
       `Pets & Lab · Órdenes ${orders.map(o => o.orderNumber).join(", ")}`,
     )
     await prisma.order.updateMany({

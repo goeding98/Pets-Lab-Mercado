@@ -28,7 +28,7 @@ export default async function SiigoPage() {
       ) : (
         <SiigoSetup
           connectedAs={s?.username ?? null}
-          current={s ? { documentId: s.documentId, paymentId: s.paymentId, sellerId: s.sellerId, productCode: s.productCode, taxId: s.taxId, taxPercent: s.taxPercent, dueDays: s.dueDays, sendEmail: s.sendEmail } : null}
+          current={s ? { documentId: s.documentId, paymentCash: s.paymentCash, paymentTransfer: s.paymentTransfer, paymentCredit: s.paymentCredit, sellerId: s.sellerId, productCode: s.productCode, taxId: s.taxId, taxPercent: s.taxPercent, dueDays: s.dueDays, sendEmail: s.sendEmail } : null}
           ready={siigoReady(s)}
         />
       )}

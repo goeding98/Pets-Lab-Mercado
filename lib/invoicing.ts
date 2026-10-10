@@ -11,6 +11,7 @@ export type InvoiceLine = { name: string; price: number; discount: number; net: 
 export type InvoiceOrder = {
   id: string; orderNumber: string; date: string; patientName: string; species: string; ownerName: string | null
   branch: string | null; lines: InvoiceLine[]; total: number; paid: number; balance: number
+  cash: number; transfer: number // cómo se pagó (Caja / módulo de pago); balance = por cobrar
   completed: boolean; invoiceNumber: string | null; invoicedAt: string | null; invoicedByName: string | null
 }
 export type InvoiceClient = {
@@ -52,7 +53,9 @@ export async function getInvoicing(f: InvoiceFilter) {
     })
     const total = lines.reduce((n, l) => n + l.net, 0)
     if (total <= 0) continue // nada que facturar
-    const paid = o.exams.reduce((n, e) => n + Math.min(e.amountPaid, computeNetPrice(e.price, e.discountType, e.discountValue)), 0)
+    const paidOf = (e: (typeof o.exams)[number]) => Math.min(Math.max(e.amountPaid, 0), computeNetPrice(e.price, e.discountType, e.discountValue))
+    const paid = o.exams.reduce((n, e) => n + paidOf(e), 0)
+    const transfer = o.exams.filter(e => e.paymentMethod === "TRANSFERENCIA").reduce((n, e) => n + paidOf(e), 0)
 
     // Cliente = la clínica; una orden sin clínica es un particular (se factura al tutor)
     const key = o.clinicId ?? `particular:${o.id}`
@@ -74,7 +77,7 @@ export async function getInvoicing(f: InvoiceFilter) {
     c.orders.push({
       id: o.id, orderNumber: o.orderNumber, date: dayKey(o.createdAt), patientName: o.patientName, species: o.species,
       ownerName: o.ownerName, branch: o.branch ? `${o.branch.name} · ${o.branch.address}` : null,
-      lines, total, paid, balance: Math.max(total - paid, 0),
+      lines, total, paid, balance: Math.max(total - paid, 0), cash: paid - transfer, transfer,
       completed: o.exams.every(e => e.status === "COMPLETADO"),
       invoiceNumber: o.invoiceNumber, invoicedAt: o.invoicedAt ? dayKey(o.invoicedAt) : null, invoicedByName: o.invoicedByName,
     })

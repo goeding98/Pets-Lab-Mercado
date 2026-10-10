@@ -3,7 +3,7 @@ import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { disconnectSiigo, loadSiigoCatalogs, saveSiigoCredentials, saveSiigoDefaults } from "@/actions/siigo"
 
-type Defaults = { documentId: number | null; paymentId: number | null; sellerId: number | null; productCode: string; taxId: number | null; taxPercent: number; dueDays: number; sendEmail: boolean }
+type Defaults = { documentId: number | null; paymentCash: number | null; paymentTransfer: number | null; paymentCredit: number | null; sellerId: number | null; productCode: string; taxId: number | null; taxPercent: number; dueDays: number; sendEmail: boolean }
 type Catalogs = {
   documents: { id: number; name: string }[]; payments: { id: number; name: string }[]; users: { id: number; name: string }[]
   taxes: { id: number; name: string; percent: number }[]; products: { code: string; name: string }[]
@@ -19,7 +19,7 @@ export default function SiigoSetup({ connectedAs, current, ready }: { connectedA
   const [key, setKey] = useState("")
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [cats, setCats] = useState<Catalogs | null>(null)
-  const [d, setD] = useState<Defaults>(current ?? { documentId: null, paymentId: null, sellerId: null, productCode: "", taxId: null, taxPercent: 0, dueDays: 0, sendEmail: true })
+  const [d, setD] = useState<Defaults>(current ?? { documentId: null, paymentCash: null, paymentTransfer: null, paymentCredit: null, sellerId: null, productCode: "", taxId: null, taxPercent: 0, dueDays: 0, sendEmail: true })
   const [pending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -80,10 +80,20 @@ export default function SiigoSetup({ connectedAs, current, ready }: { connectedA
                 <select value={d.documentId ?? ""} onChange={e => setD({ ...d, documentId: Number(e.target.value) || null })} className={input}>
                   <option value="">Elegir…</option>{cats.documents.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
                 </select></div>
-              <div><span className={label}>Forma de pago *</span>
-                <select value={d.paymentId ?? ""} onChange={e => setD({ ...d, paymentId: Number(e.target.value) || null })} className={input}>
-                  <option value="">Elegir…</option>{cats.payments.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-                </select></div>
+              <div className="sm:col-span-2 border border-black/[0.06] bg-salvia-50/50 px-3 py-3">
+                <p className="font-sans text-xs text-ink mb-2">
+                  <strong>Forma de pago:</strong> sale de lo que se registró en Petslab en cada orden (Efectivo o Transferencia; lo no pagado
+                  va como por cobrar). Indica a qué forma de pago de Siigo corresponde cada una:
+                </p>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {([["paymentCash", "Efectivo *"], ["paymentTransfer", "Transferencia *"], ["paymentCredit", "Por cobrar / crédito *"]] as const).map(([k, l]) => (
+                    <div key={k}><span className={label}>{l}</span>
+                      <select value={d[k] ?? ""} onChange={e => setD({ ...d, [k]: Number(e.target.value) || null })} className={input}>
+                        <option value="">Elegir…</option>{cats.payments.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+                      </select></div>
+                  ))}
+                </div>
+              </div>
               <div><span className={label}>Producto / servicio *</span>
                 <select value={d.productCode} onChange={e => setD({ ...d, productCode: e.target.value })} className={input}>
                   <option value="">Elegir…</option>{cats.products.map(x => <option key={x.code} value={x.code}>{x.name} ({x.code})</option>)}
@@ -96,7 +106,7 @@ export default function SiigoSetup({ connectedAs, current, ready }: { connectedA
                 <select value={d.taxId ?? ""} onChange={e => { const t = cats.taxes.find(x => x.id === Number(e.target.value)); setD({ ...d, taxId: t?.id ?? null, taxPercent: t?.percent ?? 0 }) }} className={input}>
                   <option value="">Sin impuesto (excluido)</option>{cats.taxes.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
                 </select></div>
-              <div><span className={label}>Plazo de pago (días)</span>
+              <div><span className={label}>Plazo de lo por cobrar (días)</span>
                 <input type="number" min={0} max={120} value={d.dueDays} onChange={e => setD({ ...d, dueDays: Number(e.target.value) })} className={input} /></div>
               <label className="sm:col-span-2 flex items-center gap-2 font-sans text-sm text-ink">
                 <input type="checkbox" checked={d.sendEmail} onChange={e => setD({ ...d, sendEmail: e.target.checked })} className="accent-salvia-700" />

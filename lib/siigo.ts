@@ -15,16 +15,19 @@ export type SiigoSettings = {
   username: string
   accessKeyEnc: string // AES-256-GCM (iv.tag.data en base64)
   documentId: number | null // comprobante de factura de venta (FV)
-  paymentId: number | null // forma de pago
+  // Formas de pago de Siigo equivalentes a lo registrado en Petslab (OrderExam.paymentMethod / amountPaid):
+  paymentCash: number | null // lo pagado en efectivo
+  paymentTransfer: number | null // lo pagado por transferencia
+  paymentCredit: number | null // lo que no se ha pagado (cuenta por cobrar / crédito)
   sellerId: number | null // vendedor (usuario de Siigo)
   productCode: string // producto/servicio con el que se factura cada examen
   taxId: number | null // impuesto de los ítems (ej. IVA); null = sin impuesto
   taxPercent: number // para calcular el total del pago
-  dueDays: number // días de plazo del pago (0 = contado)
+  dueDays: number // plazo de la parte por cobrar (días)
   sendEmail: boolean // Siigo envía la factura al correo de facturación del cliente
 }
 export const SIIGO_DEFAULTS: Omit<SiigoSettings, "username" | "accessKeyEnc"> = {
-  documentId: null, paymentId: null, sellerId: null, productCode: "", taxId: null, taxPercent: 0, dueDays: 0, sendEmail: true,
+  documentId: null, paymentCash: null, paymentTransfer: null, paymentCredit: null, sellerId: null, productCode: "", taxId: null, taxPercent: 0, dueDays: 0, sendEmail: true,
 }
 
 const cipherKey = () => createHash("sha256").update(`siigo:${process.env.NEXTAUTH_SECRET ?? ""}`).digest()
@@ -52,7 +55,7 @@ export async function saveSiigoSettings(s: SiigoSettings) {
   await prisma.labSetting.upsert({ where: { key: KEY }, create: { key: KEY, value }, update: { value } })
 }
 export const siigoReady = (s: SiigoSettings | null): s is SiigoSettings =>
-  !!s && !!s.documentId && !!s.paymentId && !!s.productCode
+  !!s && !!s.documentId && !!s.productCode && !!s.paymentCash && !!s.paymentTransfer && !!s.paymentCredit
 
 // ── API ────────────────────────────────────────────────────────────────────────────────────────────
 export class SiigoError extends Error {}
@@ -172,9 +175,11 @@ async function ensureCustomer(t: string, c: SiigoClient): Promise<string> {
 
 // ── Factura ────────────────────────────────────────────────────────────────────────────────────────
 export type SiigoLine = { description: string; price: number }
+// Cómo se pagó lo que se factura, según Petslab (la suma es el total neto de los ítems)
+export type SiigoPaymentSplit = { cash: number; transfer: number; credit: number }
 
-export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient, lines: SiigoLine[], observations: string) {
-  if (!siigoReady(s)) throw new SiigoError("Falta configurar Siigo (comprobante, forma de pago y producto).")
+export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient, lines: SiigoLine[], split: SiigoPaymentSplit, observations: string) {
+  if (!siigoReady(s)) throw new SiigoError("Falta configurar Siigo (comprobante, producto y las formas de pago de efectivo, transferencia y por cobrar).")
   const missing = missingForSiigo(client)
   if (missing.length) throw new SiigoError(`Al cliente le falta: ${missing.join(", ")}.`)
   const t = await token(s)
@@ -188,7 +193,19 @@ export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient, 
     price: Math.round(l.price),
     ...(s.taxId ? { taxes: [{ id: s.taxId }] } : {}),
   }))
-  const total = items.reduce((n, i) => n + i.price * (1 + (s.taxId ? s.taxPercent / 100 : 0)), 0)
+  const total = Math.round(items.reduce((n, i) => n + i.price * (1 + (s.taxId ? s.taxPercent / 100 : 0)), 0) * 100) / 100
+  // Pagos: cada parte con su forma de pago de Siigo; si hay impuesto se reparte en proporción. El último
+  // pago absorbe el redondeo para que la suma sea exactamente el total de la factura.
+  const base = split.cash + split.transfer + split.credit
+  const parts = ([[s.paymentCash, split.cash, today], [s.paymentTransfer, split.transfer, today], [s.paymentCredit, split.credit, due]] as const)
+    .filter(([, v]) => v > 0)
+  if (parts.length === 0 || base <= 0) throw new SiigoError("La factura no tiene valor.")
+  let assigned = 0
+  const payments = parts.map(([id, v, date], i) => {
+    const value = i === parts.length - 1 ? Math.round((total - assigned) * 100) / 100 : Math.round((v / base) * total * 100) / 100
+    assigned += value
+    return { id, value, due_date: date }
+  })
   const inv = await api<{ id: string; name: string; number?: number }>(t, "/v1/invoices", {
     method: "POST",
     body: {
@@ -198,7 +215,7 @@ export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient, 
       ...(s.sellerId ? { seller: s.sellerId } : {}),
       observations: observations.slice(0, 4000),
       items,
-      payments: [{ id: s.paymentId, value: Math.round(total * 100) / 100, due_date: due }],
+      payments,
       stamp: { send: true }, // factura electrónica a la DIAN
       mail: { send: s.sendEmail }, // Siigo la envía al correo del cliente
     },

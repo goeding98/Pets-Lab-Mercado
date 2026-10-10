@@ -16,14 +16,22 @@ export default function ClientCard({ client, defaultOpen, siigo }: { client: Inv
   const [invoice, setInvoice] = useState("")
   const [error, setError] = useState("")
   const [pending, startTransition] = useTransition()
-  const selTotal = client.orders.filter(o => selected.includes(o.id)).reduce((n, o) => n + o.total, 0)
+  const selOrders = client.orders.filter(o => selected.includes(o.id))
+  const selTotal = selOrders.reduce((n, o) => n + o.total, 0)
+  const sel = { cash: selOrders.reduce((n, o) => n + o.cash, 0), transfer: selOrders.reduce((n, o) => n + o.transfer, 0), credit: selOrders.reduce((n, o) => n + o.balance, 0) }
+  const payText = (p: { cash: number; transfer: number; credit: number }) =>
+    [p.cash > 0 && `Efectivo ${formatCOP(p.cash)}`, p.transfer > 0 && `Transferencia ${formatCOP(p.transfer)}`, p.credit > 0 && `Por cobrar ${formatCOP(p.credit)}`].filter(Boolean).join(" · ") || "—"
 
   // Lo que le falta al cliente para facturarle en Siigo (los particulares sin clínica no van a Siigo desde aquí)
   const missing = client.isParticular ? ["clínica con NIT"] : [!client.nit && "NIT", !client.billingEmail && "correo de facturación", !client.address && "dirección"].filter(Boolean) as string[]
   const [done, setDone] = useState("")
 
   function siigoInvoice() {
-    if (!confirm(`¿Emitir en Siigo la factura electrónica de ${client.name} por ${formatCOP(selTotal)} (${selected.length} ${selected.length === 1 ? "orden" : "órdenes"})? Siigo la envía a la DIAN.`)) return
+    if (!confirm(`¿Emitir en Siigo la factura electrónica de ${client.name} por ${formatCOP(selTotal)} (${selected.length} ${selected.length === 1 ? "orden" : "órdenes"})?
+
+Forma de pago: ${payText(sel)}
+
+Siigo la envía a la DIAN.`)) return
     setError("")
     setDone("")
     startTransition(async () => {
@@ -89,8 +97,8 @@ export default function ClientCard({ client, defaultOpen, siigo }: { client: Inv
               <thead>
                 <tr className="text-left border-b border-black/10">
                   <th className="pb-2 pr-2 w-6"></th>
-                  {["Orden", "Fecha", "Paciente", "Exámenes", "Valor", "Pagado", "Factura"].map(h => (
-                    <th key={h} className={`font-mono text-[8px] tracking-[0.15em] uppercase text-salvia-700 pb-2 pr-3 ${["Valor", "Pagado"].includes(h) ? "text-right" : ""}`}>{h}</th>
+                  {["Orden", "Fecha", "Paciente", "Exámenes", "Valor", "Forma de pago", "Factura"].map(h => (
+                    <th key={h} className={`font-mono text-[8px] tracking-[0.15em] uppercase text-salvia-700 pb-2 pr-3 ${h === "Valor" ? "text-right" : ""}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -123,7 +131,11 @@ export default function ClientCard({ client, defaultOpen, siigo }: { client: Inv
                       ))}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums font-medium whitespace-nowrap">{formatCOP(o.total)}</td>
-                    <td className={`py-2 pr-3 text-right tabular-nums whitespace-nowrap ${o.balance > 0 ? "text-red-700" : "text-ink-2"}`}>{formatCOP(o.paid)}</td>
+                    <td className="py-2 pr-3 text-[11px] leading-snug">
+                      {o.cash > 0 && <span className="block text-ink">Efectivo {formatCOP(o.cash)}</span>}
+                      {o.transfer > 0 && <span className="block text-ink">Transferencia {formatCOP(o.transfer)}</span>}
+                      {o.balance > 0 && <span className="block text-red-700">Por cobrar {formatCOP(o.balance)}</span>}
+                    </td>
                     <td className="py-2 whitespace-nowrap">
                       {o.invoiceNumber ? (
                         <span className="block">
@@ -143,6 +155,7 @@ export default function ClientCard({ client, defaultOpen, siigo }: { client: Inv
             <div className="flex flex-wrap items-center gap-2 mt-4 bg-salvia-50/60 border border-black/[0.06] px-3 py-3">
               <span className="font-sans text-xs text-ink">
                 {selected.length} {selected.length === 1 ? "orden seleccionada" : "órdenes seleccionadas"} · <strong>{formatCOP(selTotal)}</strong>
+                {selected.length > 0 && <span className="block text-[11px] text-ink-2">Forma de pago: {payText(sel)}</span>}
               </span>
               {siigo && (
                 <button
