@@ -201,6 +201,8 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   sin Pets & Pets (noCharge), agrupadas por cliente con nombre, NIT, teléfono, correo y dirección (de la clínica; sin
   clínica = particular a nombre del tutor). Se marcan facturadas con número (`Order.invoiceNumber/invoicedAt/
   invoicedByName`; una factura puede cubrir varias órdenes) y se puede deshacer. Pestañas Por facturar / Facturadas.
+  `Clinic.billingEmail` = "correo de facturación" (para Siigo): por defecto el correo de la clínica; lo cambian la
+  clínica (Portal Vet, inicio) y el personal (ficha de la clínica); se pide opcional en el registro.
 - Dashboard financiero (`app/(lab)/finanzas/`, `lib/finance.ts`, CSV en `/finanzas/csv`): solo Michel y Guillermo
   (`lib/permissions.ts: FINANCE_EMAILS` + `canSeeFinance`, revisado en middleware, menú y página; Marcelo es ADMIN
   pero no lo ve). Venta = precio neto de Caja el día que se registra la muestra (Bogotá); recaudado = `amountPaid`

@@ -21,7 +21,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
     const p = new URLSearchParams({ estado, ...(filter.desde ? { desde: filter.desde } : {}), ...(filter.hasta ? { hasta: filter.hasta } : {}), ...(filter.cliente ? { cliente: filter.cliente } : {}), ...patch })
     return `?${p}`
   }
-  const missing = clients.filter(c => !c.isParticular && (!c.nit || !c.email || !c.address || !c.phone)).length
+  const missing = clients.filter(c => !c.isParticular && (!c.nit || !c.billingEmail || !c.address || !c.phone)).length
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-6xl">

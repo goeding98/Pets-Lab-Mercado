@@ -17,9 +17,9 @@ export async function GET(req: Request) {
     const s = v === null ? "" : String(v)
     return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
-  const header = ["Cliente", "NIT / Cédula", "Teléfono", "Correo", "Dirección", "Orden", "Fecha", "Paciente", "Tutor", "Examen", "Precio lista", "Descuento", "Valor neto", "Total orden", "Pagado orden", "Factura N°"]
+  const header = ["Cliente", "NIT / Cédula", "Teléfono", "Correo facturación", "Dirección", "Orden", "Fecha", "Paciente", "Tutor", "Examen", "Precio lista", "Descuento", "Valor neto", "Total orden", "Pagado orden", "Factura N°"]
   const rows = clients.flatMap(c => c.orders.flatMap(o => o.lines.map(l => [
-    c.name, c.nit, c.phone, c.email, c.address, o.orderNumber, o.date, o.patientName, o.ownerName,
+    c.name, c.nit, c.phone, c.billingEmail, c.address, o.orderNumber, o.date, o.patientName, o.ownerName,
     l.name, Math.round(l.price), Math.round(l.discount), Math.round(l.net), Math.round(o.total), Math.round(o.paid), o.invoiceNumber,
   ])))
   const csv = "﻿" + [header, ...rows].map(r => r.map(cell).join(";")).join("\r\n")

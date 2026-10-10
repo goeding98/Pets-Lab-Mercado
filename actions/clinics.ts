@@ -21,7 +21,9 @@ export async function createClinic(formData: FormData): Promise<{ error?: string
 
   const name = ((formData.get("name") as string) ?? "").trim()
   const email = normalizeEmail(formData.get("email"))
+  const billingEmail = normalizeEmail(formData.get("billingEmail"))
   if (!name) return { error: "Ponle el nombre a la clínica." }
+  if (billingEmail && !isValidEmail(billingEmail)) return { error: "El correo de facturación no es válido." }
   if (!isValidEmail(email)) return { error: "El correo es obligatorio: es el usuario del Portal Vet." }
   if (await prisma.user.findUnique({ where: { email } })) {
     return { error: "Ya existe una cuenta con ese correo. Búscala en Clientes." }
@@ -34,6 +36,7 @@ export async function createClinic(formData: FormData): Promise<{ error?: string
       address: (formData.get("address") as string) || null,
       phone: (formData.get("phone") as string) || null,
       email,
+      billingEmail: billingEmail || email,
       contactName: (formData.get("contactName") as string) || null,
       neighborhood: (formData.get("neighborhood") as string) || null,
       city: (formData.get("city") as string) || null,
@@ -67,7 +70,9 @@ export async function updateClinic(id: string, formData: FormData): Promise<{ er
   const session = await requireEditor()
 
   const email = normalizeEmail(formData.get("email"))
+  const billingEmail = normalizeEmail(formData.get("billingEmail"))
   if (email && !isValidEmail(email)) return { error: "El correo no es válido." }
+  if (billingEmail && !isValidEmail(billingEmail)) return { error: "El correo de facturación no es válido." }
   const current = await prisma.clinic.findUnique({ where: { id }, include: { users: { where: { role: "CLINIC" } } } })
   if (!current) return { error: "Clínica no encontrada." }
 
@@ -86,6 +91,7 @@ export async function updateClinic(id: string, formData: FormData): Promise<{ er
       address: (formData.get("address") as string) || null,
       phone: (formData.get("phone") as string) || null,
       email: email || null,
+      billingEmail: billingEmail || email || null,
       contactName: (formData.get("contactName") as string) || null,
       neighborhood: (formData.get("neighborhood") as string) || null,
       city: (formData.get("city") as string) || null,

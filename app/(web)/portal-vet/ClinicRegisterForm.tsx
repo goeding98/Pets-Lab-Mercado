@@ -12,6 +12,7 @@ const ACCOUNT: Field[] = [
   { name: "nit", label: "NIT o cédula", placeholder: "900.123.456-7" },
   { name: "contactName", label: "Nombre de la persona", placeholder: "Nombre y apellido", autoComplete: "name" },
   { name: "email", label: "Correo electrónico", type: "email", placeholder: "contacto@miclinica.com", full: true, autoComplete: "email" },
+  { name: "billingEmail", label: "Correo de facturación (si es otro)", type: "email", placeholder: "Si lo dejas vacío, usamos el correo de arriba", full: true, optional: true },
   { name: "phone", label: "WhatsApp (para enviarte resultados)", type: "tel", placeholder: "310 780 0332", full: true, autoComplete: "tel" },
 ]
 // La dirección de la cuenta es la sede principal; se pueden agregar más sedes (mismo NIT)

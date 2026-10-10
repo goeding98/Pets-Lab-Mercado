@@ -23,6 +23,7 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
   const neighborhood = get("neighborhood")
   const city = get("city")
   const phone = get("phone").slice(0, 30)
+  const billingEmail = get("billingEmail").toLowerCase()
   const password = (formData.get("password") as string) ?? ""
   const confirm = (formData.get("confirmPassword") as string) ?? ""
 
@@ -32,6 +33,7 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "El correo no es válido." }
   if (onlyDigits(nit).length < 5) return { error: "El NIT o cédula no es válido." }
   if (onlyDigits(phone).length < 10) return { error: "El WhatsApp no es válido (ej. 310 780 0332)." }
+  if (billingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail)) return { error: "El correo de facturación no es válido." }
   if (password.length < 8) return { error: "La contraseña debe tener al menos 8 caracteres." }
   if (password !== confirm) return { error: "Las contraseñas no coinciden." }
 
@@ -64,6 +66,7 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
       name,
       nit,
       email,
+      billingEmail: billingEmail || email,
       phone,
       address,
       contactName,
@@ -121,4 +124,16 @@ export async function createPortalOrder(formData: FormData) {
   revalidatePath("/muestras")
   revalidatePath("/dashboard")
   redirect("/portal-vet/dashboard?enviada=1")
+}
+
+// La clínica cambia su correo de facturación (a donde le llegan las facturas) desde su Portal Vet
+export async function updateMyBillingEmail(value: string): Promise<{ error?: string }> {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) return { error: "No autorizado" }
+  const email = value.trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Escribe un correo válido." }
+  await prisma.clinic.update({ where: { id: session.user.clinicId }, data: { billingEmail: email } })
+  revalidatePath("/portal-vet/dashboard")
+  revalidatePath("/facturacion")
+  return {}
 }

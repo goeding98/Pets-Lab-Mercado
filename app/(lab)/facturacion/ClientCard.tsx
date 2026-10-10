@@ -34,7 +34,7 @@ export default function ClientCard({ client, defaultOpen }: { client: InvoiceCli
   }
 
   const info: [string, string | null][] = [
-    ["NIT / Cédula", client.nit], ["Teléfono", client.phone], ["Correo", client.email], ["Dirección", client.address],
+    ["NIT / Cédula", client.nit], ["Teléfono", client.phone], ["Correo facturación", client.billingEmail], ["Dirección", client.address],
     ...(client.contactName && !client.isParticular ? [["Contacto", client.contactName] as [string, string]] : []),
   ]
 

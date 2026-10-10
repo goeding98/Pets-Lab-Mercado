@@ -14,7 +14,7 @@ export type InvoiceOrder = {
   completed: boolean; invoiceNumber: string | null; invoicedAt: string | null; invoicedByName: string | null
 }
 export type InvoiceClient = {
-  key: string; name: string; nit: string | null; phone: string | null; email: string | null; address: string | null
+  key: string; name: string; nit: string | null; phone: string | null; email: string | null; billingEmail: string | null; address: string | null
   contactName: string | null; isParticular: boolean
   orders: InvoiceOrder[]; total: number; paid: number; balance: number
 }
@@ -61,13 +61,13 @@ export async function getInvoicing(f: InvoiceFilter) {
       c = o.clinic
         ? {
             key, name: o.clinic.name.trim(), nit: o.clinic.nit, contactName: o.clinic.contactName,
-            phone: o.clinic.phone ?? o.branch?.phone ?? null, email: o.clinic.email,
+            phone: o.clinic.phone ?? o.branch?.phone ?? null, email: o.clinic.email, billingEmail: o.clinic.billingEmail ?? o.clinic.email,
             address: [o.clinic.address ?? o.branch?.address, o.clinic.neighborhood, o.clinic.city].filter(Boolean).join(", ") || null,
             isParticular: false, orders: [], total: 0, paid: 0, balance: 0,
           }
         : {
             key, name: o.ownerName?.trim() || "Particular (sin tutor registrado)", nit: null, contactName: null,
-            phone: null, email: null, address: null, isParticular: true, orders: [], total: 0, paid: 0, balance: 0,
+            phone: null, email: null, billingEmail: null, address: null, isParticular: true, orders: [], total: 0, paid: 0, balance: 0,
           }
       clients.set(key, c)
     }

@@ -47,6 +47,11 @@ export default function ClinicaForm({ clinic, canSetNoCharge = false }: { clinic
             )}
           </div>
           <div className="col-span-2">
+            <Label>Correo de facturación</Label>
+            <Input name="billingEmail" type="email" defaultValue={clinic?.billingEmail ?? clinic?.email ?? ""} placeholder="Si se deja vacío, se usa el correo de arriba" />
+            <p className="font-sans text-[11px] text-ink-2 mt-1">A este correo llegan las facturas (Siigo).</p>
+          </div>
+          <div className="col-span-2">
             <Label>Persona de contacto</Label>
             <Input name="contactName" defaultValue={clinic?.contactName ?? ""} placeholder="Nombre y apellido" />
           </div>

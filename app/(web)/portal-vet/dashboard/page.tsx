@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import LogoutButton from "./LogoutButton"
+import BillingEmail from "./BillingEmail"
 import { formatCOP, orderPayment } from "@/lib/payment"
 
 export const metadata: Metadata = { title: "Portal Vet" }
@@ -31,7 +32,7 @@ export default async function PortalVetDashboardPage({
     select: { id: true, name: true },
   })
   const sede = branches.some(b => b.id === searchParams.sede) ? searchParams.sede : undefined
-  const clinic = await prisma.clinic.findUnique({ where: { id: session.user.clinicId }, select: { noCharge: true } })
+  const clinic = await prisma.clinic.findUnique({ where: { id: session.user.clinicId }, select: { noCharge: true, billingEmail: true, email: true } })
   const noCharge = clinic?.noCharge ?? false
   const orders = await prisma.order.findMany({
     where: {
@@ -73,6 +74,7 @@ export default async function PortalVetDashboardPage({
           <p className="font-mono text-[9px] tracking-[0.15em] text-ink-2 uppercase mt-1">
             {patients.size} pacientes · {totalExams} exámenes · {ready} resultados listos
           </p>
+          <BillingEmail initial={clinic?.billingEmail ?? clinic?.email ?? ""} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link

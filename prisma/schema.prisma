@@ -27,6 +27,7 @@ model Clinic {
   address      String?
   phone        String?
   email        String?
+  billingEmail String? // correo de facturación (Siigo); por defecto el mismo correo de la clínica
   contactName  String? // persona de contacto (registro desde el Portal Vet)
   neighborhood String? // barrio
   city         String?
