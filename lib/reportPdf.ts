@@ -4,6 +4,7 @@ import { get } from "@vercel/blob"
 import { PDFDocument } from "pdf-lib"
 import { PdfReport, type OrderData } from "@/components/PdfReport"
 import { isCoproPhotoRole } from "@/lib/coprologico"
+import { applyAgeRanges } from "@/lib/ageRanges"
 
 type ReportExam = Omit<OrderData["exams"][number], "photos" | "attachedPdf" | "macroPhotos"> & {
   uploadedPdfPath: string | null
@@ -30,6 +31,10 @@ export async function buildOrderPdf(
   order: Omit<OrderData, "exams">,
   exams: ReportExam[],
 ): Promise<Uint8Array> {
+  // Cachorros: rangos del hemograma según la edad (lib/ageRanges.ts)
+  const age = await applyAgeRanges(exams, order.age)
+  exams = age.exams
+  order = { ...order, ageNote: age.note }
   // En el reporte de la orden solo van los exámenes completados (un pendiente saldría vacío); si se
   // pide un solo examen, o ninguno está completo, van todos.
   // Un examen pendiente puede tener un borrador guardado: nunca sale en un reporte (va vacío)

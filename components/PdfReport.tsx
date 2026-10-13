@@ -130,6 +130,7 @@ export type OrderData = {
   branch?: { name: string; address: string } | null
   processedBy?: { name: string } | null
   orinaConfig?: OrinaConfig // valores de referencia del Parcial de Orina (LabSetting)
+  ageNote?: string | null // rangos del hemograma ajustados a la edad (cachorros, lib/ageRanges.ts)
   exams: {
     id: string
     template: {
@@ -506,6 +507,8 @@ export function PdfReport({ order }: { order: OrderData }) {
             {order.branch && <PatientInfo label="Sede" value={`${order.branch.name} · ${order.branch.address}`} />}
             {order.requestingVet && <PatientInfo label="Veterinario" value={order.requestingVet} />}
           </View>
+
+          {!!order.ageNote && <Text style={[styles.attachedNote, { marginTop: 0, marginBottom: 8 }]}>{order.ageNote}.</Text>}
 
           {/* Exams */}
           {order.exams.map(exam => {

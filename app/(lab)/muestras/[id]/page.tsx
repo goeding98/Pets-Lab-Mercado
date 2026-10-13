@@ -13,6 +13,7 @@ import PaymentModule from "./PaymentModule"
 import { orderPayment } from "@/lib/payment"
 import { catalogWhere } from "@/lib/catalog"
 import { isCoproPhotoRole } from "@/lib/coprologico"
+import { applyAgeRanges } from "@/lib/ageRanges"
 import { AddExam, ExamChanger } from "./ExamChanger"
 import OrderInfoEditor from "./OrderInfoEditor"
 import WhatsAppButton from "./WhatsAppButton"
@@ -55,6 +56,9 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
   })
 
   if (!order) notFound()
+  // Cachorros: el hemograma (también el de los perfiles) usa los rangos de su edad (lib/ageRanges.ts)
+  const age = await applyAgeRanges(order.exams, order.age)
+  order.exams = age.exams
 
   const session = await getServerSession(authOptions)
   const canEdit = can(session?.user.role, "resultados.editar")
@@ -162,6 +166,12 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
           )}
         </div>
       </div>
+
+      {age.note && (
+        <p className="font-sans text-xs text-azul-800 bg-azul-50 border border-azul-200 px-3 py-2 mb-4">
+          <strong>Rangos ajustados a la edad:</strong> {age.note}. Se aplican al hemograma de esta muestra (también dentro de perfiles) y al PDF.
+        </p>
+      )}
 
       {/* Info cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">

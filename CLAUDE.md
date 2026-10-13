@@ -134,7 +134,9 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Las copias no se editan aparte. Vínculos creados con `scripts/vincular-rangos.ts` (idempotente;
   correrlo de nuevo si se crea un perfil/examen derivado fuera de Promociones). `composeSections`
   liga solas las promociones nuevas. "Hemograma 0 - 2 Meses", "Hemograma 2.5 - 3 Meses" y "Hemograma 4 - 6 Meses" son maestros
-  aparte (copia del Completo, rangos propios). Cambiar un rango no recalcula el "fuera de rango" de
+  aparte (copia del Completo, rangos propios). Si la orden es de un cachorro (Order.age ≤ 6 meses, `lib/ageRanges.ts`),
+  el hemograma de adulto —también dentro de perfiles y el Simple— toma los rangos del hemograma de su edad (mismo `key`)
+  en el formulario, el "fuera de rango" y el PDF (sin tocar la base; sale una nota). Cambiar un rango no recalcula el "fuera de rango" de
   resultados ya guardados.
 - Coprológico = resultado estructurado, no por campos (`lib/coprologico.ts`, formulario
   `components/CoproForm.tsx`, PDF `CoproPdf` en `components/PdfReport.tsx`): macroscópico con selectores
