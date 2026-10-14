@@ -104,7 +104,7 @@ export async function siigoCatalogs(s: SiigoSettings) {
     api<{ results?: { code: string; name: string; active?: boolean; type?: string }[] }>(t, "/v1/products?page_size=100"),
   ])
   return {
-    documents: documents.filter(d => d.active !== false).map(d => ({ id: d.id, name: `${d.name}${d.code ? ` (FV-${d.code})` : ""}${d.electronic_type ? " · electrónica" : ""}` })),
+    documents: documents.filter(d => d.active !== false).map(d => ({ id: d.id, name: `${d.name}${d.code ? ` (FV-${d.code})` : ""}${d.electronic_type && d.electronic_type !== "NoElectronic" ? " · electrónica" : ""}` })),
     payments: payments.filter(p => p.active !== false).map(p => ({ id: p.id, name: p.name })),
     users: (users.results ?? []).filter(u => u.active !== false).map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}`.trim() })),
     taxes: taxes.filter(x => x.active !== false).map(x => ({ id: x.id, name: x.name, percent: x.percentage ?? 0 })),
