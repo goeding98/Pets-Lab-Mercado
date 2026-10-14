@@ -21,6 +21,7 @@ export default function SiigoSetup({ connectedAs, current, ready }: { connectedA
   const [cats, setCats] = useState<Catalogs | null>(null)
   const [d, setD] = useState<Defaults>(current ?? { documentId: null, paymentCash: null, paymentTransfer: null, paymentCredit: null, sellerId: null, productCode: "", taxId: null, taxPercent: 0, dueDays: 0, sendEmail: true })
   const [pending, startTransition] = useTransition()
+  const [prodQ, setProdQ] = useState("")
 
   useEffect(() => {
     if (!connectedAs) return
@@ -94,9 +95,11 @@ export default function SiigoSetup({ connectedAs, current, ready }: { connectedA
                   ))}
                 </div>
               </div>
-              <div><span className={label}>Producto / servicio *</span>
+              <div><span className={label}>Producto / servicio * ({cats.products.length} en Siigo)</span>
+                <input value={prodQ} onChange={e => setProdQ(e.target.value)} placeholder="Buscar por nombre o código…" className={`${input} mb-1.5`} />
                 <select value={d.productCode} onChange={e => setD({ ...d, productCode: e.target.value })} className={input}>
-                  <option value="">Elegir…</option>{cats.products.map(x => <option key={x.code} value={x.code}>{x.name} ({x.code})</option>)}
+                  <option value="">Elegir…</option>
+                  {cats.products.filter(x => x.code === d.productCode || `${x.name} ${x.code}`.toLowerCase().includes(prodQ.trim().toLowerCase())).map(x => <option key={x.code} value={x.code}>{x.name} ({x.code})</option>)}
                 </select></div>
               <div><span className={label}>Vendedor</span>
                 <select value={d.sellerId ?? ""} onChange={e => setD({ ...d, sellerId: Number(e.target.value) || null })} className={input}>

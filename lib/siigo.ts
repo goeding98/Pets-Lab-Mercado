@@ -93,22 +93,36 @@ export async function testSiigoCredentials(username: string, accessKey: string) 
   await token({ username, accessKeyEnc: encryptSecret(accessKey) })
 }
 
+// Listas paginadas de Siigo (máx. 100 por página): trae todas, de a 5 páginas en paralelo
+type Paged<T> = { results?: T[]; pagination?: { page: number; page_size: number; total_results: number } }
+async function allPages<T>(tok: string, path: string): Promise<T[]> {
+  const sep = path.includes("?") ? "&" : "?"
+  const first = await api<Paged<T>>(tok, `${path}${sep}page_size=100&page=1`)
+  const out = [...(first.results ?? [])]
+  const pages = Math.ceil((first.pagination?.total_results ?? out.length) / 100)
+  for (let p = 2; p <= pages; p += 5) {
+    const batch = await Promise.all(Array.from({ length: Math.min(5, pages - p + 1) }, (_, i) => api<Paged<T>>(tok, `${path}${sep}page_size=100&page=${p + i}`)))
+    for (const b of batch) out.push(...(b.results ?? []))
+  }
+  return out
+}
+
 // Listas para elegir los valores por defecto en la pantalla de configuración
 export async function siigoCatalogs(s: SiigoSettings) {
   const t = await token(s)
   const [documents, payments, users, taxes, products] = await Promise.all([
     api<{ id: number; name: string; code?: number; active?: boolean; electronic_type?: string }[]>(t, "/v1/document-types?type=FV"),
     api<{ id: number; name: string; type?: string; active?: boolean }[]>(t, "/v1/payment-types?document_type=FV"),
-    api<{ results?: { id: number; first_name: string; last_name: string; active?: boolean }[] }>(t, "/v1/users"),
+    allPages<{ id: number; first_name: string; last_name: string; active?: boolean }>(t, "/v1/users"),
     api<{ id: number; name: string; type?: string; percentage?: number; active?: boolean }[]>(t, "/v1/taxes"),
-    api<{ results?: { code: string; name: string; active?: boolean; type?: string }[] }>(t, "/v1/products?page_size=100"),
+    allPages<{ code: string; name: string; active?: boolean; type?: string }>(t, "/v1/products"),
   ])
   return {
     documents: documents.filter(d => d.active !== false).map(d => ({ id: d.id, name: `${d.name}${d.code ? ` (FV-${d.code})` : ""}${d.electronic_type && d.electronic_type !== "NoElectronic" ? " · electrónica" : ""}` })),
     payments: payments.filter(p => p.active !== false).map(p => ({ id: p.id, name: p.name })),
-    users: (users.results ?? []).filter(u => u.active !== false).map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}`.trim() })),
+    users: users.filter(u => u.active !== false).map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}`.trim() })),
     taxes: taxes.filter(x => x.active !== false).map(x => ({ id: x.id, name: x.name, percent: x.percentage ?? 0 })),
-    products: (products.results ?? []).filter(p => p.active !== false).map(p => ({ code: p.code, name: p.name })),
+    products: products.filter(p => p.active !== false).map(p => ({ code: p.code, name: p.name.trim() })).sort((a, b) => a.name.localeCompare(b.name, "es")),
   }
 }
 
