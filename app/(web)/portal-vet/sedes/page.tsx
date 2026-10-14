@@ -2,14 +2,14 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import { authOptions } from "@/lib/auth"
+import { portalAuthOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import BranchManager from "@/components/BranchManager"
 
 export const metadata: Metadata = { title: "Mis sedes · Portal Vet" }
 
 export default async function MisSedesPage() {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(portalAuthOptions)
   if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) redirect("/portal-vet")
 
   const branches = await prisma.clinicBranch.findMany({

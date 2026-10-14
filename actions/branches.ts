@@ -1,14 +1,13 @@
 "use server"
 import { revalidatePath } from "next/cache"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { getAnySession } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 
 // Sedes de una clínica. Las edita el staff con permiso de clientes, o la propia clínica (solo las suyas)
 // desde el Portal Vet.
 async function authorize(clinicId: string): Promise<string | null> {
-  const session = await getServerSession(authOptions)
+  const session = await getAnySession()
   if (!session) return "No autorizado"
   if (session.user.role === "CLINIC") return session.user.clinicId === clinicId ? null : "No autorizado"
   return can(session.user.role, "clientes.editar") ? null : "No autorizado"

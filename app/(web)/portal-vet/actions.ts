@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import bcrypt from "bcryptjs"
-import { authOptions } from "@/lib/auth"
+import { portalAuthOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
 import { assertOrderableTemplates } from "@/lib/catalog"
@@ -86,7 +86,7 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
 // Solicitud de exámenes creada por la clínica. Queda como SOLICITADA hasta que el laboratorio
 // recibe la muestra físicamente y la marca como RECIBIDA en /muestras.
 export async function createPortalOrder(formData: FormData) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(portalAuthOptions)
   if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) throw new Error("No autorizado")
 
   const templateIds = formData.getAll("templateIds") as string[]
@@ -128,7 +128,7 @@ export async function createPortalOrder(formData: FormData) {
 
 // La clínica cambia su correo de facturación (a donde le llegan las facturas) desde su Portal Vet
 export async function updateMyBillingEmail(value: string): Promise<{ error?: string }> {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(portalAuthOptions)
   if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) return { error: "No autorizado" }
   const email = value.trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Escribe un correo válido." }

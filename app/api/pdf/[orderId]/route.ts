@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { getAnySession } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { buildOrderPdf } from "@/lib/reportPdf"
 import { getOrinaConfig } from "@/lib/settings"
@@ -10,7 +9,7 @@ export async function GET(
   req: Request,
   { params }: { params: { orderId: string } }
 ) {
-  const session = await getServerSession(authOptions)
+  const session = await getAnySession()
   if (!session) return new NextResponse("No autorizado", { status: 401 })
 
   const order = await prisma.order.findUnique({

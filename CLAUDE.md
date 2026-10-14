@@ -27,6 +27,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
 - `app/(lab)/` — LIMS interno para el staff del laboratorio (Panel/Dashboard, Muestras,
   Clientes, Usuarios). Requiere sesión de staff (no CLINIC).
 - `app/(auth)/` — login y registro.
+- **Dos sesiones separadas** (`lib/auth.ts`): el LIMS usa `authOptions` (`/api/auth`, cookie por defecto, solo provider
+  "staff") y el Portal Vet `portalAuthOptions` (`/api/portal-auth`, cookie `PORTAL_SESSION_COOKIE` de
+  `lib/sessionCookies.ts`, provider "clinic"). Estar conectado en uno no da acceso al otro y conviven en el navegador.
+  Páginas/acciones del portal: `getServerSession(portalAuthOptions)`; rutas compartidas (PDF, fotos, sedes):
+  `getAnySession()`. El portal inicia/cierra sesión con `lib/portalAuthClient.ts` (next-auth/react solo habla con
+  /api/auth). No volver a una sola sesión para los dos.
 - `middleware.ts` — controla el acceso por rol: `CLINIC` va a `/portal-vet/dashboard`; el
   personal interno entra a las rutas de `(lab)` según sus permisos. Revisar aquí antes de
   tocar rutas protegidas.
@@ -236,6 +242,11 @@ ruta de API — el filesystem de Vercel es de solo lectura en producción y esas
 fallan silenciosamente en el cliente (bug real que causó horas de "se queda subiendo").
 Requiere la env var `BLOB_READ_WRITE_TOKEN` (se agrega sola al conectar un Blob store al
 proyecto en Vercel).
+
+## Región: funciones en São Paulo (`vercel.json`: `gru1`)
+
+La base (Supabase) está en sa-east-1 (São Paulo). Las funciones corrían en iad1 (Washington) y cada consulta cruzaba el
+continente: las páginas tardaban varios segundos. No quitar `"regions": ["gru1"]`.
 
 ## Base de datos — pooler en modo transacción, no sesión
 

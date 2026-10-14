@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import { authOptions } from "@/lib/auth"
+import { portalAuthOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import LogoutButton from "./LogoutButton"
 import BillingEmail from "./BillingEmail"
@@ -22,7 +22,7 @@ export default async function PortalVetDashboardPage({
 }: {
   searchParams: { q?: string; enviada?: string; sede?: string }
 }) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(portalAuthOptions)
   if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) redirect("/portal-vet")
 
   const q = searchParams.q?.trim()

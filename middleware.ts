@@ -1,22 +1,26 @@
 import { getToken } from "next-auth/jwt"
 import { NextRequest, NextResponse } from "next/server"
 import { can, canSeeFinance, homeFor, routePermission } from "@/lib/permissions"
+import { PORTAL_SESSION_COOKIE } from "@/lib/sessionCookies"
 
 export async function middleware(req: NextRequest) {
-  const token = await getToken({ req })
   const { pathname } = req.nextUrl
 
-  // Pages that redirect already-authenticated users away
-  if (pathname === "/login" || pathname === "/portal-vet") {
-    if (token) return NextResponse.redirect(new URL(homeFor(token.role), req.url))
+  // Portal Vet (clínicas): SU PROPIA sesión (cookie aparte, lib/auth.ts: portalAuthOptions). Estar
+  // conectado como personal no da acceso al portal ni al revés. /portal-vet es el ingreso/registro.
+  if (pathname === "/portal-vet" || pathname.startsWith("/portal-vet/")) {
+    const portal = await getToken({ req, cookieName: PORTAL_SESSION_COOKIE })
+    const isClinic = portal?.role === "CLINIC"
+    if (pathname === "/portal-vet") return isClinic ? NextResponse.redirect(new URL("/portal-vet/dashboard", req.url)) : NextResponse.next()
+    return isClinic ? NextResponse.next() : NextResponse.redirect(new URL("/portal-vet", req.url))
   }
 
-  // Portal Vet (clínicas) — CLINIC only. /portal-vet itself is the public login/registro page.
-  if (pathname.startsWith("/portal-vet/")) {
-    if (!token || token.role !== "CLINIC") {
-      return NextResponse.redirect(new URL(token ? homeFor(token.role) : "/portal-vet", req.url))
-    }
-    return NextResponse.next()
+  // LIMS (personal): sesión del personal. Una sesión vieja de clínica en esta cookie no cuenta.
+  const raw = await getToken({ req })
+  const token = raw && raw.role !== "CLINIC" ? raw : null
+
+  if (pathname === "/login") {
+    if (token) return NextResponse.redirect(new URL(homeFor(token.role), req.url))
   }
 
   // Dashboard financiero: solo los dueños (lib/permissions.ts: FINANCE_EMAILS)

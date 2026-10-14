@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
-import { authOptions } from "@/lib/auth"
+import { portalAuthOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import OrderForm from "@/components/OrderForm"
 import { catalogWhere } from "@/lib/catalog"
@@ -11,7 +11,7 @@ import { createPortalOrder } from "../actions"
 export const metadata: Metadata = { title: "Nueva solicitud · Portal Vet" }
 
 export default async function NuevaSolicitudPage() {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(portalAuthOptions)
   if (!session || session.user.role !== "CLINIC") redirect("/portal-vet")
 
   const [templates, branches] = await Promise.all([

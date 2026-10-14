@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { getAnySession } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { get, del } from "@vercel/blob"
@@ -11,7 +10,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { photoId: string } }
 ) {
-  const session = await getServerSession(authOptions)
+  const session = await getAnySession()
   if (!session) return new NextResponse("No autorizado", { status: 401 })
 
   const photo = await prisma.examPhoto.findUnique({
@@ -43,7 +42,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { photoId: string } }
 ) {
-  const session = await getServerSession(authOptions)
+  const session = await getAnySession()
   if (!session || !can(session.user.role, "resultados.editar"))
     return new NextResponse("No autorizado", { status: 401 })
 

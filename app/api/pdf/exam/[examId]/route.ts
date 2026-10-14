@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { getAnySession } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { get } from "@vercel/blob"
 import { buildOrderPdf } from "@/lib/reportPdf"
@@ -15,7 +14,7 @@ export async function GET(
   req: Request,
   { params }: { params: { examId: string } }
 ) {
-  const session = await getServerSession(authOptions)
+  const session = await getAnySession()
   if (!session) return new NextResponse("No autorizado", { status: 401 })
 
   const orderExam = await prisma.orderExam.findUnique({

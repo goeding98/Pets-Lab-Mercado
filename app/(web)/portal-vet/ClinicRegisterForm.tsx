@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { portalSignIn } from "@/lib/portalAuthClient"
 import { useRouter } from "next/navigation"
 import { registerClinic } from "./actions"
 
@@ -70,13 +70,9 @@ export default function ClinicRegisterForm() {
       return
     }
     // Cuenta creada: iniciar sesión directamente
-    const login = await signIn("clinic", {
-      login: fd.get("email") as string,
-      password: fd.get("password") as string,
-      redirect: false,
-    })
+    const ok = await portalSignIn(fd.get("email") as string, fd.get("password") as string).catch(() => false)
     setLoading(false)
-    if (login?.ok) {
+    if (ok) {
       router.push("/portal-vet/dashboard")
       router.refresh()
     } else {

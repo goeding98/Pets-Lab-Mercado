@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { portalSignIn } from "@/lib/portalAuthClient"
 import { useRouter } from "next/navigation"
 
 export default function ClinicLoginForm() {
@@ -15,9 +15,9 @@ export default function ClinicLoginForm() {
     e.preventDefault()
     setError("")
     setLoading(true)
-    const res = await signIn("clinic", { login, password, redirect: false })
+    const ok = await portalSignIn(login, password).catch(() => false)
     setLoading(false)
-    if (res?.ok) {
+    if (ok) {
       router.push("/portal-vet/dashboard")
       router.refresh()
     } else {
