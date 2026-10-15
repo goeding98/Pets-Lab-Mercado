@@ -163,6 +163,13 @@ export function missingForSiigo(c: SiigoClient): string[] {
   ].filter((x): x is string => !!x)
 }
 
+// Busca un cliente en Siigo por identificación (para revisar, p. ej., el consumidor final)
+export async function findSiigoCustomer(s: SiigoSettings, identification: string) {
+  const t = await token(s)
+  const r = await api<{ results?: { id: string; identification: string; name: string[]; id_type?: { code: string }; person_type?: string }[] }>(t, `/v1/customers?identification=${identification}`)
+  return r.results?.[0] ?? null
+}
+
 async function ensureCustomer(t: string, c: SiigoClient): Promise<string> {
   const id = nitDigits(c.nit!)
   const found = await api<{ results?: { identification: string }[] }>(t, `/v1/customers?identification=${id}`)
@@ -188,16 +195,20 @@ async function ensureCustomer(t: string, c: SiigoClient): Promise<string> {
 }
 
 // ── Factura ────────────────────────────────────────────────────────────────────────────────────────
+// Cliente genérico de la DIAN para quien no tiene datos (ya existe en Siigo: cédula 222222222222, "Consumidor Final")
+export const CONSUMIDOR_FINAL = "222222222222"
+
 export type SiigoLine = { description: string; price: number }
 // Cómo se pagó lo que se factura, según Petslab (la suma es el total neto de los ítems)
 export type SiigoPaymentSplit = { cash: number; transfer: number; credit: number }
 
-export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient, lines: SiigoLine[], split: SiigoPaymentSplit, observations: string) {
+// client = null → se factura a consumidor final
+export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient | null, lines: SiigoLine[], split: SiigoPaymentSplit, observations: string) {
   if (!siigoReady(s)) throw new SiigoError("Falta configurar Siigo (comprobante, producto y las formas de pago de efectivo, transferencia y por cobrar).")
-  const missing = missingForSiigo(client)
+  const missing = client ? missingForSiigo(client) : []
   if (missing.length) throw new SiigoError(`Al cliente le falta: ${missing.join(", ")}.`)
   const t = await token(s)
-  const identification = await ensureCustomer(t, client)
+  const identification = client ? await ensureCustomer(t, client) : CONSUMIDOR_FINAL
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" })
   const due = new Date(Date.now() + s.dueDays * 86400000).toLocaleDateString("en-CA", { timeZone: "America/Bogota" })
   const items = lines.map(l => ({
@@ -231,7 +242,7 @@ export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient, 
       items,
       payments,
       stamp: { send: true }, // factura electrónica a la DIAN
-      mail: { send: s.sendEmail }, // Siigo la envía al correo del cliente
+      mail: { send: s.sendEmail && !!client }, // Siigo la envía al correo del cliente
     },
   })
   return { id: inv.id, name: inv.name, total }

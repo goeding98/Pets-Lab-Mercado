@@ -218,7 +218,8 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Siigo" (`invoiceInSiigo`): órdenes de una misma clínica → busca/crea el cliente (NIT, DV, dirección, ciudad DANE, correo
   de facturación) y emite la factura electrónica (un ítem por examen, precio neto; pagos según Petslab: lo pagado por
   `paymentMethod` y lo no pagado como por cobrar con el plazo); marca las órdenes con el número que
-  devuelve Siigo. Header Partner-Id "PetsLab".
+  devuelve Siigo. Header Partner-Id "PetsLab". Cliente sin NIT/correo/dirección o particular → botón "Facturar a
+  consumidor final" (`CONSUMIDOR_FINAL` = 222222222222, ya existe en Siigo; sin envío por correo).
 - Dashboard financiero (`app/(lab)/finanzas/`, `lib/finance.ts`, CSV en `/finanzas/csv`): solo Michel y Guillermo
   (`lib/permissions.ts: FINANCE_EMAILS` + `canSeeFinance`, revisado en middleware, menú y página; Marcelo es ADMIN
   pero no lo ve). Venta = precio neto de Caja el día que se registra la muestra (Bogotá); recaudado = `amountPaid`

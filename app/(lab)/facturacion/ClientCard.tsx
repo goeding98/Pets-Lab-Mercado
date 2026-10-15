@@ -22,12 +22,12 @@ export default function ClientCard({ client, defaultOpen, siigo }: { client: Inv
   const payText = (p: { cash: number; transfer: number; credit: number }) =>
     [p.cash > 0 && `Efectivo ${formatCOP(p.cash)}`, p.transfer > 0 && `Transferencia ${formatCOP(p.transfer)}`, p.credit > 0 && `Por cobrar ${formatCOP(p.credit)}`].filter(Boolean).join(" · ") || "—"
 
-  // Lo que le falta al cliente para facturarle en Siigo (los particulares sin clínica no van a Siigo desde aquí)
-  const missing = client.isParticular ? ["clínica con NIT"] : [!client.nit && "NIT", !client.billingEmail && "correo de facturación", !client.address && "dirección"].filter(Boolean) as string[]
+  // Lo que le falta al cliente para facturarle en Siigo a su nombre; si le falta algo, se puede facturar a consumidor final
+  const missing = client.isParticular ? ["datos de cliente (particular)"] : [!client.nit && "NIT", !client.billingEmail && "correo de facturación", !client.address && "dirección"].filter(Boolean) as string[]
   const [done, setDone] = useState("")
 
-  function siigoInvoice() {
-    if (!confirm(`¿Emitir en Siigo la factura electrónica de ${client.name} por ${formatCOP(selTotal)} (${selected.length} ${selected.length === 1 ? "orden" : "órdenes"})?
+  function siigoInvoice(consumidorFinal = false) {
+    if (!confirm(`¿Emitir en Siigo la factura electrónica ${consumidorFinal ? `a CONSUMIDOR FINAL (222222222222) de las órdenes de ${client.name}` : `de ${client.name}`} por ${formatCOP(selTotal)} (${selected.length} ${selected.length === 1 ? "orden" : "órdenes"})?
 
 Forma de pago: ${payText(sel)}
 
@@ -35,7 +35,7 @@ Siigo la envía a la DIAN.`)) return
     setError("")
     setDone("")
     startTransition(async () => {
-      const res = await invoiceInSiigo(selected)
+      const res = await invoiceInSiigo(selected, consumidorFinal)
       if (res.error) return setError(res.error)
       setDone(`Factura ${res.invoice} emitida en Siigo.`)
       router.refresh()
@@ -157,17 +157,27 @@ Siigo la envía a la DIAN.`)) return
                 {selected.length} {selected.length === 1 ? "orden seleccionada" : "órdenes seleccionadas"} · <strong>{formatCOP(selTotal)}</strong>
                 {selected.length > 0 && <span className="block text-[11px] text-ink-2">Forma de pago: {payText(sel)}</span>}
               </span>
-              {siigo && (
+              {siigo && (missing.length === 0 ? (
                 <button
                   type="button"
-                  onClick={siigoInvoice}
-                  disabled={pending || selected.length === 0 || missing.length > 0}
-                  title={missing.length ? `Falta: ${missing.join(", ")}` : "Emite la factura electrónica en Siigo"}
+                  onClick={() => siigoInvoice()}
+                  disabled={pending || selected.length === 0}
+                  title="Emite la factura electrónica en Siigo"
                   className="ml-auto bg-[#0f5fbd] text-white font-mono text-[9px] tracking-[0.15em] uppercase px-3 py-2 hover:bg-[#0c4f9e] disabled:opacity-40"
                 >
                   {pending ? "Facturando…" : "Facturar en Siigo"}
                 </button>
-              )}
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => siigoInvoice(true)}
+                  disabled={pending || selected.length === 0}
+                  title="Factura electrónica a Consumidor Final (222222222222)"
+                  className="ml-auto bg-[#0f5fbd] text-white font-mono text-[9px] tracking-[0.15em] uppercase px-3 py-2 hover:bg-[#0c4f9e] disabled:opacity-40"
+                >
+                  {pending ? "Facturando…" : "Facturar a consumidor final"}
+                </button>
+              ))}
               <span className={`font-mono text-[8px] tracking-[0.15em] uppercase text-ink-2 ${siigo ? "" : "ml-auto"}`}>{siigo ? "o a mano:" : "Factura N°:"}</span>
               <input
                 value={invoice}
@@ -183,7 +193,7 @@ Siigo la envía a la DIAN.`)) return
               >
                 {pending ? "Guardando…" : "Marcar como facturadas"}
               </button>
-              {siigo && missing.length > 0 && <p className="w-full font-sans text-[11px] text-amber-800">Para facturar en Siigo falta: {missing.join(", ")} (se completa en Clientes → la clínica).</p>}
+              {siigo && missing.length > 0 && <p className="w-full font-sans text-[11px] text-amber-800">Falta {missing.join(", ")}: se factura a <strong>consumidor final</strong> (222222222222). Para facturar a nombre del cliente, complétalo en Clientes → la clínica.</p>}
               {error && <p className="w-full font-sans text-xs text-red-600">{error}</p>}
               {done && <p className="w-full font-sans text-xs text-salvia-700">{done}</p>}
             </div>

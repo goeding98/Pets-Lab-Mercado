@@ -67,7 +67,8 @@ export async function disconnectSiigo(): Promise<{ error?: string }> {
 }
 
 // Facturar en Siigo las órdenes elegidas de UN cliente: una factura electrónica con un ítem por examen
-export async function invoiceInSiigo(orderIds: string[]): Promise<{ error?: string; invoice?: string }> {
+// consumidorFinal: para clientes sin datos (o particulares) → se factura a "Consumidor Final" (222222222222)
+export async function invoiceInSiigo(orderIds: string[], consumidorFinal = false): Promise<{ error?: string; invoice?: string }> {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "facturacion")) return { error: "No autorizado" }
   if (orderIds.length === 0) return { error: "Selecciona al menos una orden." }
@@ -84,7 +85,8 @@ export async function invoiceInSiigo(orderIds: string[]): Promise<{ error?: stri
   if (orders.some(o => o.invoicedAt)) return { error: "Alguna de las órdenes ya está facturada. Recarga la página." }
   if (orders.some(o => o.clinic?.noCharge)) return { error: "Pets & Pets no se factura." }
   const clinicIds = new Set(orders.map(o => o.clinicId))
-  if (clinicIds.size !== 1 || !orders[0].clinic) return { error: "Las órdenes deben ser de una misma clínica (los particulares sin NIT no se facturan desde aquí)." }
+  if (clinicIds.size !== 1) return { error: "Las órdenes deben ser de un mismo cliente." }
+  if (!orders[0].clinic && !consumidorFinal) return { error: "Un particular sin clínica se factura a consumidor final." }
 
   const c = orders[0].clinic
   const branch = orders[0].branch
@@ -107,17 +109,17 @@ export async function invoiceInSiigo(orderIds: string[]): Promise<{ error?: stri
   try {
     const inv = await createSiigoInvoice(
       settings,
-      {
+      consumidorFinal || !c ? null : {
         name: c.name, nit: c.nit, phone: c.phone ?? branch?.phone ?? null, billingEmail: c.billingEmail ?? c.email,
         address: c.address ?? branch?.address ?? null, city: c.city ?? branch?.city ?? null, contactName: c.contactName,
       },
       lines,
       split,
-      `Pets & Lab · Órdenes ${orders.map(o => o.orderNumber).join(", ")}`,
+      `Pets & Lab · Órdenes ${orders.map(o => o.orderNumber).join(", ")}${consumidorFinal ? ` · Cliente: ${c?.name ?? (orders.map(o => o.ownerName).filter(Boolean).join(", ") || "particular")}` : ""}`,
     )
     await prisma.order.updateMany({
       where: { id: { in: orderIds } },
-      data: { invoiceNumber: inv.name, invoicedAt: new Date(), invoicedByName: `${session.user.name ?? "—"} · Siigo` },
+      data: { invoiceNumber: inv.name, invoicedAt: new Date(), invoicedByName: `${session.user.name ?? "—"} · Siigo${consumidorFinal ? " (consumidor final)" : ""}` },
     })
     revalidatePath("/facturacion")
     return { invoice: inv.name }
