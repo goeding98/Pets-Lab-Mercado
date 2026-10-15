@@ -245,6 +245,7 @@ export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient |
       mail: { send: s.sendEmail && !!client }, // Siigo la envía al correo del cliente
     },
   })
+  // Con mail.send Siigo envía el correo solo, unos minutos después de que la DIAN la acepta (antes sale "not_sent")
   return { id: inv.id, name: inv.name, total }
 }
 
@@ -252,4 +253,10 @@ export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient |
 export async function getSiigoInvoice(s: SiigoSettings, id: string) {
   const t = await token(s)
   return api<{ name: string; date: string; total: number; customer?: { identification: string }; stamp?: { status?: string; cufe?: string; observations?: string; errors?: string }; mail?: { status?: string; observations?: string }; public_url?: string }>(t, `/v1/invoices/${id}`)
+}
+
+// Reenvía por correo una factura ya emitida (Siigo adjunta el PDF y el XML de la DIAN)
+export async function sendSiigoInvoiceMail(s: SiigoSettings, id: string, email: string) {
+  const t = await token(s)
+  return api<unknown>(t, `/v1/invoices/${id}/mail`, { method: "POST", body: { mail_to: email } })
 }
