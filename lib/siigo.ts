@@ -247,3 +247,9 @@ export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient |
   })
   return { id: inv.id, name: inv.name, total }
 }
+
+// Consulta una factura emitida (estado ante la DIAN, totales)
+export async function getSiigoInvoice(s: SiigoSettings, id: string) {
+  const t = await token(s)
+  return api<{ name: string; date: string; total: number; customer?: { identification: string }; stamp?: { status?: string; cufe?: string; observations?: string; errors?: string }; mail?: { status?: string; observations?: string }; public_url?: string }>(t, `/v1/invoices/${id}`)
+}
