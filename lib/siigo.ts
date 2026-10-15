@@ -55,7 +55,7 @@ export async function saveSiigoSettings(s: SiigoSettings) {
   await prisma.labSetting.upsert({ where: { key: KEY }, create: { key: KEY, value }, update: { value } })
 }
 export const siigoReady = (s: SiigoSettings | null): s is SiigoSettings =>
-  !!s && !!s.documentId && !!s.productCode && !!s.paymentCash && !!s.paymentTransfer && !!s.paymentCredit
+  !!s && !!s.documentId && !!s.productCode && !!s.sellerId && !!s.paymentCash && !!s.paymentTransfer && !!s.paymentCredit
 
 // ── API ────────────────────────────────────────────────────────────────────────────────────────────
 export class SiigoError extends Error {}
@@ -176,7 +176,7 @@ async function ensureCustomer(t: string, c: SiigoClient): Promise<string> {
   if (found.results?.length) return id
   // NIT de empresa (9 dígitos que empiezan por 8 o 9) → persona jurídica; si no, cédula de persona natural
   const company = id.length === 9 && /^[89]/.test(id)
-  const words = c.name.trim().split(/\s+/)
+  const words = c.name.trim().replace(/^(dra?|doctora?)\.?\s+/i, "").split(/\s+/) // sin "Dr." / "Dra." en el nombre de la persona
   await api(t, "/v1/customers", {
     method: "POST",
     body: {
@@ -204,7 +204,7 @@ export type SiigoPaymentSplit = { cash: number; transfer: number; credit: number
 
 // client = null → se factura a consumidor final
 export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient | null, lines: SiigoLine[], split: SiigoPaymentSplit, observations: string) {
-  if (!siigoReady(s)) throw new SiigoError("Falta configurar Siigo (comprobante, producto y las formas de pago de efectivo, transferencia y por cobrar).")
+  if (!siigoReady(s)) throw new SiigoError("Falta configurar Siigo (comprobante, producto, vendedor y las formas de pago de efectivo, transferencia y por cobrar).")
   const missing = client ? missingForSiigo(client) : []
   if (missing.length) throw new SiigoError(`Al cliente le falta: ${missing.join(", ")}.`)
   const t = await token(s)

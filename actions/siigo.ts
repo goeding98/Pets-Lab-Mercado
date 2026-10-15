@@ -50,7 +50,7 @@ export async function saveSiigoDefaults(d: Pick<SiigoSettings, "documentId" | "p
   await requireAdmin()
   const s = await getSiigoSettings()
   if (!s) return { error: "Primero conecta las credenciales." }
-  if (!d.documentId || !d.productCode) return { error: "Elige el comprobante y el producto." }
+  if (!d.documentId || !d.productCode || !d.sellerId) return { error: "Elige el comprobante, el producto y el vendedor (Siigo lo exige)." }
   if (!d.paymentCash || !d.paymentTransfer || !d.paymentCredit) return { error: "Elige la forma de pago de Siigo para efectivo, transferencia y por cobrar." }
   await saveSiigoSettings({ ...s, ...d, dueDays: Math.max(0, Math.min(120, Math.round(d.dueDays || 0))) })
   revalidatePath("/facturacion/siigo")

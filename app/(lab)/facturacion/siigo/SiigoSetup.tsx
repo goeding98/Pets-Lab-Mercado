@@ -101,9 +101,9 @@ export default function SiigoSetup({ connectedAs, current, ready }: { connectedA
                   <option value="">Elegir…</option>
                   {cats.products.filter(x => x.code === d.productCode || `${x.name} ${x.code}`.toLowerCase().includes(prodQ.trim().toLowerCase())).map(x => <option key={x.code} value={x.code}>{x.name} ({x.code})</option>)}
                 </select></div>
-              <div><span className={label}>Vendedor</span>
+              <div><span className={label}>Vendedor *</span>
                 <select value={d.sellerId ?? ""} onChange={e => setD({ ...d, sellerId: Number(e.target.value) || null })} className={input}>
-                  <option value="">Ninguno</option>{cats.users.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+                  <option value="">Elegir…</option>{cats.users.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
                 </select></div>
               <div><span className={label}>Impuesto de los ítems</span>
                 <select value={d.taxId ?? ""} onChange={e => { const t = cats.taxes.find(x => x.id === Number(e.target.value)); setD({ ...d, taxId: t?.id ?? null, taxPercent: t?.percent ?? 0 }) }} className={input}>
