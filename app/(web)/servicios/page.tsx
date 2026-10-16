@@ -32,7 +32,7 @@ const AREAS: { area: string; icon: IconName }[] = [
   { area: "Microbiología", icon: "flask" },
   { area: "Inmunología / Serología", icon: "heart" },
   { area: "Histología e Histopatología", icon: "slide" },
-  { area: "PCR Veterinaria", icon: "drop" },
+  { area: "PCR", icon: "drop" },
 ]
 const COLORS = ["#5e7064", "#2a7780"]
 

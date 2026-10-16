@@ -23,7 +23,7 @@ const AREAS = [
   "Microbiología",
   "Inmunología / Serología",
   "Histología e Histopatología",
-  "PCR Veterinaria",
+  "PCR",
 ]
 
 export default function OrderForm({

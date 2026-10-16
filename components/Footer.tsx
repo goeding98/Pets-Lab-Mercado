@@ -43,7 +43,7 @@ export default function Footer() {
                 ["/servicios#perfiles", "Perfiles"],
                 ["/servicios#hematologia", "Hematología"],
                 ["/servicios#quimica-sanguinea", "Química Sanguínea"],
-                ["/servicios#pcr-veterinaria", "PCR Veterinaria"],
+                ["/servicios#pcr", "PCR"],
               ].map(([href, label]) => (
                 <Link key={href} href={href} className="opacity-80 hover:opacity-100 transition-opacity">
                   {label}

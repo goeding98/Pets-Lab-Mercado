@@ -167,6 +167,9 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   editables en /rangos; no fijarlos en el código. UPC = proteína (tirilla, o medida aparte) /
   creatinina urinaria. Reactivos = items de Inventario con lote y vencimiento; con lote vencido no se
   valida (chequeo en cliente y en `saveExamResults`, con los datos del inventario).
+- PCR (área "PCR", `scripts/agregar-pcr.ts`, lista de precios PCR 2026: paneles felino/canino y pruebas individuales): los
+  procesa un laboratorio externo; cada examen tiene solo la sección de texto "Resultado PCR" (un campo "Resultado") y se
+  le sube el PDF del laboratorio. Los PCR viejos del área "PCR Veterinaria" quedaron retirados (`active = false`).
 - Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial
   por especie; SDMA: Normal / Elevado / Probabilidad de enfermedad renal + nota de hemólisis), en formulario y
   PDF: `lib/referenceTables.ts`, por nombre de examen (con `note` opcional). SDMA creado con `scripts/agregar-sdma.ts`.
