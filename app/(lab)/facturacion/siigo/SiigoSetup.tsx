@@ -63,7 +63,7 @@ export default function SiigoSetup({ connectedAs, current, ready }: { connectedA
           <div><span className={label}>Access key</span><input value={key} onChange={e => setKey(e.target.value)} type="password" className={input} autoComplete="new-password" placeholder={connectedAs ? "•••••• (guardada)" : ""} /></div>
         </div>
         <div className="flex flex-wrap gap-2 mt-3">
-          <button type="button" onClick={connect} disabled={pending || !user.trim() || !key.trim()} className={btn}>{pending ? "Probando…" : "Probar y guardar"}</button>
+          <button type="button" onClick={connect} disabled={pending || !user.trim() || !key.trim()} className={btn}>{pending && key.trim() ? "Probando…" : "Probar y guardar"}</button>
           {connectedAs && (
             <button type="button" disabled={pending} onClick={() => confirm("¿Desconectar Siigo? Se borran las credenciales guardadas.") && startTransition(async () => { await disconnectSiigo(); router.refresh() })}
               className="border border-red-300 text-red-700 font-mono text-[10px] tracking-[0.18em] uppercase px-4 py-2.5">Desconectar</button>

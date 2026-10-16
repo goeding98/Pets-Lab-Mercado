@@ -8,6 +8,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { getSiigoSettings, siigoReady } from "@/lib/siigo"
 import { getAutoInvoiceLog } from "@/lib/siigoInvoicing"
+import { canSeeFinance } from "@/lib/permissions"
 
 export const metadata: Metadata = { title: "Facturación" }
 export const dynamic = "force-dynamic"
@@ -61,7 +62,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
             </span>
           )}
         </p>
-        {session?.user.role === "ADMIN" && (
+        {canSeeFinance(session?.user.role, session?.user.email) && (
           <Link href="/facturacion/siigo" className="font-mono text-[9px] tracking-[0.15em] uppercase text-[#0f5fbd] hover:underline">{siigo ? "Configuración de Siigo" : "Conectar Siigo →"}</Link>
         )}
       </div>

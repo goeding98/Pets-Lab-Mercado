@@ -30,6 +30,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  // Conexión con Siigo (credenciales de facturación): también solo los dueños
+  if (pathname === "/facturacion/siigo" || pathname.startsWith("/facturacion/siigo/")) {
+    if (!token) return NextResponse.redirect(new URL("/login", req.url))
+    if (!canSeeFinance(token.role, token.email)) return NextResponse.redirect(new URL("/facturacion", req.url))
+    return NextResponse.next()
+  }
+
   // Staff routes — each one requires the permission mapped in lib/permissions.ts
   const permission = routePermission(pathname)
   if (permission) {

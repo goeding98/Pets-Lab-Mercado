@@ -3,12 +3,13 @@ import Link from "next/link"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { getSiigoSettings, siigoReady } from "@/lib/siigo"
+import { canSeeFinance } from "@/lib/permissions"
 import SiigoSetup from "./SiigoSetup"
 
 export const metadata: Metadata = { title: "Conectar Siigo" }
 export const dynamic = "force-dynamic"
 
-// Configuración de la integración con Siigo (solo ADMIN): credenciales de integración y valores por defecto
+// Configuración de la integración con Siigo (solo Michel y Guillermo, FINANCE_EMAILS): credenciales y valores por defecto
 export default async function SiigoPage() {
   const session = await getServerSession(authOptions)
   const s = await getSiigoSettings()
@@ -21,9 +22,9 @@ export default async function SiigoPage() {
         Con esto Petslab emite la factura electrónica en Siigo con un clic desde Facturación. Se usan las
         <strong> credenciales de integración</strong> de Siigo (usuario API + access key), no la contraseña de la página.
       </p>
-      {session?.user.role !== "ADMIN" ? (
+      {!canSeeFinance(session?.user.role, session?.user.email) ? (
         <p className="font-sans text-sm text-ink border border-black/10 bg-salvia-50 px-4 py-4">
-          Solo un administrador puede configurar la conexión. Estado: <strong>{siigoReady(s) ? "conectado" : "sin conectar"}</strong>.
+          Solo Michel Nader y Guillermo Oeding pueden ver o cambiar la conexión con Siigo. Estado: <strong>{siigoReady(s) ? "conectado" : "sin conectar"}</strong>.
         </p>
       ) : (
         <SiigoSetup

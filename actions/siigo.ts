@@ -3,16 +3,17 @@ import { revalidatePath } from "next/cache"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import { can } from "@/lib/permissions"
+import { can, canSeeFinance } from "@/lib/permissions"
 import { invoiceOrders } from "@/lib/siigoInvoicing"
 import {
   SIIGO_DEFAULTS, SiigoError, encryptSecret, getSiigoSettings, saveSiigoSettings, siigoCatalogs,
   testSiigoCredentials, type SiigoSettings,
 } from "@/lib/siigo"
 
+// La conexión con Siigo (credenciales y configuración) solo la manejan Michel y Guillermo (FINANCE_EMAILS)
 async function requireAdmin() {
   const session = await getServerSession(authOptions)
-  if (session?.user.role !== "ADMIN") throw new Error("No autorizado")
+  if (!canSeeFinance(session?.user.role, session?.user.email)) throw new Error("No autorizado")
   return session
 }
 const message = (e: unknown) => (e instanceof SiigoError ? e.message : "No se pudo conectar con Siigo. Intenta de nuevo.")
