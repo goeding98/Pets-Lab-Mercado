@@ -23,7 +23,7 @@ export default function ClientCard({ client, defaultOpen, siigo }: { client: Inv
     [p.cash > 0 && `Efectivo ${formatCOP(p.cash)}`, p.transfer > 0 && `Transferencia ${formatCOP(p.transfer)}`, p.credit > 0 && `Por cobrar ${formatCOP(p.credit)}`].filter(Boolean).join(" · ") || "—"
 
   // Lo que le falta al cliente para facturarle en Siigo a su nombre; si le falta algo, se puede facturar a consumidor final
-  const missing = client.isParticular ? ["datos de cliente (particular)"] : [!client.nit && "NIT", !client.billingEmail && "correo de facturación", !client.address && "dirección"].filter(Boolean) as string[]
+  const missing = client.isParticular ? ["datos de cliente (particular)"] : [!client.nit && "NIT", !client.address && "dirección"].filter(Boolean) as string[]
   const [done, setDone] = useState("")
 
   function siigoInvoice(consumidorFinal = false) {

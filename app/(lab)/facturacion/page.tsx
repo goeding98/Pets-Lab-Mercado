@@ -7,6 +7,7 @@ import ClientCard from "./ClientCard"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { getSiigoSettings, siigoReady } from "@/lib/siigo"
+import { getAutoInvoiceLog } from "@/lib/siigoInvoicing"
 
 export const metadata: Metadata = { title: "Facturación" }
 export const dynamic = "force-dynamic"
@@ -26,6 +27,8 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   }
   const session = await getServerSession(authOptions)
   const siigo = siigoReady(await getSiigoSettings())
+  const auto = siigo ? await getAutoInvoiceLog() : null
+  const fmtAt = (iso: string) => new Date(iso).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium", timeStyle: "short" })
   const missing = clients.filter(c => !c.isParticular && (!c.nit || !c.billingEmail || !c.address || !c.phone)).length
 
   return (
@@ -43,7 +46,20 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
 
       <div className={`flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 mb-4 border ${siigo ? "border-[#0f5fbd]/30 bg-[#0f5fbd]/[0.05]" : "border-amber-200 bg-amber-50"}`}>
         <p className="font-sans text-xs text-ink">
-          {siigo ? <>Siigo <strong>conectado</strong>: cada cliente tiene el botón <strong>Facturar en Siigo</strong>.</> : <>Siigo <strong>no está conectado</strong>: por ahora se registra el número de factura a mano.</>}
+          {siigo
+            ? <>Facturación <strong>automática</strong> en Siigo: cada noche (11 pm) se emite una factura por cliente por día con todo lo pendiente. También se puede facturar a mano con el botón de cada cliente.</>
+            : <>Siigo <strong>no está conectado</strong>: por ahora se registra el número de factura a mano.</>}
+          {auto && (
+            <span className="block mt-1 text-ink-2">
+              Última corrida: {fmtAt(auto.at)} · {auto.issued.length} {auto.issued.length === 1 ? "factura emitida" : "facturas emitidas"}
+              {auto.remaining > 0 && <> · {auto.remaining} quedaron para la siguiente</>}
+              {auto.failed.length > 0 && (
+                <span className="block text-red-700">
+                  No se pudieron emitir: {auto.failed.map(f => `${f.client} (${f.day.split("-").reverse().join("/")}): ${f.error}`).join(" · ")}
+                </span>
+              )}
+            </span>
+          )}
         </p>
         {session?.user.role === "ADMIN" && (
           <Link href="/facturacion/siigo" className="font-mono text-[9px] tracking-[0.15em] uppercase text-[#0f5fbd] hover:underline">{siigo ? "Configuración de Siigo" : "Conectar Siigo →"}</Link>

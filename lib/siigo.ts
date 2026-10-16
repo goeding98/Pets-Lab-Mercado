@@ -154,11 +154,10 @@ const cityCodes = (city: string | null) => {
 
 export type SiigoClient = { name: string; nit: string | null; phone: string | null; billingEmail: string | null; address: string | null; city: string | null; contactName: string | null }
 
-// Lo que le falta a un cliente para poder facturarle en Siigo
+// Lo que le falta a un cliente para poder facturarle en Siigo a su nombre (sin correo sí se factura, solo no se envía)
 export function missingForSiigo(c: SiigoClient): string[] {
   return [
     !(c.nit && nitDigits(c.nit)) && "NIT o cédula",
-    !c.billingEmail && "correo de facturación",
     !c.address && "dirección",
   ].filter((x): x is string => !!x)
 }
@@ -188,7 +187,7 @@ async function ensureCustomer(t: string, c: SiigoClient): Promise<string> {
       name: company ? [c.name.trim()] : [words.slice(0, Math.ceil(words.length / 2)).join(" "), words.slice(Math.ceil(words.length / 2)).join(" ") || "."],
       address: { address: c.address, city: cityCodes(c.city) },
       phones: c.phone ? [{ number: c.phone.replace(/\D/g, "").slice(-10) }] : [],
-      contacts: [{ first_name: (c.contactName ?? c.name).split(" ")[0], last_name: (c.contactName ?? c.name).split(" ").slice(1).join(" ") || ".", email: c.billingEmail }],
+      contacts: [{ first_name: (c.contactName ?? c.name).split(" ")[0], last_name: (c.contactName ?? c.name).split(" ").slice(1).join(" ") || ".", ...(c.billingEmail ? { email: c.billingEmail } : {}) }],
     },
   })
   return id
@@ -242,7 +241,7 @@ export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient |
       items,
       payments,
       stamp: { send: true }, // factura electrónica a la DIAN
-      mail: { send: s.sendEmail && !!client }, // Siigo la envía al correo del cliente
+      mail: { send: s.sendEmail && !!client?.billingEmail }, // Siigo la envía al correo del cliente
     },
   })
   // Con mail.send Siigo envía el correo solo, unos minutos después de que la DIAN la acepta (antes sale "not_sent")
@@ -259,4 +258,10 @@ export async function getSiigoInvoice(s: SiigoSettings, id: string) {
 export async function sendSiigoInvoiceMail(s: SiigoSettings, id: string, email: string) {
   const t = await token(s)
   return api<unknown>(t, `/v1/invoices/${id}/mail`, { method: "POST", body: { mail_to: email } })
+}
+
+// Facturas emitidas desde una fecha (AAAA-MM-DD), con su estado ante la DIAN
+export async function listSiigoInvoices(s: SiigoSettings, dateStart: string) {
+  const t = await token(s)
+  return allPages<{ id: string; name: string; date: string; total: number; stamp?: { status?: string; observations?: string }; mail?: { status?: string } }>(t, `/v1/invoices?date_start=${dateStart}`)
 }

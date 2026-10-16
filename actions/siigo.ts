@@ -4,9 +4,9 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
-import { computeNetPrice } from "@/lib/billing"
+import { invoiceOrders } from "@/lib/siigoInvoicing"
 import {
-  SIIGO_DEFAULTS, SiigoError, createSiigoInvoice, encryptSecret, getSiigoSettings, saveSiigoSettings, siigoCatalogs,
+  SIIGO_DEFAULTS, SiigoError, encryptSecret, getSiigoSettings, saveSiigoSettings, siigoCatalogs,
   testSiigoCredentials, type SiigoSettings,
 } from "@/lib/siigo"
 
@@ -67,62 +67,16 @@ export async function disconnectSiigo(): Promise<{ error?: string }> {
 }
 
 // Facturar en Siigo las órdenes elegidas de UN cliente: una factura electrónica con un ítem por examen
-// consumidorFinal: para clientes sin datos (o particulares) → se factura a "Consumidor Final" (222222222222)
+// (lib/siigoInvoicing.ts). consumidorFinal: a "Consumidor Final" (222222222222); sin NIT o dirección va ahí solo.
 export async function invoiceInSiigo(orderIds: string[], consumidorFinal = false): Promise<{ error?: string; invoice?: string }> {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "facturacion")) return { error: "No autorizado" }
-  if (orderIds.length === 0) return { error: "Selecciona al menos una orden." }
-
   const settings = await getSiigoSettings()
   if (!settings) return { error: "Siigo no está conectado. Un administrador debe configurarlo en Facturación → Conectar Siigo." }
-
-  const orders = await prisma.order.findMany({
-    where: { id: { in: orderIds } },
-    orderBy: { createdAt: "asc" },
-    include: { clinic: true, branch: true, exams: { orderBy: [{ createdAt: "asc" }, { id: "asc" }], include: { template: { select: { name: true } } } } },
-  })
-  if (orders.length !== orderIds.length) return { error: "Alguna orden ya no existe. Recarga la página." }
-  if (orders.some(o => o.invoicedAt)) return { error: "Alguna de las órdenes ya está facturada. Recarga la página." }
-  if (orders.some(o => o.clinic?.noCharge)) return { error: "Pets & Pets no se factura." }
-  const clinicIds = new Set(orders.map(o => o.clinicId))
-  if (clinicIds.size !== 1) return { error: "Las órdenes deben ser de un mismo cliente." }
-  if (!orders[0].clinic && !consumidorFinal) return { error: "Un particular sin clínica se factura a consumidor final." }
-
-  const c = orders[0].clinic
-  const branch = orders[0].branch
-  const lines = orders.flatMap(o => o.exams.map(e => ({
-    description: `${e.template.name} - ${o.patientName} (orden ${o.orderNumber})`,
-    price: computeNetPrice(e.price, e.discountType, e.discountValue),
-  }))).filter(l => l.price > 0)
-  // Forma de pago según lo registrado en Petslab: lo pagado (efectivo o transferencia) y lo que falta (por cobrar)
-  const split = { cash: 0, transfer: 0, credit: 0 }
-  for (const o of orders) for (const e of o.exams) {
-    const net = computeNetPrice(e.price, e.discountType, e.discountValue)
-    if (net <= 0) continue
-    const paid = Math.min(Math.max(e.amountPaid, 0), net)
-    if (e.paymentMethod === "TRANSFERENCIA") split.transfer += paid
-    else split.cash += paid
-    split.credit += net - paid
-  }
-  if (lines.length === 0) return { error: "Estas órdenes no tienen valor a facturar." }
-
   try {
-    const inv = await createSiigoInvoice(
-      settings,
-      consumidorFinal || !c ? null : {
-        name: c.name, nit: c.nit, phone: c.phone ?? branch?.phone ?? null, billingEmail: c.billingEmail ?? c.email,
-        address: c.address ?? branch?.address ?? null, city: c.city ?? branch?.city ?? null, contactName: c.contactName,
-      },
-      lines,
-      split,
-      `Pets & Lab · Órdenes ${orders.map(o => o.orderNumber).join(", ")}${consumidorFinal ? ` · Cliente: ${c?.name ?? (orders.map(o => o.ownerName).filter(Boolean).join(", ") || "particular")}` : ""}`,
-    )
-    await prisma.order.updateMany({
-      where: { id: { in: orderIds } },
-      data: { invoiceNumber: inv.name, invoicedAt: new Date(), invoicedByName: `${session.user.name ?? "—"} · Siigo${consumidorFinal ? " (consumidor final)" : ""}` },
-    })
+    const r = await invoiceOrders(settings, orderIds, session.user.name ?? "—", consumidorFinal)
     revalidatePath("/facturacion")
-    return { invoice: inv.name }
+    return { invoice: r.invoice }
   } catch (e) {
     return { error: message(e) }
   }

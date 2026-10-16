@@ -221,8 +221,15 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Siigo" (`invoiceInSiigo`): órdenes de una misma clínica → busca/crea el cliente (NIT, DV, dirección, ciudad DANE, correo
   de facturación) y emite la factura electrónica (un ítem por examen, precio neto; pagos según Petslab: lo pagado por
   `paymentMethod` y lo no pagado como por cobrar con el plazo); marca las órdenes con el número que
-  devuelve Siigo. Header Partner-Id "PetsLab". Cliente sin NIT/correo/dirección o particular → botón "Facturar a
-  consumidor final" (`CONSUMIDOR_FINAL` = 222222222222, ya existe en Siigo; sin envío por correo).
+  devuelve Siigo. Header Partner-Id "PetsLab". Cliente sin NIT o dirección, o particular → consumidor final
+  (`CONSUMIDOR_FINAL` = 222222222222, ya existe en Siigo); sin correo se factura a su NIT sin enviar correo.
+  Emisión en `lib/siigoInvoicing.ts: invoiceOrders` (reserva las órdenes con `invoiceNumber = "EMITIENDO-…"` antes de
+  llamar a Siigo para no facturar dos veces; si falla las libera). **Facturación automática**: Vercel Cron
+  (`vercel.json`, 04:00 UTC = 11 pm Colombia) → `api/cron/facturacion` → `runAutoInvoicing`: UNA factura por cliente
+  por día de registro con todo lo pendiente (particulares del día juntos a consumidor final); antes de las 10 pm solo
+  factura días anteriores; exige `CRON_SECRET` si existe. Resultado de la última corrida en `LabSetting "siigo-auto-log"`
+  (banner de Facturación). Comprobante FV-13, producto LABORATORIO (99993), vendedor 437. Siigo envía el correo solo,
+  unos minutos después de que la DIAN acepta.
 - Dashboard financiero (`app/(lab)/finanzas/`, `lib/finance.ts`, CSV en `/finanzas/csv`): solo Michel y Guillermo
   (`lib/permissions.ts: FINANCE_EMAILS` + `canSeeFinance`, revisado en middleware, menú y página; Marcelo es ADMIN
   pero no lo ve). Venta = precio neto de Caja el día que se registra la muestra (Bogotá); recaudado = `amountPaid`
