@@ -11,6 +11,8 @@ export default async function LabLayout({ children }: { children: React.ReactNod
 
   // Las clínicas usan el Portal Vet, no el LIMS
   if (session.user.role === "CLINIC") redirect("/portal-vet/dashboard")
+  // Usuario cerrado con una sesión que quedó abierta
+  if (session.user.role === "INACTIVO") redirect("/api/auth/signout")
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-bone">

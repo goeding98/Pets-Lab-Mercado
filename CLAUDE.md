@@ -41,6 +41,9 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `STAFF` = microbiólogo (todo menos Usuarios), `COMERCIAL` (Panel, Muestras en consulta,
   Nueva muestra, Clientes) y `DOMICILIARIO` (Muestras en consulta y Nueva muestra). Al
   agregar una ruta o acción nueva, mapearla ahí; no volver al chequeo `role !== "CLINIC"`.
+  `INACTIVO` = usuario cerrado (sin permisos; se conserva para el historial de sus órdenes, se reactiva en Usuarios):
+  `authorize` lo rechaza y el callback `jwt` vuelve a leer el rol de la base en cada sesión, así que también pierde una
+  sesión ya abierta (`getStaffSession` lo trata como sin sesión; el layout del LIMS lo saca).
 
 ## Datos y dominio del negocio
 

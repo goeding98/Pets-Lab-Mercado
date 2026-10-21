@@ -28,6 +28,11 @@ const callbacks: NextAuthOptions["callbacks"] = {
       token.role = (user as any).role
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       token.clinicId = (user as any).clinicId
+    } else if (token.id) {
+      // El rol se vuelve a leer de la base: un usuario cerrado (INACTIVO) o borrado pierde el acceso aunque
+      // tenga la sesión abierta, y un cambio de rol aplica sin volver a iniciar sesión
+      const u = await prisma.user.findUnique({ where: { id: token.id as string }, select: { role: true } })
+      token.role = u?.role ?? "INACTIVO"
     }
     return token
   },
@@ -64,7 +69,7 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email.trim().toLowerCase() },
           include: { clinic: true },
         })
-        if (!user || user.role === "CLINIC") return null
+        if (!user || user.role === "CLINIC" || user.role === "INACTIVO") return null
 
         const valid = await bcrypt.compare(credentials.password, user.password)
         if (!valid) return null
@@ -126,7 +131,10 @@ export const portalAuthOptions: NextAuthOptions = {
   ],
 }
 
-export const getStaffSession = () => getServerSession(authOptions)
+export async function getStaffSession() {
+  const s = await getServerSession(authOptions)
+  return s && s.user.role !== "INACTIVO" ? s : null
+}
 export const getPortalSession = () => getServerSession(portalAuthOptions)
 // Rutas que usan los dos portales (PDF, fotos, sedes): la del personal y, si no, la de la clínica
 export async function getAnySession() {

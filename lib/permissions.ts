@@ -30,6 +30,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos"],
   CONTADOR: ["facturacion"], // la contadora: solo Facturación
   CLINIC: [],
+  INACTIVO: [], // usuario cerrado: no entra ni con una sesión ya abierta (lib/auth.ts); conserva su historial
 }
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -39,6 +40,7 @@ export const ROLE_LABELS: Record<string, string> = {
   DOMICILIARIO: "Domiciliario",
   CONTADOR: "Contador(a)",
   CLINIC: "Clínica",
+  INACTIVO: "Inactivo (sin acceso)",
 }
 
 // Dashboard financiero (/finanzas): solo los dueños (Michel y Guillermo), por correo — Marcelo también

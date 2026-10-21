@@ -51,6 +51,7 @@ export default function EditUserForm({ user, isSelf }: Props) {
           <option value="DOMICILIARIO">Domiciliario</option>
           <option value="CONTADOR">Contador(a) — solo Facturación</option>
           <option value="CLINIC">Clínica</option>
+          <option value="INACTIVO">Inactivo (sin acceso)</option>
         </select>
         {isSelf && <p className="font-mono text-[9px] text-ink-2 mt-1">No puedes cambiar tu propio rol.</p>}
       </div>
