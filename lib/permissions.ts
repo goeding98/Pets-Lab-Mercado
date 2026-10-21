@@ -16,17 +16,18 @@ export type Permission =
   | "usuarios"
   | "promociones"       // crear/eliminar promociones (exámenes combinados)
   | "personalizados"    // exámenes personalizados por cliente (/personalizados): médicos, microbiólogos y comercial
+  | "descuentos"        // descuentos por cliente, área de examen y fechas (/descuentos): ADMIN y COMERCIAL
   | "rangos"            // rangos de referencia de los exámenes maestros (solo ADMIN: jefe médico y administradores)
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "muestras.eliminar", "resultados.editar",
-  "clientes.ver", "clientes.editar", "caja", "facturacion", "pagos", "inventario", "usuarios", "promociones", "personalizados", "rangos",
+  "clientes.ver", "clientes.editar", "caja", "facturacion", "pagos", "inventario", "usuarios", "promociones", "personalizados", "descuentos", "rangos",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
-  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion"),
-  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones", "personalizados", "pagos"],
+  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos"),
+  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones", "personalizados", "descuentos", "pagos"],
   DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos"],
   CONTADOR: ["facturacion"], // la contadora: solo Facturación
   CLINIC: [],
@@ -70,6 +71,7 @@ export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/usuarios", "usuarios"],
   ["/promociones", "promociones"],
   ["/personalizados", "personalizados"],
+  ["/descuentos", "descuentos"],
   ["/rangos", "rangos"],
 ]
 

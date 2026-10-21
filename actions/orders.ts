@@ -24,6 +24,7 @@ async function validatedOrina(structured: unknown) {
   return orina
 }
 import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
+import { computeNetPrice } from "@/lib/billing"
 import { PAYMENT_METHODS } from "@/lib/payment"
 import { assertOrderableTemplates } from "@/lib/catalog"
 
@@ -37,13 +38,13 @@ export async function createOrder(formData: FormData) {
   // Incluye los personalizados solo si son de esta clínica
   await assertOrderableTemplates(templateIds, clinicId)
   const branchId = await resolveBranch(clinicId, formData.get("branchId"))
-  const listed = await examsWithListPrice(templateIds)
+  const listed = await examsWithListPrice(templateIds, clinicId)
   // "Ya pagó" al registrar (solo el personal con permiso de pagos): se registra el pago completo en Caja
   const method = formData.get("paymentMethod")
   const paidUpfront = formData.get("paid") === "1" && can(session.user.role, "pagos")
     && PAYMENT_METHODS.some(m => m.value === method)
   const exams = paidUpfront
-    ? listed.map(e => ({ ...e, amountPaid: e.price, paymentTerm: "CONTADO", paymentMethod: method as string }))
+    ? listed.map(e => ({ ...e, amountPaid: computeNetPrice(e.price, e.discountType, e.discountValue), paymentTerm: "CONTADO", paymentMethod: method as string }))
     : listed
 
   const order = await createWithOrderNumber(orderNumber => prisma.order.create({

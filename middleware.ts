@@ -62,6 +62,7 @@ export const config = {
     "/facturacion/:path*",
     "/promociones/:path*",
     "/personalizados/:path*",
+    "/descuentos/:path*",
     "/rangos/:path*",
     "/finanzas/:path*",
   ],

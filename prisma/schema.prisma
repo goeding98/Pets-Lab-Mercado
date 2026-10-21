@@ -36,6 +36,7 @@ model Clinic {
   orders       Order[]
   branches     ClinicBranch[]
   customExams  ExamTemplate[] @relation("CustomExamClients") // exámenes personalizados para esta clínica
+  discounts    ClinicDiscount[]
   createdAt    DateTime       @default(now())
 }
 
@@ -257,4 +258,22 @@ model DeletedOrder {
   deletedByName String
   deletedAt     DateTime @default(now())
   snapshot      Json // orden completa con exámenes y resultados
+}
+
+// Descuento de un cliente (/clientes/[id], permiso "descuentos": ADMIN y COMERCIAL): un % sobre los exámenes de ciertas
+// áreas (vacío = todos) para las órdenes registradas entre startDate y endDate (AAAA-MM-DD, hora de Colombia, inclusive).
+// Se aplica al crear la orden / agregar o cambiar un examen (lib/discounts.ts) como descuento PORCENTAJE en Caja.
+model ClinicDiscount {
+  id            String   @id @default(cuid())
+  clinicId      String
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  percent       Float
+  areas         String[]
+  startDate     String
+  endDate       String
+  note          String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+
+  @@index([clinicId])
 }

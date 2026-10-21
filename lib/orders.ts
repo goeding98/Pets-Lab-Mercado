@@ -1,14 +1,17 @@
 import { Prisma } from "@prisma/client"
 import { prisma } from "./db"
+import { discountsFor, priceFields } from "./discounts"
 
-// Exámenes de una orden nueva, con el precio de lista del examen precargado (si lo tiene) para Caja
-export async function examsWithListPrice(templateIds: string[]) {
+// Exámenes de una orden nueva, con el precio de lista del examen precargado (si lo tiene) para Caja y el
+// descuento vigente del cliente (lib/discounts.ts), si tiene uno para esa área de examen
+export async function examsWithListPrice(templateIds: string[], clinicId: string | null = null) {
   const templates = await prisma.examTemplate.findMany({
     where: { id: { in: templateIds } },
     select: { id: true, price: true },
   })
   const priceOf = new Map(templates.map(t => [t.id, t.price]))
-  return templateIds.map(id => ({ templateId: id, price: priceOf.get(id) ?? 0 }))
+  const pct = await discountsFor(clinicId, templateIds)
+  return templateIds.map(id => ({ templateId: id, ...priceFields(priceOf.get(id) ?? 0, pct.get(id)) }))
 }
 
 // Sede de la orden: debe ser de la clínica; si la clínica tiene sedes, es obligatoria

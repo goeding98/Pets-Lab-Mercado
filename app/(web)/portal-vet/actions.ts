@@ -97,7 +97,7 @@ export async function createPortalOrder(formData: FormData) {
   const species = get("species")
   if (!patientName || !species) throw new Error("Faltan datos del paciente")
 
-  const exams = await examsWithListPrice(templateIds)
+  const exams = await examsWithListPrice(templateIds, session.user.clinicId)
   const branchId = await resolveBranch(session.user.clinicId, formData.get("branchId"))
   await createWithOrderNumber(orderNumber => prisma.order.create({
     data: {

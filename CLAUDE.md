@@ -90,6 +90,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   catálogo borra todos los `ExamTemplate`, promociones incluidas. `ExamTemplate.price` (opcional,
   hoy solo se edita en Promociones) se copia a `OrderExam.price` al crear la orden
   (`lib/orders.ts: examsWithListPrice`); después Caja lo edita por orden sin tocar el de lista.
+- Descuentos por cliente (`app/(lab)/descuentos/`, `actions/discounts.ts`, `lib/discounts.ts`, modelo `ClinicDiscount`; permiso
+  `descuentos`: ADMIN y COMERCIAL): % para un cliente en todos los exámenes o en ciertas áreas (`areas` vacío = todos),
+  entre `startDate` y `endDate` (AAAA-MM-DD Colombia, inclusive). Se aplica solo como descuento PORCENTAJE en el
+  `OrderExam` al crear la orden (staff y Portal Vet, `examsWithListPrice(templateIds, clinicId)`) y al cambiar/agregar
+  un examen (fecha de la orden); si aplican varios, gana el mayor. "Ya pagó" registra el neto. Nueva muestra muestra el
+  total con descuento. Crear/borrar uno no toca órdenes ya registradas; Caja lo puede ajustar después.
 - Pacientes (`app/(lab)/pacientes/`, permiso `muestras.ver`): no hay tabla Patient; se listan agrupando las
   órdenes por paciente + especie + tutor + clínica (datos de la más reciente). Los datos se corrigen por
   muestra con "Editar datos" (`actions/orderInfo.ts`, `OrderInfoEditor.tsx`, permiso `muestras.crear`):

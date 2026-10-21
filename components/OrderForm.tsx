@@ -34,6 +34,7 @@ export default function OrderForm({
   submitLabel = "Registrar muestra →",
   pendingLabel = "Registrando…",
   paymentOption = false,
+  discounts = [],
 }: {
   templates: (ExamTemplate & { clients?: { id: string }[] })[]
   clinics?: (Clinic & { branches: BranchOption[] })[]
@@ -42,6 +43,7 @@ export default function OrderForm({
   submitLabel?: string
   pendingLabel?: string
   paymentOption?: boolean
+  discounts?: { clinicId: string; percent: number; areas: string[] }[] // vigentes hoy (solo para el total del staff)
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState("")
@@ -50,7 +52,11 @@ export default function OrderForm({
   // Personalizados: en el formulario del staff solo aparecen con su clínica elegida (en el portal ya
   // llegan filtrados por la clínica de la sesión)
   const offered = clinics ? templates.filter(t => !t.isCustom || t.clients?.some(c => c.id === clinicId)) : templates
-  const total = offered.filter(t => selected.includes(t.id)).reduce((n, t) => n + (t.price ?? 0), 0)
+  // Total con el descuento vigente del cliente (lib/discounts.ts: por área, gana el mayor)
+  const clientDiscounts = discounts.filter(d => d.clinicId === clinicId)
+  const pctOf = (area: string) => Math.max(0, ...clientDiscounts.filter(d => d.areas.length === 0 || d.areas.includes(area)).map(d => d.percent))
+  const listTotal = offered.filter(t => selected.includes(t.id)).reduce((n, t) => n + (t.price ?? 0), 0)
+  const total = offered.filter(t => selected.includes(t.id)).reduce((n, t) => n + Math.max((t.price ?? 0) * (1 - pctOf(t.area) / 100), 0), 0)
   const noCharge = clinics?.find(c => c.id === clinicId)?.noCharge ?? false
   const branchOptions = clinics ? clinics.find(c => c.id === clinicId)?.branches ?? [] : ownBranches ?? []
 
@@ -199,7 +205,9 @@ export default function OrderForm({
             <div className="flex flex-wrap items-center gap-4 mt-2">
               <p className="font-sans text-sm text-ink">
                 Total a pagar: <strong>{formatCOP(total)}</strong>
-                <span className="block font-sans text-[11px] text-ink-2">Precios de lista; descuentos se ajustan en Caja.</span>
+                <span className="block font-sans text-[11px] text-ink-2">
+                  {total < listTotal ? <>Con el descuento del cliente (lista {formatCOP(listTotal)}). Otros ajustes, en Caja.</> : "Precios de lista; descuentos se ajustan en Caja."}
+                </span>
               </p>
               <label className="flex items-center gap-2 font-sans text-sm text-ink cursor-pointer">
                 <input type="checkbox" name="paid" value="1" className="w-4 h-4 accent-salvia-700" />

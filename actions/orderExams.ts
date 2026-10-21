@@ -7,10 +7,12 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { assertOrderableTemplates } from "@/lib/catalog"
+import { discountsFor, priceFields } from "@/lib/discounts"
 
 // Corregir los exámenes de una muestra (ej. la clínica pidió un perfil y quería otro). Solo el
 // personal, y solo exámenes pendientes: uno completado tiene resultados e inventario descontado.
-// El precio pasa a ser el de lista del examen nuevo (descuento en 0); lo ya pagado se conserva y el
+// El precio pasa a ser el de lista del examen nuevo, con el descuento del cliente vigente en la fecha de la orden
+// (lib/discounts.ts; si no hay, descuento en 0); lo ya pagado se conserva y el
 // módulo de pago muestra el saldo. Cada cambio queda anotado en las observaciones de la orden.
 
 async function requireStaff() {
@@ -22,7 +24,7 @@ async function requireStaff() {
 async function pendingExam(orderExamId: string) {
   const exam = await prisma.orderExam.findUnique({
     where: { id: orderExamId },
-    include: { template: { select: { name: true } }, order: { select: { id: true, clinicId: true, notes: true } } },
+    include: { template: { select: { name: true } }, order: { select: { id: true, clinicId: true, notes: true, createdAt: true } } },
   })
   if (!exam) throw new Error("Examen no encontrado")
   if (exam.status !== "PENDIENTE" || exam.uploadedPdfPath) {
@@ -34,9 +36,10 @@ async function pendingExam(orderExamId: string) {
 const today = () => new Date().toLocaleDateString("es-CO", { timeZone: "America/Bogota" })
 const withLog = (notes: string | null, line: string) => (notes ? `${notes}\n${line}` : line)
 
-async function listPrice(templateId: string) {
+async function listPrice(templateId: string, order: { clinicId: string | null; createdAt: Date }) {
   const t = await prisma.examTemplate.findUniqueOrThrow({ where: { id: templateId }, select: { name: true, price: true } })
-  return { name: t.name, price: t.price ?? 0 }
+  const pct = await discountsFor(order.clinicId, [templateId], order.createdAt)
+  return { name: t.name, fields: priceFields(t.price ?? 0, pct.get(templateId)) }
 }
 
 // La orden queda completa solo si todos sus exámenes lo están
@@ -61,14 +64,14 @@ export async function changeOrderExam(orderExamId: string, templateId: string): 
     const exam = await pendingExam(orderExamId)
     if (exam.templateId === templateId) return {}
     await assertOrderableTemplates([templateId], exam.order.clinicId)
-    const next = await listPrice(templateId)
+    const next = await listPrice(templateId, exam.order)
     await prisma.$transaction([
       // El borrador (si había) era de los campos del examen anterior: se descarta
       prisma.examResult.deleteMany({ where: { orderExamId } }),
       // Se cambia en el mismo registro: conserva comentarios y fotos de la muestra
       prisma.orderExam.update({
         where: { id: orderExamId },
-        data: { templateId, price: next.price, discountType: "VALOR", discountValue: 0, structured: Prisma.DbNull },
+        data: { templateId, ...next.fields, structured: Prisma.DbNull },
       }),
       prisma.order.update({
         where: { id: exam.order.id },
@@ -85,11 +88,11 @@ export async function changeOrderExam(orderExamId: string, templateId: string): 
 export async function addOrderExam(orderId: string, templateId: string): Promise<{ error?: string }> {
   const session = await requireStaff()
   try {
-    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId }, select: { clinicId: true, notes: true } })
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId }, select: { clinicId: true, notes: true, createdAt: true } })
     await assertOrderableTemplates([templateId], order.clinicId)
-    const next = await listPrice(templateId)
+    const next = await listPrice(templateId, order)
     await prisma.$transaction([
-      prisma.orderExam.create({ data: { orderId, templateId, price: next.price } }),
+      prisma.orderExam.create({ data: { orderId, templateId, ...next.fields } }),
       prisma.order.update({
         where: { id: orderId },
         data: { notes: withLog(order.notes, `[${today()}] Examen agregado: ${next.name} (por ${session.user.name})`) },
