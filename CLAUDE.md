@@ -68,7 +68,8 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   igualar (y ajusta los reticulocitos de los perfiles). Hay un
   solo hemograma para canino y felino (rangos de ambas especies en el mismo campo); el "fuera de
   rango" se evalúa con el rango de la especie de la orden. Exámenes nuevos sin rango de referencia
-  en la base (hay que pedírselo al laboratorio): CK, Fructosamina, Ácidos Biliares, Creatininuria.
+  en la base (hay que pedírselo al laboratorio): CK, Fructosamina, Creatininuria. Ácidos Biliares tiene dos casillas
+  (Preprandial y Postprandial, cada una con su rango por especie; la tabla de referencia sigue al final).
 - `prisma/seed.ts` y `scripts/import-catalogo-v6.ts` están **desactualizados**: el catálogo v6 (66
   exámenes, de `catalogo-pets-lab/catalogo-examenes.json`) ya no coincide con la base.
   `import-catalogo-v6.ts` borra todo `ExamTemplate`/`Order` antes de re-importar —
