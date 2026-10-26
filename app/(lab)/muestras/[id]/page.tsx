@@ -18,6 +18,8 @@ import { AddExam, ExamChanger } from "./ExamChanger"
 import OrderInfoEditor from "./OrderInfoEditor"
 import WhatsAppButton from "./WhatsAppButton"
 import ExamTabs from "./ExamTabs"
+import A15Import from "./A15Import"
+import { A15_KEYS, a15KeyOf, isA15Excluded } from "@/lib/a15"
 import DeleteOrderButton from "./DeleteOrderButton"
 import { TrackOpenSample } from "@/components/OpenSamplesBar"
 import { headers } from "next/headers"
@@ -65,6 +67,8 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
   const payment = orderPayment(order.exams, order.clinic?.noCharge ?? false)
   // Corregir exámenes de la muestra (personal): catálogo disponible para la clínica de la orden
   const canChangeExams = can(session?.user.role, "muestras.crear")
+  // Botón del equipo de química A15: si algún examen tiene parámetros que mide el equipo
+  const hasA15 = canEdit && order.exams.some(e => !isA15Excluded(e.template.name) && e.template.sections.some(s => !isA15Excluded(s.name) && s.fields.some(f => A15_KEYS.has(a15KeyOf(f.key) ?? ""))))
   const catalog = canChangeExams
     ? await prisma.examTemplate.findMany({
         where: catalogWhere(order.clinicId),
@@ -206,6 +210,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
       {/* Exams */}
       <div className="space-y-6">
         <TrackOpenSample id={order.id} orderNumber={order.orderNumber} patientName={order.patientName} />
+        {hasA15 && <A15Import />}
         <ExamTabs
           orderId={order.id}
           tabs={order.exams.map(e => ({

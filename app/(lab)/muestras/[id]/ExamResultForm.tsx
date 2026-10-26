@@ -16,6 +16,7 @@ import CoproscopicoFields from "@/components/CoproscopicoFields"
 import OrinaForm from "@/components/OrinaForm"
 import { isOrinaSection, orinaErrors, readOrina, type OrinaConfig, type Reactivo } from "@/lib/orina"
 import CoproForm from "@/components/CoproForm"
+import { A15_EVENT, a15KeyOf, isA15Excluded, type A15EventDetail } from "@/lib/a15"
 
 type Field = {
   id: string
@@ -242,6 +243,34 @@ export default function ExamResultForm({
     setSaved(false)
   }
 
+  // Valores del equipo de química A15 (A15Import.tsx): llena los campos con el mismo key si el examen está abierto
+  const lockedRef = useRef(false)
+  useEffect(() => {
+    const onA15 = (e: Event) => {
+      const { values: incoming, report } = (e as CustomEvent<A15EventDetail>).detail
+      const next: Record<string, string> = {}
+      for (const s of exam.template.sections) {
+        if (isA15Excluded(exam.template.name) || isA15Excluded(s.name)) continue
+        for (const f of s.fields) {
+          const key = a15KeyOf(f.key)
+          if (!key || incoming[key] == null) continue
+          if (f.fieldType === "calculated") report.push({ key, exam: exam.template.name, status: "calculado" })
+          else if (lockedRef.current) report.push({ key, exam: exam.template.name, status: "bloqueado" })
+          else {
+            next[f.id] = incoming[key]
+            report.push({ key, exam: exam.template.name, status: "llenado" })
+          }
+        }
+      }
+      if (Object.keys(next).length) {
+        setValues(prev => ({ ...prev, ...next }))
+        setSaved(false)
+      }
+    }
+    window.addEventListener(A15_EVENT, onA15)
+    return () => window.removeEventListener(A15_EVENT, onA15)
+  }, [exam.template])
+
   function handleDraft() {
     const results = allFields.map(f => {
       const value = f.fieldType === "calculated" ? getCalcValue(f) : (values[f.id] ?? "")
@@ -306,6 +335,7 @@ export default function ExamResultForm({
   const refTable = referenceTableFor(exam.template.name)
   const isComplete = exam.status === "COMPLETADO"
   const locked = (isComplete && !editing) || readOnly
+  lockedRef.current = locked
 
   function startEditing() {
     setSaved(false)

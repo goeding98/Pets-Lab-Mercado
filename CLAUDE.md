@@ -131,6 +131,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `{url, name}` a `api/upload/[examId]` (verifica con `head` que sea un PDF de
   `uploads/<examId>/`). No volver a mandar el archivo por la función: Vercel corta a 4.5 MB.
   Eliminar el PDF deja el examen completado si tiene resultados capturados; si no, vuelve a pendiente.
+- Equipo de química A15 (`lib/a15.ts`, `muestras/[id]/A15Import.tsx`, botón "Cargar resultados del A15" en la muestra si tiene
+  parámetros del equipo): se pegan/suben capturas de "Resultados muestra"; se leen en el navegador con tesseract.js (texto a x2
+  + segunda lectura solo-dígitos de cada celda a x2 y x3; si no coinciden, amarillo "Revisar"). `A15_TECHS` = técnica del equipo
+  → `ExamField.key`; albúmina/proteínas/globulinas vienen en g/L y se pasan a g/dL. "Pasar a los exámenes" lanza `A15_EVENT`
+  y cada `ExamResultForm` abierto llena sus campos con ese key (no los calculados ni los completados sin "Editar"; nunca
+  Citoquímico/orina). No guarda: se revisa y se da Guardar. A/G y BUN/Creatinina del equipo no se usan.
 - Borrador (`actions/orders.ts: saveExamDraft`, botón "Guardar borrador"): guarda `ExamResult`/`structured` de un
   examen **pendiente** sin completarlo (sin inventario, sin validaciones de cierre; RECIBIDA → EN_PROCESO). Un
   borrador nunca sale en un PDF (`lib/reportPdf.ts` vacía los pendientes); se descarta si el examen se cambia por
