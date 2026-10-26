@@ -8,32 +8,33 @@ export type A15Tech = {
   key: string | null // ExamField.key en Petslab (null = no lo usamos)
   label: string
   gPerL?: boolean // el equipo lo da en g/L; Petslab lo usa en g/dL (÷ 10)
+  max?: number // valor máximo creíble en la unidad del equipo: más alto = el OCR leyó mal ("56" por 0,56) → Revisar
 }
 
 export const A15_TECHS: A15Tech[] = [
-  { name: "ALBUMIN", key: "albumina", label: "Albúmina", gPerL: true },
-  { name: "ALP-AMP", key: "fosfatasa_alcalina_alkp", label: "Fosfatasa Alcalina" },
-  { name: "ALT", key: "alt_gpt", label: "ALT/GPT" },
-  { name: "AST", key: "ast_got", label: "AST/GOT" },
-  { name: "BILI DIRECT DPD", key: "bilirrubina_directa", label: "Bilirrubina Directa" },
-  { name: "BILI TOTAL DPD", key: "bilirrubina_total", label: "Bilirrubina Total" },
-  { name: "CALCIUM ARSENAZO", key: "calcio", label: "Calcio" },
-  { name: "CHOLESTEROL", key: "colesterol", label: "Colesterol" },
-  { name: "CREATININE", key: "creatinina", label: "Creatinina" },
-  { name: "g-GT", key: "ggt", label: "GGT" },
-  { name: "GLUCOSE", key: "glucosa", label: "Glucosa" },
-  { name: "LIPASE", key: "lipasa", label: "Lipasa" },
-  { name: "PHOSPHORUS", key: "fosforo", label: "Fósforo" },
-  { name: "PROTEIN TOTAL", key: "proteinas_totales", label: "Proteínas Totales", gPerL: true },
-  { name: "TRIGLYCERIDES", key: "trigliceridos", label: "Triglicéridos" },
-  { name: "UREA UV", key: "urea", label: "Urea" },
-  { name: "AMYLASE DIRECT", key: "amilasa", label: "Amilasa" },
-  { name: "FRUCTOSAMINE", key: "fructosamina", label: "Fructosamina" },
+  { name: "ALBUMIN", key: "albumina", label: "Albúmina", gPerL: true, max: 80 },
+  { name: "ALP-AMP", key: "fosfatasa_alcalina_alkp", label: "Fosfatasa Alcalina", max: 5000 },
+  { name: "ALT", key: "alt_gpt", label: "ALT/GPT", max: 5000 },
+  { name: "AST", key: "ast_got", label: "AST/GOT", max: 5000 },
+  { name: "BILI DIRECT DPD", key: "bilirrubina_directa", label: "Bilirrubina Directa", max: 40 },
+  { name: "BILI TOTAL DPD", key: "bilirrubina_total", label: "Bilirrubina Total", max: 50 },
+  { name: "CALCIUM ARSENAZO", key: "calcio", label: "Calcio", max: 25 },
+  { name: "CHOLESTEROL", key: "colesterol", label: "Colesterol", max: 1500 },
+  { name: "CREATININE", key: "creatinina", label: "Creatinina", max: 20 },
+  { name: "g-GT", key: "ggt", label: "GGT", max: 500 },
+  { name: "GLUCOSE", key: "glucosa", label: "Glucosa", max: 1000 },
+  { name: "LIPASE", key: "lipasa", label: "Lipasa", max: 10000 },
+  { name: "PHOSPHORUS", key: "fosforo", label: "Fósforo", max: 30 },
+  { name: "PROTEIN TOTAL", key: "proteinas_totales", label: "Proteínas Totales", gPerL: true, max: 150 },
+  { name: "TRIGLYCERIDES", key: "trigliceridos", label: "Triglicéridos", max: 5000 },
+  { name: "UREA UV", key: "urea", label: "Urea", max: 600 },
+  { name: "AMYLASE DIRECT", key: "amilasa", label: "Amilasa", max: 10000 },
+  { name: "FRUCTOSAMINE", key: "fructosamina", label: "Fructosamina", max: 1500 },
   { name: "ALBUMIN/GLOBULIN RATIO", key: null, label: "Relación A/G" }, // el equipo la redondea a 0; Petslab la calcula
-  { name: "BUN", key: "nitrogeno_ureico_bun", label: "Nitrógeno Ureico (BUN)" },
+  { name: "BUN", key: "nitrogeno_ureico_bun", label: "Nitrógeno Ureico (BUN)", max: 300 },
   { name: "BUN/CREATININE", key: null, label: "Relación BUN/Creatinina" },
-  { name: "GLOBULIN", key: "globulinas", label: "Globulinas", gPerL: true },
-  { name: "INDIRECT BILIRUB DPD", key: "bilirrubina_indirecta", label: "Bilirrubina Indirecta" },
+  { name: "GLOBULIN", key: "globulinas", label: "Globulinas", gPerL: true, max: 150 },
+  { name: "INDIRECT BILIRUB DPD", key: "bilirrubina_indirecta", label: "Bilirrubina Indirecta", max: 40 },
   { name: "VLDL 2", key: null, label: "VLDL" },
 ]
 
@@ -101,3 +102,35 @@ export function toPetslab(t: A15Tech, value: string, unitRead: string): string {
   if (!inGPerL) return value
   return String(Math.round((Number(value) / 10) * 100) / 100)
 }
+
+// Prepara la captura para el OCR (sobre los píxeles RGBA, en el lugar): la pasa a gris y borra las líneas de la
+// cuadrícula de la tabla (filas/columnas casi enteras oscuras), que el OCR lee como "|", "[" o "1" pegados a los
+// valores ("[SER", "|39", "118.10").
+export function cleanForOcr(px: Uint8ClampedArray | Uint8Array, w: number, h: number) {
+  const dark = new Uint8Array(w * h)
+  for (let i = 0; i < w * h; i++) {
+    const g = Math.round(0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2])
+    px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = g
+    dark[i] = g < 140 ? 1 : 0
+  }
+  const white = (i: number) => { px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = 255 }
+  for (let y = 0; y < h; y++) {
+    let n = 0
+    for (let x = 0; x < w; x++) n += dark[y * w + x]
+    if (n > w * 0.5) for (let x = 0; x < w; x++) white(y * w + x)
+  }
+  for (let x = 0; x < w; x++) {
+    // Línea vertical: un tramo oscuro continuo largo (las letras nunca lo forman)
+    let run = 0, start = 0
+    for (let y = 0; y <= h; y++) {
+      if (y < h && dark[y * w + x]) { if (run === 0) start = y; run++ }
+      else {
+        if (run > Math.max(25, h * 0.3)) for (let k = start; k < start + run; k++) white(k * w + x)
+        run = 0
+      }
+    }
+  }
+}
+
+// Quita restos de bordes pegados a una palabra leída: "[SER" → "SER", "|39" → "39"
+export const stripBorders = (s: string) => s.replace(/^[\[\]|(){}_!]+|[\[\]|(){}_!]+$/g, "")

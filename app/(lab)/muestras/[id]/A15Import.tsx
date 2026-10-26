@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
 import {
-  A15_EVENT, cleanNumber, isTypeToken, matchTech, toPetslab,
+  A15_EVENT, cleanForOcr, cleanNumber, isTypeToken, matchTech, stripBorders, toPetslab,
   type A15EventDetail, type A15FillReport, type A15Tech,
 } from "@/lib/a15"
 
@@ -46,28 +46,41 @@ function loadImage(file: Blob): Promise<HTMLImageElement> {
   })
 }
 
-// La captura se agranda y se pasa a gris: el OCR lee mucho mejor los números así
-function scaled(img: HTMLImageElement, s: number) {
+// La captura se limpia (gris, sin líneas de la tabla) y se agranda: el OCR lee mucho mejor los números así
+function cleaned(img: HTMLImageElement) {
   const c = document.createElement("canvas")
-  c.width = img.naturalWidth * s
-  c.height = img.naturalHeight * s
+  c.width = img.naturalWidth
+  c.height = img.naturalHeight
+  const ctx = c.getContext("2d")!
+  ctx.drawImage(img, 0, 0)
+  const data = ctx.getImageData(0, 0, c.width, c.height)
+  cleanForOcr(data.data, c.width, c.height)
+  ctx.putImageData(data, 0, 0)
+  return c
+}
+function scaled(src: HTMLCanvasElement, s: number) {
+  const c = document.createElement("canvas")
+  c.width = Math.round(src.width * s)
+  c.height = Math.round(src.height * s)
   const ctx = c.getContext("2d")!
   ctx.imageSmoothingQuality = "high"
-  ctx.filter = "grayscale(1)"
-  ctx.drawImage(img, 0, 0, c.width, c.height)
+  ctx.drawImage(src, 0, 0, c.width, c.height)
   return c
 }
 
 async function readScreenshot(file: Blob): Promise<{ rows: Row[]; sample?: string }> {
   const { text, digits } = await getWorkers()
   const img = await loadImage(file)
-  const c2 = scaled(img, 2)
-  const c3 = scaled(img, 3)
-  const { data } = await text.recognize(c2)
+  const base = cleaned(img)
+  // Capturas pequeñas (tabla con letra chica) se agrandan más
+  const s1 = base.width < 500 ? 3 : 2
+  const c1 = scaled(base, s1)
+  const c2 = scaled(base, s1 * 1.5)
+  const { data } = await text.recognize(c1)
   const rows: Row[] = []
   let sample: string | undefined
   for (const line of data.lines ?? []) {
-    const words = line.words.filter(w => w.text.trim())
+    const words = line.words.map(w => ({ ...w, text: stripBorders(w.text) })).filter(w => w.text.trim())
     const ti = words.findIndex((w, i) => i > 0 && isTypeToken(w.text))
     // Sin columna TIPO: el valor es la primera palabra numérica después del nombre
     const vi = ti > 0 ? ti + 1 : words.findIndex((w, i) => i > 0 && cleanNumber(w.text) !== null)
@@ -87,16 +100,16 @@ async function readScreenshot(file: Blob): Promise<{ rows: Row[]; sample?: strin
       })
       return cleanNumber(r.data.text)
     }
-    const reads = [cleanNumber(words[vi].text), await cell(c2, 1), await cell(c3, 1.5)]
+    const reads = [cleanNumber(words[vi].text), await cell(c1, 1), await cell(c2, 1.5)]
     const valid = reads.filter((v): v is string => v !== null)
     if (valid.length === 0) continue
     const counts = new Map<string, number>()
     for (const v of valid) counts.set(v, (counts.get(v) ?? 0) + 1)
-    // Gana la lectura más repetida; si empatan, la de solo números a escala x2
+    // Gana la lectura más repetida; si empatan, la de solo números a la primera escala
     const [top, n] = Array.from(counts.entries()).sort((a, z) => z[1] - a[1])[0]
     const device = n > 1 ? top : (reads[1] ?? valid[0])
     const unit = words[vi + 1]?.text ?? ""
-    rows.push({ tech, device, unit, value: toPetslab(tech, device, unit), sure: valid.length === 3 && counts.size === 1 })
+    rows.push({ tech, device, unit, value: toPetslab(tech, device, unit), sure: valid.length === 3 && counts.size === 1 && !(tech.max && Number(device) > tech.max) })
   }
   URL.revokeObjectURL(img.src)
   return { rows, sample }
@@ -226,7 +239,7 @@ export default function A15Import() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={m.url} alt={m.name} className="w-36 h-24 object-cover object-left-top border border-black/10" />
                 <p className="font-mono text-[8px] tracking-[0.12em] uppercase mt-1 text-ink-2">
-                  {m.status === "leyendo" ? "Leyendo…" : m.status === "error" ? <span className="text-red-700">No se pudo leer</span> : `${m.count} valores`}
+                  {m.status === "leyendo" ? "Leyendo…" : m.status === "error" ? <span className="text-red-700">No se pudo leer</span> : m.count ? `${m.count} valores` : <span className="text-red-700">No encontré valores: usa una captura más grande y nítida</span>}
                 </p>
               </div>
             ))}
