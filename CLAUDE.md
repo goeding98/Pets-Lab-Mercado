@@ -147,6 +147,11 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Extendido de Sangre Periférica, Citología de Piel, Citología Conjuntival, Citología de Masa (y Masa Adicional), Conclusión de Citología de Líquidos, secciones "Interpretación", Citología de Efusión, Test de Héller y Wright de orina y heces, Observaciones del Raspado de Piel — también dentro de los perfiles) se muestran
   solo como Parámetro + Descripción, con filas altas, en el formulario y en el PDF. La lista vive en
   `lib/sections.ts: isDescriptiveSection` (por nombre de sección o de examen); agregar ahí las nuevas.
+- Sugerencias de Morfología y Observaciones del hemograma (`lib/hemogramSuggestions.ts`, `components/HemoSuggestions.tsx`, bajo
+  cada casilla linea_roja / linea_blanca / serie_plaquetaria / hemoparasitos en `ExamResultForm`, también en perfiles): verde =
+  frases calculadas con los valores vs. el rango de la especie/edad (anemia y grado, índices, leucocitosis, neutrofilia,
+  desviación a la izquierda, trombocitopenia…; hemoparásitos negativo según especie); gris = hallazgos del extendido
+  (cruces + → ++ → +++ → quitar). Solo editan el texto; el doctor decide y guarda.
 - Rangos de referencia (`app/(lab)/rangos/`, `actions/ranges.ts`, permiso `rangos`: solo ADMIN —
   el jefe médico Marcelo Valencia es ADMIN): lista los exámenes maestros (activos, no perfiles ni
   promociones) y edita refCanine/refFeline (y los nombres: "Renombrar" parámetro → `updateFieldName`, "Renombrar examen" → `updateExamName`, que

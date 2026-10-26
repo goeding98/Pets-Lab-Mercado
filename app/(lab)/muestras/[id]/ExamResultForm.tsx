@@ -17,6 +17,8 @@ import OrinaForm from "@/components/OrinaForm"
 import { isOrinaSection, orinaErrors, readOrina, type OrinaConfig, type Reactivo } from "@/lib/orina"
 import CoproForm from "@/components/CoproForm"
 import { A15_EVENT, a15KeyOf, isA15Excluded, type A15EventDetail } from "@/lib/a15"
+import HemoSuggestions from "@/components/HemoSuggestions"
+import { isHemoTextKey, type HemoReader, type HemoTextKey } from "@/lib/hemogramSuggestions"
 
 type Field = {
   id: string
@@ -238,6 +240,15 @@ export default function ExamResultForm({
     return v !== undefined ? String(v) : ""
   }
 
+  // Sugerencias de Morfología y Observaciones del hemograma: lee los valores (también los calculados) y el rango
+  // de la especie de cada parámetro por su key
+  const hemoRead: HemoReader = key => {
+    const f = allFields.find(x => (x.key ?? "").replace(/__d+$/, "") === key)
+    if (!f) return { value: null, ref: null }
+    const v = getResolvedValues()[formulaKey(f)]
+    return { value: v ?? null, ref: refFor(f) }
+  }
+
   function handleChange(fieldId: string, value: string) {
     setValues(prev => ({ ...prev, [fieldId]: value }))
     setSaved(false)
@@ -452,6 +463,15 @@ export default function ExamResultForm({
                           className="border border-black/20 bg-white px-2 py-1.5 text-xs font-sans w-full resize-y focus:outline-salvia-700 disabled:bg-black/5 disabled:cursor-default"
                           placeholder="—"
                         />
+                        {!locked && isHemoTextKey(field.key?.replace(/__d+$/, "") ?? null) && (
+                          <HemoSuggestions
+                            fieldKey={field.key!.replace(/__d+$/, "") as HemoTextKey}
+                            text={getValue(field.id)}
+                            onChange={v => handleChange(field.id, v)}
+                            read={hemoRead}
+                            species={species}
+                          />
+                        )}
                       </td>
                     </tr>
                   ))}
