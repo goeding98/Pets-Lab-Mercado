@@ -6,7 +6,7 @@ import { saveExamDraft, saveExamResults } from "@/actions/orders"
 import { setUnsaved } from "@/lib/unsavedWork"
 import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
 import { formatCOP } from "@/lib/payment"
-import { getRangeStatus, canineRefLabel } from "@/lib/rangeStatus"
+import { getRangeStatus, isFelineOnlyExam } from "@/lib/rangeStatus"
 import { evaluar } from "@/catalogo-pets-lab/calculos"
 import ExamNotes from "./ExamNotes"
 import { isDescriptiveSection } from "@/lib/sections"
@@ -485,7 +485,7 @@ export default function ExamResultForm({
                     <th className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2 pr-3 w-[220px]">Parámetro</th>
                     <th className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2 pr-3 w-[80px]">Unidad</th>
                     <th className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2 pr-3 w-[110px]">Resultado</th>
-                    <th className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2 pr-3 w-[140px]">Ref. canino</th>
+                    {!isFelineOnlyExam(`${exam.template.name} ${section.name}`) && <th className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2 pr-3 w-[140px]">Ref. canino</th>}
                     <th className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2 pr-3 w-[140px]">Ref. felino</th>
                     <th className="font-mono text-[8px] tracking-[0.15em] text-salvia-700 uppercase pb-2">Técnica</th>
                   </tr>
@@ -559,7 +559,7 @@ export default function ExamResultForm({
                             />
                           )}
                         </td>
-                        <td className="py-1.5 pr-3 font-mono text-[10px] text-ink-2">{canineRefLabel(`${exam.template.name} ${section.name}`, field.refCanine)}</td>
+                        {!isFelineOnlyExam(`${exam.template.name} ${section.name}`) && <td className="py-1.5 pr-3 font-mono text-[10px] text-ink-2">{field.refCanine ?? "—"}</td>}
                         <td className="py-1.5 pr-3 font-mono text-[10px] text-ink-2">{field.refFeline ?? "—"}</td>
                         <td className="py-1.5 font-mono text-[10px] text-ink-2">{field.technique ?? "—"}</td>
                       </tr>

@@ -1,5 +1,5 @@
 import { Fragment } from "react"
-import { RANGE_COLORS, getRangeStatus, refForSpecies, canineRefLabel } from "@/lib/rangeStatus"
+import { RANGE_COLORS, getRangeStatus, refForSpecies, isFelineOnlyExam } from "@/lib/rangeStatus"
 import path from "path"
 import fs from "fs"
 import {
@@ -585,7 +585,7 @@ export function PdfReport({ order }: { order: OrderData }) {
                       <View style={styles.colParam}><Text style={styles.thText}>Parámetro</Text></View>
                       <View style={styles.colUnit}><Text style={styles.thText}>Unidad</Text></View>
                       <View style={styles.colResult}><Text style={styles.thText}>Resultado</Text></View>
-                      <View style={styles.colRef}><Text style={styles.thText}>Ref. Can.</Text></View>
+                      {!isFelineOnlyExam(`${exam.template.name} ${section.name}`) && <View style={styles.colRef}><Text style={styles.thText}>Ref. Can.</Text></View>}
                       <View style={styles.colRef}><Text style={styles.thText}>Ref. Fel.</Text></View>
                       <View style={styles.colTech}><Text style={styles.thText}>Técnica</Text></View>
                     </View>
@@ -613,7 +613,7 @@ export function PdfReport({ order }: { order: OrderData }) {
                               {value}{flagged ? " *" : ""}
                             </Text>
                           </View>
-                          <View style={styles.colRef}><Text style={styles.tdMono}>{canineRefLabel(`${exam.template.name} ${section.name}`, field.refCanine)}</Text></View>
+                          {!isFelineOnlyExam(`${exam.template.name} ${section.name}`) && <View style={styles.colRef}><Text style={styles.tdMono}>{field.refCanine ?? "—"}</Text></View>}
                           <View style={styles.colRef}><Text style={styles.tdMono}>{field.refFeline ?? "—"}</Text></View>
                           <View style={styles.colTech}><Text style={styles.tdMono}>{field.technique ?? "—"}</Text></View>
                         </View>

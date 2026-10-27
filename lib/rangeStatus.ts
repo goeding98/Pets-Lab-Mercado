@@ -20,6 +20,5 @@ export const refForSpecies = (species: string, f: { refCanine?: string | null; r
 // Mismos tonos que el formulario (Tailwind blue-600 / red-600)
 export const RANGE_COLORS = { low: "#2563eb", high: "#dc2626" } as const
 
-// Pruebas solo felinas (VIF/VILEF, Lipasa Pancreática Específica Felina…): la columna Ref. canino queda vacía, sin "—"
+// Pruebas solo felinas (VIF/VILEF, Lipasa Pancreática Específica Felina…): sin columna Ref. canino (formulario y PDF)
 export const isFelineOnlyExam = (examName: string) => /felin/i.test(examName) && !/canin/i.test(examName)
-export const canineRefLabel = (examName: string, ref: string | null | undefined) => ref ?? (isFelineOnlyExam(examName) ? "" : "—")
