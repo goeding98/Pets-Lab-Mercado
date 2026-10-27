@@ -1,5 +1,5 @@
 import { Fragment } from "react"
-import { RANGE_COLORS, getRangeStatus, refForSpecies } from "@/lib/rangeStatus"
+import { RANGE_COLORS, getRangeStatus, refForSpecies, canineRefLabel } from "@/lib/rangeStatus"
 import path from "path"
 import fs from "fs"
 import {
@@ -613,7 +613,7 @@ export function PdfReport({ order }: { order: OrderData }) {
                               {value}{flagged ? " *" : ""}
                             </Text>
                           </View>
-                          <View style={styles.colRef}><Text style={styles.tdMono}>{field.refCanine ?? "—"}</Text></View>
+                          <View style={styles.colRef}><Text style={styles.tdMono}>{canineRefLabel(`${exam.template.name} ${section.name}`, field.refCanine)}</Text></View>
                           <View style={styles.colRef}><Text style={styles.tdMono}>{field.refFeline ?? "—"}</Text></View>
                           <View style={styles.colTech}><Text style={styles.tdMono}>{field.technique ?? "—"}</Text></View>
                         </View>

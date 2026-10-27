@@ -6,7 +6,7 @@ import { saveExamDraft, saveExamResults } from "@/actions/orders"
 import { setUnsaved } from "@/lib/unsavedWork"
 import { computeNetPrice, getPaymentStatus } from "@/lib/billing"
 import { formatCOP } from "@/lib/payment"
-import { getRangeStatus } from "@/lib/rangeStatus"
+import { getRangeStatus, canineRefLabel } from "@/lib/rangeStatus"
 import { evaluar } from "@/catalogo-pets-lab/calculos"
 import ExamNotes from "./ExamNotes"
 import { isDescriptiveSection } from "@/lib/sections"
@@ -559,7 +559,7 @@ export default function ExamResultForm({
                             />
                           )}
                         </td>
-                        <td className="py-1.5 pr-3 font-mono text-[10px] text-ink-2">{field.refCanine ?? "—"}</td>
+                        <td className="py-1.5 pr-3 font-mono text-[10px] text-ink-2">{canineRefLabel(`${exam.template.name} ${section.name}`, field.refCanine)}</td>
                         <td className="py-1.5 pr-3 font-mono text-[10px] text-ink-2">{field.refFeline ?? "—"}</td>
                         <td className="py-1.5 font-mono text-[10px] text-ink-2">{field.technique ?? "—"}</td>
                       </tr>
