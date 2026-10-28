@@ -132,6 +132,11 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `{url, name}` a `api/upload/[examId]` (verifica con `head` que sea un PDF de
   `uploads/<examId>/`). No volver a mandar el archivo por la función: Vercel corta a 4.5 MB.
   Eliminar el PDF deja el examen completado si tiene resultados capturados; si no, vuelve a pendiente.
+- Reporte por partes de perfiles/promociones/personalizados (`lib/reportParts.ts`, `muestras/[id]/PartsReport.tsx`): las secciones se
+  agrupan en partes (Hemograma, Química sanguínea, Coagulación, Coprológico, Orina o el examen de origen) y se emite PDF
+  (`api/pdf/exam/[examId]?parts=A|B`, solo personal) o WhatsApp (`/r/<token kind "p">`, id `<examId>~<índices>`, `actions/shareParts.ts`)
+  solo de las elegidas, con lo GUARDADO aunque el perfil siga pendiente (excepción a "un borrador nunca sale": lo decide el
+  personal). Sin PDF adjunto ni comentarios/fotos generales del perfil. Solo se pueden elegir partes con datos guardados.
 - Equipo de química A15 (`lib/a15.ts`, `muestras/[id]/A15Import.tsx`, botón "Cargar resultados del A15" en la muestra si tiene
   parámetros del equipo): se pegan/suben capturas de "Resultados muestra"; se leen en el navegador con tesseract.js (texto a x2
   + segunda lectura solo-dígitos de cada celda a x2 y x3; si no coinciden, amarillo "Revisar"). `A15_TECHS` = técnica del equipo

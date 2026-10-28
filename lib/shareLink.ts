@@ -3,7 +3,8 @@ import { createHmac, timingSafeEqual } from "crypto"
 // Enlace para compartir el PDF de una orden (o de un examen) por WhatsApp sin iniciar sesión:
 // /r/<token>. El token va firmado con NEXTAUTH_SECRET (no se puede inventar ni cambiar de orden) y
 // vence. La regla de pago se vuelve a revisar al abrirlo (app/r/[token]/route.ts).
-export type ShareTarget = { kind: "o" | "e"; id: string } // o = orden completa, e = un examen
+// o = orden completa, e = un examen, p = partes de un perfil (id = "<examId>~<índices de examParts>", ej. "abc~0-2")
+export type ShareTarget = { kind: "o" | "e" | "p"; id: string }
 
 const SHARE_DAYS = 60
 const b64 = (b: Buffer) => b.toString("base64url")
@@ -23,6 +24,6 @@ export function readShareToken(token: string): ShareTarget | null {
   const expected = Buffer.from(sign(payload)), got = Buffer.from(sig)
   if (expected.length !== got.length || !timingSafeEqual(expected, got)) return null
   if (parseInt(exp36, 36) * 1000 < Date.now()) return null
-  if (kind !== "o" && kind !== "e") return null
+  if (kind !== "o" && kind !== "e" && kind !== "p") return null
   return { kind, id }
 }

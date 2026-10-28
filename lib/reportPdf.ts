@@ -5,11 +5,15 @@ import { PDFDocument } from "pdf-lib"
 import { PdfReport, type OrderData } from "@/components/PdfReport"
 import { isCoproPhotoRole } from "@/lib/coprologico"
 import { applyAgeRanges } from "@/lib/ageRanges"
+import { templateForParts } from "@/lib/reportParts"
 
 type ReportExam = Omit<OrderData["exams"][number], "photos" | "attachedPdf" | "macroPhotos"> & {
   uploadedPdfPath: string | null
   status?: string
   photos: { id: string; url: string; role?: string | null }[] // role "COPRO_MACRO" = foto de la muestra del Coprológico
+  // Reporte por partes de un perfil (lib/reportParts.ts): solo esas secciones, con lo guardado aunque el perfil siga
+  // pendiente (el personal decide mandarlo); sin el PDF adjunto ni los comentarios/fotos generales del perfil
+  onlyParts?: string[]
 }
 
 async function readBlob(url: string): Promise<Buffer | null> {
@@ -38,7 +42,10 @@ export async function buildOrderPdf(
   // En el reporte de la orden solo van los exámenes completados (un pendiente saldría vacío); si se
   // pide un solo examen, o ninguno está completo, van todos.
   // Un examen pendiente puede tener un borrador guardado: nunca sale en un reporte (va vacío)
-  const finalOnly = exams.map(e => (e.status && e.status !== "COMPLETADO" ? { ...e, results: [], structured: null } : e))
+  exams = exams.map(e => (e.onlyParts?.length
+    ? { ...e, template: templateForParts(e.template, e.onlyParts), uploadedPdfPath: null, comments: null, photos: e.photos.filter(p => p.role) }
+    : e))
+  const finalOnly = exams.map(e => (e.status && e.status !== "COMPLETADO" && !e.onlyParts?.length ? { ...e, results: [], structured: null } : e))
   const done = finalOnly.filter(e => e.status === "COMPLETADO")
   const shown = finalOnly.length > 1 && done.length > 0 ? done : finalOnly
   const hasNotes = (e: ReportExam) => !!e.comments || e.photos.some(p => !p.role)

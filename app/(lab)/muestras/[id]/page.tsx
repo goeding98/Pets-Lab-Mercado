@@ -19,6 +19,8 @@ import OrderInfoEditor from "./OrderInfoEditor"
 import WhatsAppButton from "./WhatsAppButton"
 import ExamTabs from "./ExamTabs"
 import A15Import from "./A15Import"
+import PartsReport from "./PartsReport"
+import { examParts, sectionPart } from "@/lib/reportParts"
 import { A15_KEYS, a15KeyOf, isA15Excluded } from "@/lib/a15"
 import DeleteOrderButton from "./DeleteOrderButton"
 import { TrackOpenSample } from "@/components/OpenSamplesBar"
@@ -251,6 +253,17 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
                 />
               </div>
             )}
+            {/* Perfiles: PDF / WhatsApp solo de algunas partes (Hemograma, Coprológico…) con lo guardado */}
+            {(() => {
+              const parts = examParts(exam.template)
+              if (parts.length === 0) return null
+              const partOfField = new Map(exam.template.sections.flatMap(s => s.fields.map(f => [f.id, sectionPart(s.name)] as const)))
+              const withData = new Set(exam.results.filter(r => r.value.trim()).map(r => partOfField.get(r.fieldId)).filter((p): p is string => !!p))
+              const st = (exam.structured ?? {}) as Record<string, unknown>
+              if (st.copro || st.coproscopico) withData.add("Coprológico")
+              if (st.orina) withData.add("Orina")
+              return <PartsReport examId={exam.id} parts={parts} withData={parts.filter(p => withData.has(p))} wa={wa} />
+            })()}
             <ExamResultForm
               exam={{
                 ...exam,

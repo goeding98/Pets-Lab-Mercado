@@ -4,6 +4,7 @@ import { buildOrderPdf } from "@/lib/reportPdf"
 import { getOrinaConfig } from "@/lib/settings"
 import { orderPayment } from "@/lib/payment"
 import { readShareToken } from "@/lib/shareLink"
+import { examParts } from "@/lib/reportParts"
 
 // PDF compartido por WhatsApp (sin sesión): /r/<token firmado> → reporte de la orden o de un examen.
 // Igual que el Portal Vet, no se entrega si la orden está retenida por pago (lib/payment.ts).
@@ -30,9 +31,11 @@ export async function GET(_req: Request, { params }: { params: { token: string }
   const target = readShareToken(params.token)
   if (!target) return message("Este enlace no es válido o ya venció. Pide el resultado de nuevo al laboratorio.", 404)
 
+  // p = partes de un perfil: "<examId>~<índices>"
+  const [examId, partIdx] = target.kind === "p" ? target.id.split("~") : [target.id, ""]
   const orderId = target.kind === "o"
     ? target.id
-    : (await prisma.orderExam.findUnique({ where: { id: target.id }, select: { orderId: true } }))?.orderId
+    : (await prisma.orderExam.findUnique({ where: { id: examId }, select: { orderId: true } }))?.orderId
   if (!orderId) return message("No encontramos este resultado.", 404)
 
   const order = await prisma.order.findUnique({
@@ -47,11 +50,16 @@ export async function GET(_req: Request, { params }: { params: { token: string }
     return message("El resultado estará disponible cuando se registre el pago. Comunícate con el laboratorio.", 402)
   }
 
-  const exams = target.kind === "o" ? order.exams : order.exams.filter(e => e.id === target.id)
-  if (!exams.some(e => e.status === "COMPLETADO")) return message("Este resultado aún no está listo.", 404)
+  const exams = target.kind === "o" ? order.exams : order.exams.filter(e => e.id === examId)
+  let onlyParts: string[] = []
+  if (target.kind === "p") {
+    const all = exams[0] ? examParts(exams[0].template) : []
+    onlyParts = partIdx.split("-").map(Number).map(i => all[i]).filter((p): p is string => !!p)
+    if (onlyParts.length === 0) return message("No encontramos este resultado.", 404)
+  } else if (!exams.some(e => e.status === "COMPLETADO")) return message("Este resultado aún no está listo.", 404)
 
-  const bytes = await buildOrderPdf({ ...order, orinaConfig: await getOrinaConfig() }, exams)
-  const name = target.kind === "o" ? `PL-${order.orderNumber}` : `${order.orderNumber}-${exams[0].template.name}`
+  const bytes = await buildOrderPdf({ ...order, orinaConfig: await getOrinaConfig() }, onlyParts.length ? [{ ...exams[0], onlyParts }] : exams)
+  const name = target.kind === "o" ? `PL-${order.orderNumber}` : `${order.orderNumber}-${onlyParts.length ? onlyParts.join("-") : exams[0].template.name}`
   return new NextResponse(Buffer.from(bytes), {
     status: 200,
     headers: {

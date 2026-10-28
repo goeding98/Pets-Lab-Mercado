@@ -5,6 +5,7 @@ import { get } from "@vercel/blob"
 import { buildOrderPdf } from "@/lib/reportPdf"
 import { getOrinaConfig } from "@/lib/settings"
 import { orderPayment } from "@/lib/payment"
+import { examParts } from "@/lib/reportParts"
 
 // Los encabezados HTTP no admiten caracteres como "–" o "₃": nombre de archivo solo en ASCII
 const safeFilename = (s: string) =>
@@ -43,6 +44,22 @@ export async function GET(
   // Sin pago no se entrega el resultado (ver lib/payment.ts)
   if (session.user.role === "CLINIC" && !orderPayment(orderExam.order.exams, orderExam.order.clinic?.noCharge).released) {
     return new NextResponse("Resultado pendiente de pago: se libera cuando el laboratorio registre el pago.", { status: 402 })
+  }
+
+  // ?parts=Hemograma|Coprológico: reporte solo de esas partes del perfil (lib/reportParts.ts). Solo el personal:
+  // puede salir con un borrador; a la clínica le llega por el enlace firmado que el personal decide mandar.
+  const parts = (new URL(req.url).searchParams.get("parts") ?? "").split("|").filter(p => examParts(orderExam.template).includes(p))
+  if (parts.length && session.user.role !== "CLINIC") {
+    const { order: { exams: _b, ...order }, ...exam } = orderExam
+    const bytes = await buildOrderPdf({ ...order, orinaConfig: await getOrinaConfig() }, [{ ...exam, onlyParts: parts }])
+    return new NextResponse(Buffer.from(bytes), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Cache-Control": "no-store",
+        "Content-Disposition": `inline; filename="${safeFilename(`${order.orderNumber}-${parts.join("-")}`)}.pdf"`,
+      },
+    })
   }
 
   const hasNotes = !!orderExam.comments || orderExam.photos.some(p => !p.role)
