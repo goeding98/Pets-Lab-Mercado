@@ -1,27 +1,32 @@
 "use client"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { createCustomExam } from "@/actions/customExams"
+import { createCustomExam, updateCustomExam } from "@/actions/customExams"
 import { formatCOP } from "@/lib/payment"
 import ClientPicker from "./ClientPicker"
 
 type Template = { id: string; name: string; area: string; turnaround: string; sampleType: string; price: number | null }
 const OTRA = "__otra__"
 
+// Con "edit" es el formulario de Editar de un personalizado ya creado (mismos campos, ya llenos)
+export type CustomExamEdit = { id: string; name: string; area: string; clinicIds: string[]; templateIds: string[]; price: number | null; used: boolean }
+
 export default function NewCustomExamForm({
-  templates, clinics, areas,
+  templates, clinics, areas, edit, onClose,
 }: {
   templates: Template[]
   clinics: { id: string; name: string }[]
   areas: string[]
+  edit?: CustomExamEdit
+  onClose?: () => void
 }) {
   const router = useRouter()
-  const [name, setName] = useState("")
-  const [area, setArea] = useState("Perfiles")
-  const [areaOtra, setAreaOtra] = useState("")
-  const [clinicIds, setClinicIds] = useState<string[]>([])
-  const [selected, setSelected] = useState<string[]>([])
-  const [price, setPrice] = useState("")
+  const [name, setName] = useState(edit?.name ?? "")
+  const [area, setArea] = useState(edit ? (areas.includes(edit.area) ? edit.area : OTRA) : "Perfiles")
+  const [areaOtra, setAreaOtra] = useState(edit && !areas.includes(edit.area) ? edit.area : "")
+  const [clinicIds, setClinicIds] = useState<string[]>(edit?.clinicIds ?? [])
+  const [selected, setSelected] = useState<string[]>(edit?.templateIds ?? [])
+  const [price, setPrice] = useState(edit?.price != null ? String(edit.price) : "")
   const [filter, setFilter] = useState("")
   const [error, setError] = useState("")
   const [done, setDone] = useState("")
@@ -37,7 +42,15 @@ export default function NewCustomExamForm({
     setError("")
     setDone("")
     startTransition(async () => {
-      const res = await createCustomExam({ name, area: finalArea, clinicIds, templateIds: selected, price: Number(price) })
+      const input = { name, area: finalArea, clinicIds, templateIds: selected, price: Number(price) }
+      if (edit) {
+        const res = await updateCustomExam(edit.id, input)
+        if (res.error) return setError(res.error)
+        if (res.newVersion) alert("Como este examen ya tenía órdenes, se creó una versión nueva con los exámenes elegidos. Las órdenes anteriores quedan con la versión de antes.")
+        router.refresh()
+        return onClose?.()
+      }
+      const res = await createCustomExam(input)
       if (res.error) return setError(res.error)
       setDone(`“${name.trim()}” creado.`)
       setName(""); setPrice(""); setSelected([]); setClinicIds([])
@@ -115,16 +128,30 @@ export default function NewCustomExamForm({
         <p className="font-sans text-[11px] text-ink-2 mt-1.5">Los perfiles no aparecen: ya son sumas de exámenes; elige los exámenes sueltos.</p>
       </div>
 
+      {edit?.used && (
+        <p className="font-sans text-xs text-ink bg-amber-50 border border-amber-200 px-3 py-2">
+          Este examen ya se usó en órdenes. Nombre, categoría, precio y clientes se cambian de una vez; si cambias los exámenes
+          incluidos se crea una versión nueva y las órdenes anteriores conservan la de antes. El precio nuevo aplica a las
+          órdenes nuevas (las ya registradas se ajustan en Caja).
+        </p>
+      )}
       {error && <p className="font-mono text-[9px] tracking-[0.15em] text-red-600 uppercase">{error}</p>}
       {done && <p className="font-mono text-[9px] tracking-[0.15em] text-salvia-700 uppercase">{done}</p>}
 
-      <button
-        type="submit"
-        disabled={pending || !name.trim() || !finalArea || clinicIds.length === 0 || selected.length === 0 || !(Number(price) > 0)}
-        className="bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.22em] uppercase px-6 py-3 hover:bg-salvia-800 transition-colors disabled:opacity-50"
-      >
-        {pending ? "Creando…" : "Crear examen personalizado →"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          disabled={pending || !name.trim() || !finalArea || clinicIds.length === 0 || selected.length === 0 || !(Number(price) > 0)}
+          className="bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.22em] uppercase px-6 py-3 hover:bg-salvia-800 transition-colors disabled:opacity-50"
+        >
+          {edit ? (pending ? "Guardando…" : "Guardar cambios →") : pending ? "Creando…" : "Crear examen personalizado →"}
+        </button>
+        {edit && (
+          <button type="button" onClick={onClose} className="font-mono text-[10px] tracking-[0.18em] uppercase px-4 py-3 border border-black/20 hover:bg-black/5">
+            Cancelar
+          </button>
+        )}
+      </div>
     </form>
   )
 }

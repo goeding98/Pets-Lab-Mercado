@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
-import { createCustomExamCore } from "@/lib/customExam"
+import { createCustomExamCore, updateCustomExamCore, type CustomExamInput } from "@/lib/customExam"
 
 // Exámenes personalizados (/personalizados): igual que una promoción (ExamTemplate compuesto con copia
 // de secciones, campos, fórmulas y receta; isPromotion = true para que /rangos lo trate como copia),
@@ -23,9 +23,17 @@ function revalidateCatalog() {
   revalidatePath("/inventario/recetas")
 }
 
-export async function createCustomExam(input: Parameters<typeof createCustomExamCore>[0]): Promise<{ error?: string; success?: boolean }> {
+export async function createCustomExam(input: CustomExamInput): Promise<{ error?: string; success?: boolean }> {
   await requirePermission()
   const res = await createCustomExamCore(input)
+  if (res.success) revalidateCatalog()
+  return res
+}
+
+// Editar un personalizado ya creado (lib/customExam.ts: si ya tiene órdenes y cambian los exámenes, versión nueva)
+export async function updateCustomExam(id: string, input: CustomExamInput): Promise<{ error?: string; success?: boolean; newVersion?: boolean }> {
+  await requirePermission()
+  const res = await updateCustomExamCore(id, input)
   if (res.success) revalidateCatalog()
   return res
 }

@@ -121,6 +121,9 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   /muestras/nueva `OrderForm` los muestra solo al elegir su clínica; nunca en /servicios ni /promociones.
   Las secciones copiadas se llaman "<examen> — <sección>": `isDescriptiveSection` las evalúa como en el
   examen original.
+  Botón "Editar" (`EditCustomExam.tsx` → mismo `NewCustomExamForm`, `updateCustomExamCore`): nombre/categoría/precio/clientes se
+  cambian en el mismo examen; si cambian los exámenes incluidos, sin órdenes se rearma en su lugar y con órdenes se crea
+  una versión nueva y la anterior queda `active = false` (sus resultados apuntan a sus campos).
 - Un `OrderExam` se completa de dos formas: (a) capturando resultados campo por campo en
   el formulario (`app/(lab)/muestras/[id]/ExamResultForm.tsx`), o (b) subiendo un PDF ya
   hecho externamente. El botón "PDF" de la orden genera un reporte combinado que fusiona

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { prisma } from "@/lib/db"
 import NewCustomExamForm from "./NewCustomExamForm"
 import ClientsEditor from "./ClientsEditor"
+import EditCustomExam from "./EditCustomExam"
 import DeletePromotionButton from "../promociones/DeletePromotionButton"
 import PromotionPriceEditor from "../promociones/PromotionPriceEditor"
 
@@ -67,6 +68,15 @@ export default async function PersonalizadosPage() {
                 </div>
                 <PromotionPriceEditor id={c.id} price={c.price} />
                 <DeletePromotionButton id={c.id} name={c.name} used={c._count.orderExams > 0} />
+                <EditCustomExam
+                  templates={templates}
+                  clinics={clinics}
+                  areas={areas}
+                  edit={{
+                    id: c.id, name: c.name, area: c.area, price: c.price, used: c._count.orderExams > 0,
+                    clinicIds: c.clients.map(x => x.id), templateIds: c.promoComponents.map(pc => pc.templateId),
+                  }}
+                />
               </div>
             ))}
           </div>
