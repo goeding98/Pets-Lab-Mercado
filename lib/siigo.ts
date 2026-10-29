@@ -175,7 +175,11 @@ async function ensureCustomer(t: string, c: SiigoClient): Promise<string> {
   if (found.results?.length) return id
   // NIT de empresa (9 dígitos que empiezan por 8 o 9) → persona jurídica; si no, cédula de persona natural
   const company = id.length === 9 && /^[89]/.test(id)
-  const words = c.name.trim().replace(/^(dra?|doctora?)\.?\s+/i, "").split(/\s+/) // sin "Dr." / "Dra." en el nombre de la persona
+  // Siigo rechaza ("Invalid name") nombres con apóstrofos y otros signos (ej. "DOGTOR'S CAT"): solo letras, números,
+  // espacios y . , -; el "&" pasa a "Y"
+  const clean = (s: string) => s.replace(/&/g, " Y ").replace(/[^\p{L}\p{N} .,-]/gu, "").replace(/\s+/g, " ").trim()
+  c = { ...c, name: clean(c.name), contactName: c.contactName ? clean(c.contactName) || null : null }
+  const words = c.name.replace(/^(dra?|doctora?)\.?\s+/i, "").split(/\s+/) // sin "Dr." / "Dra." en el nombre de la persona
   await api(t, "/v1/customers", {
     method: "POST",
     body: {
