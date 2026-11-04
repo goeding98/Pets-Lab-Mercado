@@ -67,20 +67,27 @@ async function overpass(q: string): Promise<OverpassResult | null> {
 async function intersection(p: Parsed, box: BBox): Promise<[number, number] | null> {
   const sfx = p.suffix ? ` ${p.suffix}` : ""
   const mainRe = `^${p.type} ${numRe(p.num)}${sfx}$`
-  const crossTypes = p.type === "Calle" ? "Carrera|Avenida|Transversal|Diagonal" : p.type === "Diagonal" || p.type === "Transversal" ? "Calle|Carrera|Diagonal|Transversal" : "Calle|Diagonal|Transversal"
-  const crossRe = `^(${crossTypes}) ${numRe(p.cross)}( (Norte|Oeste|Sur|Este))?$`
+  // En orden de preferencia: una Calle se cruza con una Carrera (y viceversa). Puede existir también p. ej. una
+  // "Transversal 12D" que corta la misma calle en otro lado: solo se usa si no hay cruce con la Carrera 12D.
+  const crossTypes = p.type === "Calle" ? ["Carrera", "Avenida", "Transversal", "Diagonal"]
+    : p.type === "Diagonal" || p.type === "Transversal" ? ["Calle", "Carrera", "Diagonal", "Transversal"]
+    : ["Calle", "Diagonal", "Transversal"]
+  const crossRe = `^(${crossTypes.join("|")}) ${numRe(p.cross)}( (Norte|Oeste|Sur|Este))?$`
   const q = `[out:json][timeout:25];way(${box.join(",")})["highway"]["name"~"${mainRe}",i]->.a;way(${box.join(",")})["highway"]["name"~"${crossRe}",i]->.b;.a out geom;.b out geom;`
   const j = await overpass(q)
   if (!j) return null
-  const main = new RegExp(mainRe, "i"), cross = new RegExp(crossRe, "i")
   const pts = (re: RegExp) => j.elements.filter(e => re.test(e.tags?.name ?? "")).flatMap(e => (e.geometry ?? []).map(g => [g.lat, g.lon] as [number, number]))
-  const A = pts(main), B = pts(cross)
-  let best: { d: number; p: [number, number] } | null = null
-  for (const a of A) for (const b of B) {
-    const d = dist(a, b)
-    if (!best || d < best.d) best = { d, p: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }
+  const A = pts(new RegExp(mainRe, "i"))
+  for (const t of crossTypes) {
+    const B = pts(new RegExp(`^${t} ${numRe(p.cross)}( (Norte|Oeste|Sur|Este))?$`, "i"))
+    let best: { d: number; p: [number, number] } | null = null
+    for (const a of A) for (const b of B) {
+      const d = dist(a, b)
+      if (!best || d < best.d) best = { d, p: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }
+    }
+    if (best && best.d < 150) return best.p
   }
-  return best && best.d < 150 ? best.p : null
+  return null
 }
 
 async function nominatim(address: string, city: string, box: BBox | null): Promise<[number, number] | null> {
