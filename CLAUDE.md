@@ -346,3 +346,9 @@ Next. Solución: borrar `.next` y reiniciar el servidor.
 ## Deploy
 
 Push a `main` → Vercel despliega solo (`petslab.com.co`). No hay ambiente de staging.
+
+## Seguridad de la base (2026-11-03)
+Todas las tablas de `public` tienen RLS activo **sin políticas**, y a `anon`/`authenticated` se les quitaron los
+permisos (también los "default privileges" para tablas nuevas). Nada usa la API pública de Supabase: la app entra
+con `DATABASE_URL` como `postgres`, que se salta el RLS. Si una migración crea una tabla nueva, activarle RLS
+(`alter table "X" enable row level security`) o Supabase vuelve a mandar el aviso "Table publicly accessible".
