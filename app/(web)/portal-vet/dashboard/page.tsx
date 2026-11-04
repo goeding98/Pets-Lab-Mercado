@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db"
 import LogoutButton from "./LogoutButton"
 import BillingEmail from "./BillingEmail"
 import { formatCOP, orderPayment } from "@/lib/payment"
+import { formatDateTime } from "@/lib/dates"
 
 export const metadata: Metadata = { title: "Portal Vet" }
 
@@ -160,7 +161,7 @@ export default async function PortalVetDashboardPage({
                       <div className="w-[130px] shrink-0">
                         <p className="font-mono text-[10px] tracking-[0.15em] text-salvia-700">{o.orderNumber}</p>
                         <p className="font-mono text-[9px] text-ink-2 mt-0.5">
-                          {new Date(o.createdAt).toLocaleDateString("es-CO")}
+                          {formatDateTime(o.createdAt)}
                         </p>
                         {o.branch && (
                           <p className="font-mono text-[8px] tracking-[0.12em] uppercase text-salvia-700 mt-1">Sede {o.branch.name}</p>

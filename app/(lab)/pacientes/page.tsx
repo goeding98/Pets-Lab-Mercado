@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { prisma } from "@/lib/db"
+import { formatDateTime } from "@/lib/dates"
 
 export const metadata: Metadata = { title: "Pacientes" }
 
@@ -101,7 +102,7 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
                   </div>
                 </td>
                 <td className="px-4 py-3 font-mono text-[10px] text-ink-2 whitespace-nowrap">
-                  {new Date(l.createdAt).toLocaleDateString("es-CO")}
+                  {formatDateTime(l.createdAt)}
                 </td>
               </tr>
             ))}

@@ -27,6 +27,7 @@ import { TrackOpenSample } from "@/components/OpenSamplesBar"
 import { headers } from "next/headers"
 import { makeShareToken } from "@/lib/shareLink"
 import { formatCOP } from "@/lib/payment"
+import { formatDateTime } from "@/lib/dates"
 
 export const metadata: Metadata = { title: "Detalle de muestra" }
 
@@ -185,7 +186,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
           { label: "Clínica", value: order.clinic ? (order.branch ? `${order.clinic.name} · Sede ${order.branch.name}` : order.clinic.name) : "—" },
           { label: "Veterinario", value: order.requestingVet ?? "—" },
           { label: "Dueño", value: order.ownerName ?? "—" },
-          { label: "Fecha", value: new Date(order.createdAt).toLocaleDateString("es-CO") },
+          { label: "Fecha y hora", value: formatDateTime(order.createdAt) },
         ].map(({ label, value }) => (
           <div key={label} className="bg-salvia-50 border border-black/[0.06] p-4">
             <p className="font-mono text-[8px] tracking-[0.2em] text-salvia-700 uppercase mb-1">{label}</p>

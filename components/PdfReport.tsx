@@ -19,6 +19,7 @@ import {
   colorLabel, coproPhotoRole, gramPhrase, isCoproSection, isCoproscopicoSection, NOTA_FIJA, parseMarkup, phLabel, readCoproAt, readCoproscopico,
   stripMarkup, TECNICA_DEFAULT, type CoproData, type CoproscopicoData, type Segment,
 } from "@/lib/coprologico"
+import { formatLongDateTime } from "@/lib/dates"
 import {
   colorOrinaLabel, densidadLabel, isAbnormal, isOrinaSection, LEYENDA_BACTERIAS, METODOS_DEFAULT, NOTA_ORINA,
   ORINA_CONFIG_DEFAULT, PARAM_LABEL, phOrinaLabel, readOrina, speciesKey, upcInterpretacion, upcValue,
@@ -477,9 +478,7 @@ function PatientInfo({ label, value }: { label: string; value: string }) {
 }
 
 export function PdfReport({ order }: { order: OrderData }) {
-  const dateStr = new Date(order.createdAt).toLocaleDateString("es-CO", {
-    year: "numeric", month: "long", day: "numeric",
-  })
+  const dateStr = formatLongDateTime(order.createdAt)
 
   return (
     <Document title={`Reporte ${order.orderNumber} — Pets & Lab`}>

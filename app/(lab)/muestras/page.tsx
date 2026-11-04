@@ -6,6 +6,7 @@ import { orderPayment } from "@/lib/payment"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { can } from "@/lib/permissions"
+import { formatDateTime } from "@/lib/dates"
 
 export const metadata: Metadata = { title: "Muestras" }
 
@@ -106,7 +107,7 @@ export default async function MuestrasPage({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-salvia-50 border-b border-black/10">
-              {["N° Orden", "Paciente / Especie", "Clínica", "Exámenes", "Fecha", "Estado", "Pago", ""].map(h => (
+              {["N° Orden", "Paciente / Especie", "Clínica", "Exámenes", "Fecha y hora", "Estado", "Pago", ""].map(h => (
                 <th key={h} className="text-left px-4 py-2.5 font-mono text-[8px] tracking-[0.18em] uppercase text-salvia-700">
                   {h}
                 </th>
@@ -136,7 +137,7 @@ export default async function MuestrasPage({
                     {order.exams.map(e => e.template.name).join(", ")}
                   </td>
                   <td className="px-4 py-3 font-mono text-[10px] text-ink-2">
-                    {new Date(order.createdAt).toLocaleDateString("es-CO")}
+                    {formatDateTime(order.createdAt)}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`${s.className} font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5`}>
