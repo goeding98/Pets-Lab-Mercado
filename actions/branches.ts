@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache"
 import { getAnySession } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
+import { geocodeBranch } from "@/lib/geocode"
 
 // Sedes de una clínica. Las edita el staff con permiso de clientes, o la propia clínica (solo las suyas)
 // desde el Portal Vet.
@@ -33,19 +34,23 @@ export async function addBranch(clinicId: string, input: BranchInput): Promise<{
   if (denied) return { error: denied }
   const data = clean(input)
   if (!data.name || !data.address) return { error: "La sede necesita nombre y dirección." }
-  await prisma.clinicBranch.create({ data: { clinicId, ...data } })
+  const created = await prisma.clinicBranch.create({ data: { clinicId, ...data } })
+  await geocodeBranch(created.id).catch(() => false) // mapa de clientes
   revalidate(clinicId)
   return {}
 }
 
 export async function updateBranch(id: string, input: BranchInput): Promise<{ error?: string }> {
-  const branch = await prisma.clinicBranch.findUnique({ where: { id }, select: { clinicId: true } })
+  const branch = await prisma.clinicBranch.findUnique({ where: { id }, select: { clinicId: true, address: true, city: true } })
   if (!branch) return { error: "Sede no encontrada" }
   const denied = await authorize(branch.clinicId)
   if (denied) return { error: denied }
   const data = clean(input)
   if (!data.name || !data.address) return { error: "La sede necesita nombre y dirección." }
-  await prisma.clinicBranch.update({ where: { id }, data })
+  // Otra dirección: se vuelve a ubicar en el mapa (también si estaba ubicada a mano)
+  const moved = data.address !== branch.address || data.city !== branch.city
+  await prisma.clinicBranch.update({ where: { id }, data: moved ? { ...data, lat: null, lng: null, geoManual: false } : data })
+  if (moved) await geocodeBranch(id).catch(() => false)
   revalidate(branch.clinicId)
   return {}
 }

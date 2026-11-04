@@ -20,6 +20,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `actions/branches.ts`). Cada `Order` tiene `branchId`: si la clínica tiene sedes es obligatoria y
   debe ser suya (`lib/orders.ts: resolveBranch`). La sede sale en Muestras, Panel, Caja, el Portal
   (con filtro por sede) y el PDF. Un NIT ya registrado no puede crear otra cuenta: agrega una sede.
+- Mapa de clientes (`app/(lab)/clientes/mapa/`, permiso `clientes.ver`; botón "Mapa" en Clientes): un punto por sede
+  (`ClinicBranch.lat/lng`), tamaño = muestras enviadas, color = activo en 90 días / sin muestras / Pets & Pets. Leaflet +
+  OpenStreetMap. `lib/geocode.ts` ubica la dirección por el cruce de calles de la nomenclatura ("Calle 10 # 31-143" =
+  Calle 10 con Carrera 31) en Overpass, y si no, Nominatim solo si cae en la ciudad (mejor sin ubicar que mal ubicada).
+  Se ubica al crear/cambiar la dirección de una sede (`actions/branches.ts`) y con "Ubicar las que faltan"; arrastrar un
+  punto la guarda a mano (`geoManual = true`, `actions/geo.ts`, `clientes.editar`) y ya no se recalcula sola.
 - Solicitudes del portal: crean un `Order` con `source = "PORTAL"` y `status = "SOLICITADA"`
   (el lab aún no tiene la muestra); el staff la ve en `/muestras` y la pasa a `RECIBIDA`. El
   formulario de ingreso es el mismo componente para staff y clínicas

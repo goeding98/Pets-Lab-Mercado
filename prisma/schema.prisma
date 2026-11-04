@@ -50,6 +50,9 @@ model ClinicBranch {
   neighborhood String?
   city         String?
   phone        String?
+  lat          Float? // ubicación en el mapa de clientes (lib/geocode.ts; se puede corregir arrastrando el punto)
+  lng          Float?
+  geoManual    Boolean  @default(false) // true = ubicada a mano: no se vuelve a calcular sola
   orders       Order[]
   createdAt    DateTime @default(now())
 }

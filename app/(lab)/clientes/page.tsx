@@ -17,12 +17,20 @@ export default async function ClientesPage() {
           <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase">Administración</p>
           <h1 className="font-serif text-[28px] font-medium tracking-[-0.02em] mt-1">Clientes</h1>
         </div>
+        <div className="flex items-center gap-3">
+        <Link
+          href="/clientes/mapa"
+          className="border border-salvia-700 text-salvia-700 font-mono text-[10px] tracking-[0.22em] uppercase px-5 py-3 hover:bg-salvia-700 hover:text-bone transition-colors"
+        >
+          Mapa
+        </Link>
         <Link
           href="/clientes/nueva"
           className="bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.22em] uppercase px-5 py-3 hover:bg-salvia-800 transition-colors"
         >
           Nueva clínica +
         </Link>
+        </div>
       </div>
 
       <div className="border border-black/10 overflow-x-auto">
