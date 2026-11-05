@@ -40,17 +40,34 @@ function PortalTag() {
 export default async function MuestrasPage({
   searchParams,
 }: {
-  searchParams: { status?: string; q?: string }
+  searchParams: { status?: string; q?: string; sede?: string }
 }) {
+  // Sedes propias (Pets & Pets = cliente sin cobro): filtro rápido para el domiciliario que recoge en cada una
+  const ownBranches = await prisma.clinicBranch.findMany({
+    where: { clinic: { noCharge: true } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+  })
+  const sede = ownBranches.find(b => b.id === searchParams.sede)?.id
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {}
   if (searchParams.status) where.status = searchParams.status
-  if (searchParams.q) {
+  if (sede) where.branchId = sede
+  const q = searchParams.q?.trim()
+  if (q) {
+    // Sin distinguir mayúsculas: "Max" encuentra "MAX"
     where.OR = [
-      { orderNumber: { contains: searchParams.q } },
-      { patientName: { contains: searchParams.q } },
-      { ownerName: { contains: searchParams.q } },
+      { orderNumber: { contains: q, mode: "insensitive" } },
+      { patientName: { contains: q, mode: "insensitive" } },
+      { ownerName: { contains: q, mode: "insensitive" } },
+      { clinic: { name: { contains: q, mode: "insensitive" } } },
     ]
+  }
+  const link = (params: Record<string, string | undefined>) => {
+    const u = new URLSearchParams()
+    for (const [k, v] of Object.entries({ q, status: searchParams.status, sede, ...params })) if (v) u.set(k, v)
+    const str = u.toString()
+    return str ? `/muestras?${str}` : "/muestras"
   }
 
   const orders = await prisma.order.findMany({
@@ -79,13 +96,32 @@ export default async function MuestrasPage({
         </Link>
       </div>
 
+      {/* Sedes de Pets & Pets */}
+      {ownBranches.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="font-mono text-[8px] tracking-[0.18em] uppercase text-ink-2 mr-1">Sede Pets &amp; Pets:</span>
+          {[{ id: undefined as string | undefined, name: "Todas" }, ...ownBranches].map(b => (
+            <Link
+              key={b.id ?? "todas"}
+              href={link({ sede: b.id ?? "" })}
+              className={`font-mono text-[9px] tracking-[0.15em] uppercase px-3 py-1.5 border transition-colors ${
+                sede === b.id ? "bg-salvia-700 border-salvia-700 text-bone" : "border-black/20 text-ink hover:border-salvia-700"
+              }`}
+            >
+              {b.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* Filters */}
-      <form method="get" className="flex gap-3 mb-5">
+      <form method="get" className="flex flex-wrap gap-3 mb-5">
+        {sede && <input type="hidden" name="sede" value={sede} />}
         <input
           name="q"
           defaultValue={searchParams.q}
           placeholder="Buscar por N° orden, paciente, dueño…"
-          className="border border-black/20 bg-white px-3 py-2 text-sm font-sans flex-1 focus:outline-2 focus:outline-salvia-700"
+          className="border border-black/20 bg-white px-3 py-2 text-sm font-sans flex-1 min-w-[200px] focus:outline-2 focus:outline-salvia-700"
         />
         <select
           name="status"
@@ -133,8 +169,8 @@ export default async function MuestrasPage({
                     <span className="text-ink-2 ml-1">({order.species})</span>
                   </td>
                   <td className="px-4 py-3 font-sans text-xs text-ink-2">{order.clinic?.name ?? "—"}{order.branch && <span className="block font-mono text-[8px] tracking-[0.12em] uppercase text-salvia-700 mt-0.5">Sede {order.branch.name}</span>}</td>
-                  <td className="px-4 py-3 font-sans text-xs text-ink-2 max-w-[200px] truncate">
-                    {order.exams.map(e => e.template.name).join(", ")}
+                  <td className="px-4 py-3 font-sans text-xs text-ink-2 min-w-[180px]">
+                    {order.exams.map(e => <span key={e.id} className="block">{e.template.name}</span>)}
                   </td>
                   <td className="px-4 py-3 font-mono text-[10px] text-ink-2">
                     {formatDateTime(order.createdAt)}
@@ -165,7 +201,7 @@ export default async function MuestrasPage({
             {orders.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center font-sans text-xs text-ink-2">
-                  No hay órdenes.{" "}
+                  {q || sede || searchParams.status ? "Ninguna orden coincide con el filtro." : "No hay órdenes."}{" "}
                   <Link href="/muestras/nueva" className="text-salvia-700 hover:underline">Registrar nueva muestra →</Link>
                 </td>
               </tr>
