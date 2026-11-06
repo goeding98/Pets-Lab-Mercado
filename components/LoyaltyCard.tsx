@@ -1,4 +1,4 @@
-import { TIERS, loyaltyMessage, tierFor, type LoyaltyStatus, type Tier } from "@/lib/loyalty"
+import { TIERS, loyaltyMessage, monthName, tierFor, type LoyaltyStatus, type Tier } from "@/lib/loyalty"
 
 const SCALE = 30 // la barra llega hasta 30 pacientes (Oro empieza en 26)
 const fmt = (d: string) => d.slice(8) + "/" + d.slice(5, 7)
@@ -20,7 +20,8 @@ export default function LoyaltyCard({ s, compact = false, leaders = 0 }: { s: Lo
   const msg = loyaltyMessage(s)
   const pct = Math.min(s.count / SCALE, 1) * 100
   const projectedTier = tierFor(s.projected)
-  const accent = s.tier?.color ?? "#2f5d50"
+  const accent = s.best?.color ?? s.tier?.color ?? "#2f5d50"
+  const mes = monthName(s.reward.month)
 
   const bar = (
     <div className="relative pt-1 pb-6">
@@ -45,7 +46,7 @@ export default function LoyaltyCard({ s, compact = false, leaders = 0 }: { s: Lo
     return (
       <div className="border border-black/10 bg-white px-4 py-3 mb-6">
         <div className="flex items-center gap-3 mb-2">
-          <Medal tier={s.tier} size={24} />
+          <Medal tier={s.best} size={24} />
           <p className="font-sans text-[13px] text-ink flex-1"><strong>{msg.title}</strong> <span className="text-ink-2">{msg.body}</span></p>
         </div>
         {bar}
@@ -55,19 +56,20 @@ export default function LoyaltyCard({ s, compact = false, leaders = 0 }: { s: Lo
 
   return (
     <section className="border border-black/10 bg-white mb-8 overflow-hidden">
-      <div className="px-5 pt-4 pb-2" style={{ background: `linear-gradient(135deg, ${s.tier?.soft ?? "#eef3f0"} 0%, #ffffff 70%)` }}>
+      <div className="px-5 pt-4 pb-2" style={{ background: `linear-gradient(135deg, ${s.best?.soft ?? "#eef3f0"} 0%, #ffffff 70%)` }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Medal tier={s.tier} size={40} />
+            <Medal tier={s.best} size={40} />
             <div>
               <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase">Club Pets &amp; Lab</p>
-              <p className="font-serif text-[22px] font-medium leading-tight" style={{ color: s.tier?.color ?? "#1f2a24" }}>
-                {s.tier ? `Nivel ${s.tier.name}` : "Sin nivel aún"}
+              <p className="font-serif text-[22px] font-medium leading-tight" style={{ color: s.best?.color ?? "#1f2a24" }}>
+                {s.best ? `Nivel ${s.best.name}` : "Sin nivel aún"}
               </p>
+              <p className="font-sans text-[12px] text-ink-2">{s.best ? `${s.best.percent}% asegurado para todo ${mes}` : `Descuento de ${mes} por desbloquear`}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="font-mono text-[8px] tracking-[0.18em] uppercase text-ink-2">Corte {s.period.label}</p>
+            <p className="font-mono text-[8px] tracking-[0.18em] uppercase text-ink-2">Oportunidad {s.half} de 2 · corte {s.period.label}</p>
             <p className="font-sans text-[13px] text-ink">
               {s.daysLeft <= 1 ? <strong className="text-red-700">¡Cierra hoy!</strong> : <>Cierra en <strong>{s.daysLeft} días</strong></>}
             </p>
@@ -78,6 +80,11 @@ export default function LoyaltyCard({ s, compact = false, leaders = 0 }: { s: Lo
           <p className="font-serif text-[44px] leading-none font-medium text-ink">{s.count}</p>
           <p className="font-sans text-[13px] text-ink-2 pb-1">{s.count === 1 ? "paciente" : "pacientes"} en esta quincena</p>
         </div>
+        {s.secured && (
+          <p className="inline-block mt-3 font-sans text-[12px] px-2.5 py-1" style={{ background: s.secured.tier.soft, color: s.secured.tier.color }}>
+            ✓ Corte {s.secured.period.label}: {s.secured.tier.name} con {s.secured.count} pacientes, ya asegurado
+          </p>
+        )}
         <p className="font-sans text-[15px] font-medium text-ink mt-3">{msg.title}</p>
         <p className="font-sans text-[13px] text-ink-2">{msg.body}</p>
 
@@ -86,7 +93,7 @@ export default function LoyaltyCard({ s, compact = false, leaders = 0 }: { s: Lo
 
       <div className="grid grid-cols-3 border-t border-black/[0.06]">
         {TIERS.map((t, i) => {
-          const reached = s.count >= t.min
+          const reached = (s.best?.percent ?? 0) >= t.percent
           const range = TIERS[i + 1] ? `${t.min}–${TIERS[i + 1].min - 1}` : `${t.min}+`
           return (
             <div key={t.key} className={`px-3 py-3 text-center ${i > 0 ? "border-l border-black/[0.06]" : ""}`} style={{ background: reached ? t.soft : undefined }}>
@@ -105,7 +112,7 @@ export default function LoyaltyCard({ s, compact = false, leaders = 0 }: { s: Lo
         {s.upcoming && (
           <p>📅 Ya ganaste <strong>{s.upcoming.percent}%</strong> del {fmt(s.upcoming.start)} al {fmt(s.upcoming.end)}.</p>
         )}
-        {s.projected > s.count && projectedTier && projectedTier.key !== s.tier?.key && (
+        {s.projected > s.count && projectedTier && projectedTier.percent > (s.best?.percent ?? 0) && (
           <p>📈 A tu ritmo cerrarías con unos <strong>{s.projected} pacientes</strong>: nivel {projectedTier.name} ({projectedTier.percent}%).</p>
         )}
         {s.last && s.last.count > 0 && (
@@ -113,8 +120,9 @@ export default function LoyaltyCard({ s, compact = false, leaders = 0 }: { s: Lo
         )}
         {leaders > 0 && <p className="text-ink-2">👏 {leaders} {leaders === 1 ? "clínica ganó" : "clínicas ganaron"} nivel en el último corte.</p>}
         <p className="text-[11px] text-ink-2 pt-1">
-          Cuentan los pacientes distintos (no los exámenes) de cada quincena: del 1 al 15 y del 16 a fin de mes. El descuento se activa solo
-          al día siguiente del cierre y dura un mes completo. Las solicitudes cuentan cuando el laboratorio recibe la muestra.
+          Cada mes tienes dos oportunidades: del 1 al 15 y del 16 a fin de mes. Cuentan los pacientes distintos de cada quincena (no los
+          exámenes), y el mejor nivel que alcances en cualquiera de las dos te da el descuento durante todo el mes siguiente. Las
+          solicitudes cuentan cuando el laboratorio recibe la muestra.
         </p>
       </div>
     </section>

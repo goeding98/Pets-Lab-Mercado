@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { prisma } from "@/lib/db"
-import { PROGRAM_START, TIERS, getLoyaltyStatuses, getPeriodResult, periodOf, prevPeriod, type Tier } from "@/lib/loyalty"
+import { PROGRAM_START, TIERS, getLoyaltyStatuses, getPeriodResult, monthName, periodOf, prevPeriod, type Tier } from "@/lib/loyalty"
 import { toWhatsAppNumber } from "@/lib/whatsapp"
 
 export const metadata: Metadata = { title: "Club Pets & Lab" }
@@ -28,7 +28,7 @@ export default async function LealtadPage() {
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
   const period = periodOf()
   const any = rows[0]
-  const close = rows.filter(r => r.count > 0 && r.next && r.missing <= 3)
+  const close = rows.filter(r => r.count > 0 && r.next && r.missing > 0 && r.missing <= 3)
   const total = rows.reduce((n, r) => n + r.count, 0)
   const active = rows.filter(r => r.active).length
 
@@ -49,8 +49,8 @@ export default async function LealtadPage() {
           <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase">Programa de lealtad</p>
           <h1 className="font-serif text-[24px] md:text-[28px] font-medium tracking-[-0.02em] mt-1">Club Pets &amp; Lab</h1>
           <p className="font-sans text-[13px] text-ink-2 mt-1 max-w-2xl">
-            Corte actual <strong>{period.label}</strong>{any ? <> · cierra en {any.daysLeft} {any.daysLeft === 1 ? "día" : "días"} · el nivel que alcancen da descuento del {fmt(any.reward.start)} al {fmt(any.reward.end)}</> : null}.
-            Cuentan pacientes distintos, no exámenes. Los descuentos se crean solos al cerrar el corte y aparecen en{" "}
+            Corte actual <strong>{period.label}</strong> (oportunidad {any?.half ?? 1} de 2){any ? <> · cierra en {any.daysLeft} {any.daysLeft === 1 ? "día" : "días"} · el mejor nivel de los dos cortes del mes da el descuento de todo {monthName(any.reward.month)}</> : null}.
+            Cuentan pacientes distintos por quincena, no exámenes. Los descuentos se crean solos al cerrar el corte y aparecen en{" "}
             <Link href="/descuentos?tipo=auto" className="text-salvia-700 underline">Descuentos</Link>.
           </p>
         </div>
@@ -59,8 +59,8 @@ export default async function LealtadPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {TIERS.slice().reverse().map(t => (
           <div key={t.key} className="border border-black/10 px-4 py-3" style={{ background: t.soft }}>
-            <p className="font-mono text-[8px] tracking-[0.18em] uppercase" style={{ color: t.color }}>{t.name} hoy · {t.percent}%</p>
-            <p className="font-serif text-[28px] leading-tight font-medium" style={{ color: t.color }}>{rows.filter(r => r.tier?.key === t.key).length}</p>
+            <p className="font-mono text-[8px] tracking-[0.18em] uppercase" style={{ color: t.color }}>{t.name} asegurado · {t.percent}%</p>
+            <p className="font-serif text-[28px] leading-tight font-medium" style={{ color: t.color }}>{rows.filter(r => r.best?.key === t.key).length}</p>
             <p className="font-sans text-[11px] text-ink-2">clínicas ({t.min}{t.key === "ORO" ? "+" : `–${TIERS[TIERS.indexOf(t) + 1].min - 1}`} pacientes)</p>
           </div>
         ))}
@@ -80,12 +80,12 @@ export default async function LealtadPage() {
           <div className="grid sm:grid-cols-2 gap-2.5">
             {close.map(r => {
               const wa = toWhatsAppNumber(r.phone)
-              const text = `Hola, ${r.name}. En Pets & Lab llevan ${r.count} pacientes en esta quincena: con ${r.missing} más suben a nivel ${r.next!.name} y tienen ${r.next!.percent}% de descuento durante un mes. El corte cierra el ${fmt(r.period.end)}.`
+              const text = `Hola, ${r.name}. En Pets & Lab llevan ${r.count} pacientes en esta quincena: con ${r.missing} más suben a nivel ${r.next!.name} y tienen ${r.next!.percent}% de descuento durante todo ${monthName(r.reward.month)}. El corte cierra el ${fmt(r.period.end)}.`
               return (
                 <div key={r.clinicId} className="border border-amber-300 bg-amber-50/60 px-4 py-3">
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-sans text-[14px] font-medium text-ink">{r.name}</p>
-                    <TierTag tier={r.tier} />
+                    <TierTag tier={r.best} />
                   </div>
                   <p className="font-sans text-[12px] text-ink mt-1">
                     {r.count} pacientes · faltan <strong>{r.missing}</strong> para {r.next!.name} ({r.next!.percent}%)
@@ -112,12 +112,12 @@ export default async function LealtadPage() {
               <div className="min-w-0">
                 <p className="font-sans text-[14px] font-medium text-ink truncate">{r.name}</p>
                 <div className="mt-1 h-1.5 bg-black/[0.06] rounded-full overflow-hidden max-w-[220px]">
-                  <div className="h-full rounded-full" style={{ width: `${Math.min(r.count / 30, 1) * 100}%`, background: r.tier?.color ?? "#2f5d50" }} />
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(r.count / 30, 1) * 100}%`, background: r.best?.color ?? "#2f5d50" }} />
                 </div>
               </div>
               <div className="col-start-2 md:col-start-auto flex items-center gap-2">
                 <span className="font-serif text-[20px] font-medium text-ink">{r.count}</span>
-                <TierTag tier={r.tier} />
+                <TierTag tier={r.best} />
               </div>
               <p className="col-start-2 md:col-start-auto font-sans text-[12px] text-ink-2">
                 {r.next ? <>Faltan {r.missing} para {r.next.name}</> : "Nivel máximo"}
@@ -125,7 +125,7 @@ export default async function LealtadPage() {
               </p>
               <p className="col-start-2 md:col-start-auto font-sans text-[12px] text-ink-2">
                 {r.active ? <span className="text-salvia-700 font-medium">{r.active.percent}% activo hasta {fmt(r.active.end)}</span> : "Sin descuento activo"}
-                {r.last && r.last.count > 0 && <span className="block">Corte ant.: {r.last.count}{r.last.tier ? ` · ${r.last.tier.name}` : ""}</span>}
+                {r.secured ? <span className="block">1a quincena: {r.secured.count} · {r.secured.tier.name} ✓</span> : r.last && r.last.count > 0 && <span className="block">Corte ant.: {r.last.count}{r.last.tier ? ` · ${r.last.tier.name}` : ""}</span>}
               </p>
             </div>
           ))}
@@ -137,7 +137,8 @@ export default async function LealtadPage() {
         <h2 className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-3">Cortes cerrados</h2>
         {history.length === 0 ? (
           <p className="border border-black/10 bg-white px-4 py-5 font-sans text-sm text-ink-2">
-            El programa empezó con el corte del 1–15 nov. El primer cierre es el 16/11 a las 12 am: ese día se crean solos los descuentos.
+            El programa empezó el 1 de noviembre. El primer corte cierra el 16/11 a las 12 am: ese día se crean solos los descuentos de diciembre
+            (y el 1/12 se suben si alguien mejoró en la segunda quincena).
           </p>
         ) : (
           <div className="border border-black/10 bg-white divide-y divide-black/[0.06]">

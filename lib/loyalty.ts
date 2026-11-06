@@ -1,7 +1,7 @@
 // Programa de lealtad "Club Pets & Lab". Cortes quincenales (1–15 y 16–fin de mes, hora de Colombia): se cuentan los
 // PACIENTES distintos (nombre + especie + tutor) que cada clínica envió en el corte, no los exámenes. Nivel: Bronce 10–15,
-// Plata 16–25, Oro 26+. Al cerrar el corte se crea solo un descuento (ClinicDiscount source LEALTAD) por un mes corrido
-// desde el día siguiente al corte, en todos los exámenes. Si se cruza con otro descuento gana el mayor (lib/discounts.ts).
+// Plata 16–25, Oro 26+. Cada corte es una oportunidad: al cerrarlo se crea (o se sube) solo el descuento del MES SIGUIENTE
+// completo (ClinicDiscount source LEALTAD); gana el mejor nivel de los dos cortes del mes. Con otros descuentos gana el mayor.
 // Las solicitudes del Portal (SOLICITADA) cuentan cuando el laboratorio recibe la muestra. Pets & Pets (noCharge) no participa.
 import type { Prisma } from "@prisma/client"
 import { prisma } from "./db"
@@ -55,13 +55,15 @@ function addDays(day: string, n: number) {
   d.setUTCDate(d.getUTCDate() + n)
   return d.toISOString().slice(0, 10)
 }
-// Descuento ganado en un corte: un mes corrido desde el día siguiente (16 nov → 15 dic; 1 dic → 31 dic)
+// Descuento del mes: lo que se gane en cualquiera de los dos cortes de un mes vale para TODO el mes siguiente
+// (1 al último día). Gana el mejor nivel de los dos cortes.
+export const monthOf = (p: Period) => p.id.slice(0, 7) // AAAA-MM
+const MONTH_NAMES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+export const monthName = (ym: string) => MONTH_NAMES[Number(ym.slice(5, 7)) - 1]
 export function rewardWindow(p: Period) {
-  const start = addDays(p.end, 1)
-  const [y, m, d] = start.split("-").map(Number)
+  const [y, m] = p.start.split("-").map(Number)
   const ny = m === 12 ? y + 1 : y, nm = m === 12 ? 1 : m + 1
-  const end = addDays(`${ny}-${pad(nm)}-${pad(Math.min(d, lastDayOfMonth(ny, nm)))}`, -1)
-  return { start, end }
+  return { start: `${ny}-${pad(nm)}-01`, end: `${ny}-${pad(nm)}-${pad(lastDayOfMonth(ny, nm))}`, month: `${ny}-${pad(nm)}` }
 }
 export const daysLeft = (p: Period, today = dayKey()) =>
   Math.round((new Date(`${p.end}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86400000) + 1
@@ -101,9 +103,10 @@ export async function getPeriodResult(id: string): Promise<PeriodResult | null> 
   return (row?.value as unknown as PeriodResult) ?? null
 }
 
-// Cierra los cortes terminados que falten (desde PROGRAM_START): guarda el resultado y crea los descuentos. Es
-// idempotente y barato si ya está al día: lo llaman el cron diario, el dashboard, Descuentos y el cálculo de descuentos
-// de cada orden nueva. El registro LabSetting "loyalty:<corte>" es el candado (si otro proceso lo creó, se salta).
+// Cierra los cortes terminados que falten (desde PROGRAM_START) y guarda el resultado. Un descuento por clínica por mes
+// ganado (loyaltyPeriod = AAAA-MM del mes en que se ganó): el primer corte lo crea; el segundo lo sube si llegó a un
+// nivel mayor. Es idempotente y barato si ya está al día: lo llaman el cron diario, el dashboard, Descuentos y el cálculo
+// de descuentos de cada orden nueva. El registro LabSetting "loyalty:<corte>" es el candado (si otro proceso lo creó, se salta).
 export async function ensureLoyaltyClosed(): Promise<string[]> {
   const closed: string[] = []
   const pending: Period[] = []
@@ -122,18 +125,18 @@ export async function ensureLoyaltyClosed(): Promise<string[]> {
     const counts = await countPatients(p)
     const results = Array.from(counts.entries()).map(([clinicId, count]) => ({ clinicId, count, tier: tierFor(count)?.key ?? null }))
     const win = rewardWindow(p)
+    const month = monthOf(p)
     for (const r of results) {
       const t = tierByKey(r.tier)
       if (!t) continue
-      const exists = await prisma.clinicDiscount.findFirst({ where: { clinicId: r.clinicId, loyaltyPeriod: p.id } })
-      if (exists) continue
-      await prisma.clinicDiscount.create({
-        data: {
-          clinicId: r.clinicId, percent: t.percent, areas: [], startDate: win.start, endDate: win.end,
-          note: `Club Pets & Lab · nivel ${t.name}: ${r.count} pacientes en el corte ${p.label}`,
-          createdByName: LOYALTY_BY, source: "LEALTAD", loyaltyTier: t.key, loyaltyPeriod: p.id, loyaltyCount: r.count,
-        },
-      })
+      const data = {
+        percent: t.percent, areas: [], startDate: win.start, endDate: win.end,
+        note: `Club Pets & Lab · nivel ${t.name} ganado en ${monthName(month)}: ${r.count} pacientes en el corte ${p.label}`,
+        createdByName: LOYALTY_BY, source: "LEALTAD", loyaltyTier: t.key, loyaltyPeriod: month, loyaltyCount: r.count,
+      }
+      const exists = await prisma.clinicDiscount.findFirst({ where: { clinicId: r.clinicId, source: "LEALTAD", loyaltyPeriod: month } })
+      if (!exists) await prisma.clinicDiscount.create({ data: { clinicId: r.clinicId, ...data } })
+      else if (exists.percent < t.percent) await prisma.clinicDiscount.update({ where: { id: exists.id }, data })
     }
     await prisma.labSetting.update({
       where: { key: settingKey(p.id) },
@@ -148,13 +151,16 @@ export async function ensureLoyaltyClosed(): Promise<string[]> {
 export type LoyaltyStatus = {
   clinicId: string
   period: Period
-  count: number
-  tier: Tier | null
-  next: Tier | null
-  missing: number // pacientes que faltan para el siguiente nivel (0 en Oro)
+  half: 1 | 2 // primera o segunda oportunidad del mes
+  count: number // pacientes de este corte
+  tier: Tier | null // nivel de este corte con lo que lleva
+  secured: { tier: Tier; count: number; period: Period } | null // ganado en el primer corte del mes (ya cerrado)
+  best: Tier | null // lo que hoy tiene asegurado para el mes siguiente (el mejor de los dos cortes)
+  next: Tier | null // siguiente nivel por encima de best
+  missing: number // pacientes que le faltan EN ESTE CORTE para next
   daysLeft: number
-  projected: number // a este ritmo, cuántos pacientes al cierre
-  reward: { start: string; end: string } // descuento que gana con el nivel de este corte
+  projected: number // a este ritmo, cuántos pacientes al cierre del corte
+  reward: { start: string; end: string; month: string } // mes del descuento
   active: { percent: number; tier: Tier | null; end: string } | null // descuento de lealtad vigente hoy
   upcoming: { percent: number; tier: Tier | null; start: string; end: string } | null // ganado, empieza después
   last: { period: Period; count: number; tier: Tier | null } | null // corte anterior
@@ -165,62 +171,73 @@ export async function getLoyaltyStatuses(clinicIds?: string[]): Promise<Map<stri
   const today = dayKey()
   const period = periodOf(today)
   const prev = prevPeriod(period)
+  const half: 1 | 2 = period.id.endsWith("-1") ? 1 : 2
+  const prevInProgram = periodKey(prev.id) >= periodKey(PROGRAM_START)
   const ids = clinicIds ?? (await prisma.clinic.findMany({ where: { noCharge: false }, select: { id: true } })).map(c => c.id)
   const [counts, prevResult, discounts] = await Promise.all([
     countPatients(period, ids),
-    periodKey(prev.id) >= periodKey(PROGRAM_START) ? getPeriodResult(prev.id) : Promise.resolve(null),
+    prevInProgram ? getPeriodResult(prev.id) : Promise.resolve(null),
     prisma.clinicDiscount.findMany({ where: { clinicId: { in: ids }, source: "LEALTAD", endDate: { gte: today } }, orderBy: { percent: "desc" } }),
   ])
-  const prevCounts = prevResult ? null : await countPatients(prev, ids)
+  const prevCounts = prevInProgram && !prevResult ? await countPatients(prev, ids) : null
   const elapsed = periodLength(period) - daysLeft(period, today) + 1
   const out = new Map<string, LoyaltyStatus>()
   for (const id of ids) {
     const count = counts.get(id) ?? 0
     const tier = tierFor(count)
-    const next = nextTier(count)
+    const lastCount = prevResult ? prevResult.results.find(r => r.clinicId === id)?.count ?? 0 : prevCounts?.get(id) ?? 0
+    const lastTier = tierFor(lastCount)
+    // Primer corte del mismo mes (solo si estamos en la segunda quincena)
+    const secured = half === 2 && prevInProgram && lastTier ? { tier: lastTier, count: lastCount, period: prev } : null
+    const best = [tier, secured?.tier].filter((t): t is Tier => !!t).sort((a, b) => b.percent - a.percent)[0] ?? null
+    const next = TIERS.find(t => t.percent > (best?.percent ?? 0)) ?? null
     const mine = discounts.filter(d => d.clinicId === id)
     const act = mine.find(d => d.startDate <= today)
     const up = mine.filter(d => d.startDate > today).sort((a, b) => a.startDate.localeCompare(b.startDate))[0]
-    const lastCount = prevResult ? prevResult.results.find(r => r.clinicId === id)?.count ?? 0 : prevCounts?.get(id) ?? 0
     out.set(id, {
-      clinicId: id, period, count, tier, next,
+      clinicId: id, period, half, count, tier, secured, best, next,
       missing: next ? next.min - count : 0,
       daysLeft: daysLeft(period, today),
       projected: elapsed >= 3 ? Math.round((count / elapsed) * periodLength(period)) : count,
       reward: rewardWindow(period),
       active: act ? { percent: act.percent, tier: tierByKey(act.loyaltyTier), end: act.endDate } : null,
       upcoming: up ? { percent: up.percent, tier: tierByKey(up.loyaltyTier), start: up.startDate, end: up.endDate } : null,
-      // El corte anterior solo si ya era del programa (antes no dio descuento)
-      last: periodKey(prev.id) >= periodKey(PROGRAM_START) ? { period: prev, count: lastCount, tier: tierFor(lastCount) } : null,
+      last: prevInProgram ? { period: prev, count: lastCount, tier: lastTier } : null,
     })
   }
   return out
 }
 
 // Mensaje motivador según dónde va la clínica (Portal Vet)
-const fmt = (d: string) => d.slice(8) + "/" + d.slice(5, 7)
 export function loyaltyMessage(s: LoyaltyStatus): { title: string; body: string } {
-  const r = s.reward
-  if (s.tier?.key === "ORO") {
-    return { title: `¡Nivel Oro asegurado! 🏆`, body: `Tienes ${s.tier.percent}% de descuento en todos tus exámenes del ${fmt(r.start)} al ${fmt(r.end)}. Es el nivel más alto del club.` }
-  }
-  if (s.count === 0) {
-    return { title: "Tu quincena empieza aquí", body: `Con ${TIERS[0].min} pacientes en este corte desbloqueas ${TIERS[0].percent}% de descuento durante todo un mes.` }
+  const mes = monthName(s.reward.month)
+  const pl = (k: number) => `${k} ${k === 1 ? "paciente" : "pacientes"}`
+  const second = s.half === 1 ? " Si no llegas, tienes una segunda oportunidad del 16 a fin de mes." : ""
+  if (s.best?.key === "ORO") {
+    return { title: `¡Nivel Oro asegurado para ${mes}! 🏆`, body: `Tendrás ${s.best.percent}% de descuento en todos tus exámenes durante todo ${mes}. Es el nivel más alto del club.` }
   }
   const n = s.next!
-  const pl = (k: number) => `${k} ${k === 1 ? "paciente" : "pacientes"}`
+  if (!s.best && s.count === 0) {
+    return s.half === 1
+      ? { title: "Tu mes empieza aquí", body: `Con ${TIERS[0].min} pacientes en esta quincena desbloqueas ${TIERS[0].percent}% para todo ${mes}. Tienes dos oportunidades: del 1 al 15 y del 16 a fin de mes.` }
+      : { title: "Segunda oportunidad del mes", body: `Con ${TIERS[0].min} pacientes en esta quincena desbloqueas ${TIERS[0].percent}% de descuento para todo ${mes}.` }
+  }
   if (s.missing <= 3) {
     return {
       title: `¡Ya casi llegas a ${n.name}! 🔥`,
-      body: s.tier
-        ? `Te faltan solo ${pl(s.missing)} para pasar de ${s.tier.percent}% a ${n.percent}% de descuento durante un mes.`
-        : `Te faltan solo ${pl(s.missing)} para desbloquear ${n.percent}% de descuento durante un mes.`,
+      body: s.best
+        ? `Te faltan solo ${pl(s.missing)} en esta quincena para pasar de ${s.best.percent}% a ${n.percent}% en todo ${mes}.`
+        : `Te faltan solo ${pl(s.missing)} en esta quincena para desbloquear ${n.percent}% en todo ${mes}.`,
     }
   }
-  if (s.tier) {
-    return { title: `¡Nivel ${s.tier.name} asegurado!`, body: `Ya ganaste ${s.tier.percent}% del ${fmt(r.start)} al ${fmt(r.end)}. Te faltan ${pl(s.missing)} para ${n.name} (${n.percent}%).` }
+  if (s.best) {
+    const from = s.secured && s.secured.tier.key === s.best.key ? ` (lo ganaste en el corte ${s.secured.period.label})` : ""
+    return {
+      title: `¡${s.best.name} asegurado para ${mes}!`,
+      body: `Ya tienes ${s.best.percent}% para todo ${mes}${from}. Con ${pl(s.missing)} en esta quincena subes a ${n.name} (${n.percent}%).${second}`,
+    }
   }
-  return { title: `Vas en camino a ${n.name}`, body: `Llevas ${pl(s.count)}. Con ${pl(s.missing)} más desbloqueas ${n.percent}% de descuento durante un mes.` }
+  return { title: `Vas en camino a ${n.name}`, body: `Llevas ${pl(s.count)} en esta quincena. Con ${pl(s.missing)} más desbloqueas ${n.percent}% para todo ${mes}.${second}` }
 }
 
 export async function loyaltyLeaders(periodId: string) {

@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { prisma } from "@/lib/db"
 import Link from "next/link"
 import { bogotaDay, discountStatus } from "@/lib/discounts"
-import { ensureLoyaltyClosed, periodById, tierByKey } from "@/lib/loyalty"
+import { ensureLoyaltyClosed, monthName, tierByKey } from "@/lib/loyalty"
 import NewDiscountForm from "./NewDiscountForm"
 import DeleteDiscountButton from "./DeleteDiscountButton"
 
@@ -103,7 +103,7 @@ export default async function DescuentosPage({ searchParams }: { searchParams: {
                   {d.note && <p className="font-sans text-xs text-ink mt-0.5">{d.note}</p>}
                   {d.auto ? (
                     <p className="font-mono text-[8px] tracking-[0.12em] uppercase mt-1" style={{ color: t?.color }}>
-                      Generado automáticamente por el Club Pets &amp; Lab{d.loyaltyPeriod ? ` · corte ${periodById(d.loyaltyPeriod).label}` : ""}{d.loyaltyCount != null ? ` · ${d.loyaltyCount} pacientes` : ""} ·{" "}
+                      Generado automáticamente por el Club Pets &amp; Lab{d.loyaltyPeriod ? ` · ganado en ${monthName(d.loyaltyPeriod)}` : ""}{d.loyaltyCount != null ? ` · ${d.loyaltyCount} pacientes` : ""} ·{" "}
                       <Link href="/lealtad" className="underline">ver programa</Link>
                     </p>
                   ) : (
