@@ -10,6 +10,8 @@ import { formatCOP, orderPayment } from "@/lib/payment"
 import { formatDateTime } from "@/lib/dates"
 import { getClinicCredit } from "@/lib/credit"
 import CreditStatement from "./CreditStatement"
+import LoyaltyCard from "@/components/LoyaltyCard"
+import { getLoyaltyStatuses, loyaltyLeaders } from "@/lib/loyalty"
 
 export const metadata: Metadata = { title: "Portal Vet" }
 
@@ -69,6 +71,9 @@ export default async function PortalVetDashboardPage({
   const credit = noCharge ? null : await getClinicCredit(session.user.clinicId)
   const payOf = (o: (typeof orders)[number]) => orderPayment(o.exams, noCharge, { onCredit: o.creditDays != null, inMora: !!credit?.inMora })
   const held = (o: (typeof orders)[number]) => !payOf(o).released
+  // Club Pets & Lab (lib/loyalty.ts): barra de progreso del corte quincenal
+  const loyalty = noCharge ? undefined : (await getLoyaltyStatuses([session.user.clinicId])).get(session.user.clinicId)
+  const leaders = loyalty?.last ? await loyaltyLeaders(loyalty.last.period.id) : 0
   const ready = orders.filter(o => o.status === "COMPLETADA" && !held(o)).length
 
   return (
@@ -98,6 +103,8 @@ export default async function PortalVetDashboardPage({
           <LogoutButton />
         </div>
       </div>
+
+      {loyalty && <LoyaltyCard s={loyalty} leaders={leaders} />}
 
       {credit && (credit.line?.active || credit.used > 0) && <CreditStatement credit={credit} />}
 

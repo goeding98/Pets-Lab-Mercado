@@ -104,6 +104,14 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   `OrderExam` al crear la orden (staff y Portal Vet, `examsWithListPrice(templateIds, clinicId)`) y al cambiar/agregar
   un examen (fecha de la orden); si aplican varios, gana el mayor. "Ya pagó" registra el neto. Nueva muestra muestra el
   total con descuento. Crear/borrar uno no toca órdenes ya registradas; Caja lo puede ajustar después.
+- Club Pets & Lab (lealtad, `lib/loyalty.ts`): cortes quincenales 1–15 y 16–fin (Colombia), cuenta PACIENTES distintos
+  (nombre+especie+tutor, sin SOLICITADA, sin Pets & Pets) por clínica: Bronce 10–15 = 10%, Plata 16–25 = 20%, Oro 26+ = 25%.
+  Al cerrar el corte `ensureLoyaltyClosed` crea un `ClinicDiscount` con `source = "LEALTAD"` (tier, periodo, conteo) por un
+  mes corrido desde el día siguiente (16 nov → 15 dic; 1 dic → 31 dic), todas las áreas. Candado/historial en
+  `LabSetting "loyalty:<AAAA-MM-1|2>"`. Lo llaman el cron `api/cron/lealtad` (05:10 UTC), `/lealtad`, `/descuentos` y
+  `discountsFor` (cada orden nueva). Empieza en `PROGRAM_START` (corte 1–15 nov 2026), sin retroactivos. Barra en el Portal
+  Vet (`components/LoyaltyCard.tsx`, también corta en Nueva solicitud); dashboard `/lealtad` (permiso `descuentos`) con
+  ranking, "a punto de subir" (WhatsApp) e historial. En /descuentos salen como "⚡ Automático" con filtros.
 - Pacientes (`app/(lab)/pacientes/`, permiso `muestras.ver`): no hay tabla Patient; se listan agrupando las
   órdenes por paciente + especie + tutor + clínica (datos de la más reciente). Los datos se corrigen por
   muestra con "Editar datos" (`actions/orderInfo.ts`, `OrderInfoEditor.tsx`, permiso `muestras.crear`):

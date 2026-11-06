@@ -82,6 +82,7 @@ export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/promociones", "promociones"],
   ["/personalizados", "personalizados"],
   ["/descuentos", "descuentos"],
+  ["/lealtad", "descuentos"], // Club Pets & Lab (programa de lealtad)
   ["/rangos", "rangos"],
 ]
 

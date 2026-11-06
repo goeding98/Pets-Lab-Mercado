@@ -1,4 +1,5 @@
 import { prisma } from "./db"
+import { ensureLoyaltyClosed } from "./loyalty"
 
 // Descuentos por cliente (ClinicDiscount): un % para los exámenes de ciertas áreas (vacío = todos) en una ventana
 // de fechas. Se aplican al poner el precio de un examen en una orden (crear, agregar o cambiar examen); si hay
@@ -18,6 +19,8 @@ export function discountStatus(d: { startDate: string; endDate: string }, day = 
 export async function discountsFor(clinicId: string | null, templateIds: string[], at: Date = new Date()): Promise<Map<string, number>> {
   const out = new Map<string, number>()
   if (!clinicId || templateIds.length === 0) return out
+  // Si cerró un corte del programa de lealtad y el cron aún no corrió, se crean sus descuentos ya (lib/loyalty.ts)
+  await ensureLoyaltyClosed().catch(() => [])
   const day = bogotaDay(at)
   const rules = await prisma.clinicDiscount.findMany({ where: { clinicId, startDate: { lte: day }, endDate: { gte: day } } })
   if (rules.length === 0) return out

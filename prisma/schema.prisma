@@ -281,6 +281,11 @@ model ClinicDiscount {
   endDate       String
   note          String?
   createdByName String?
+  // Programa de lealtad (lib/loyalty.ts): source = LEALTAD lo crea el sistema solo al cerrar cada corte quincenal
+  source        String   @default("MANUAL") // MANUAL | LEALTAD
+  loyaltyTier   String? // BRONCE | PLATA | ORO
+  loyaltyPeriod String? // corte que lo ganó: AAAA-MM-1 (1-15) | AAAA-MM-2 (16-fin)
+  loyaltyCount  Int? // pacientes del corte
   createdAt     DateTime @default(now())
 
   @@index([clinicId])
