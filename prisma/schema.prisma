@@ -21,23 +21,25 @@ model User {
 }
 
 model Clinic {
-  id           String         @id @default(cuid())
-  name         String
-  nit          String?
-  address      String?
-  phone        String?
-  email        String?
-  billingEmail String? // correo de facturación (Siigo); por defecto el mismo correo de la clínica
-  contactName  String? // persona de contacto (registro desde el Portal Vet)
-  neighborhood String? // barrio
-  city         String?
-  noCharge     Boolean        @default(false) // cliente sin cobro (Pets & Pets): sus resultados nunca se retienen por pago
-  users        User[]
-  orders       Order[]
-  branches     ClinicBranch[]
-  customExams  ExamTemplate[] @relation("CustomExamClients") // exámenes personalizados para esta clínica
-  discounts    ClinicDiscount[]
-  createdAt    DateTime       @default(now())
+  id             String           @id @default(cuid())
+  name           String
+  nit            String?
+  address        String?
+  phone          String?
+  email          String?
+  billingEmail   String? // correo de facturación (Siigo); por defecto el mismo correo de la clínica
+  contactName    String? // persona de contacto (registro desde el Portal Vet)
+  neighborhood   String? // barrio
+  city           String?
+  noCharge       Boolean          @default(false) // cliente sin cobro (Pets & Pets): sus resultados nunca se retienen por pago
+  users          User[]
+  orders         Order[]
+  branches       ClinicBranch[]
+  customExams    ExamTemplate[]   @relation("CustomExamClients") // exámenes personalizados para esta clínica
+  discounts      ClinicDiscount[]
+  creditLine     CreditLine?
+  creditPayments CreditPayment[]
+  createdAt      DateTime         @default(now())
 }
 
 // Sede de una clínica (misma cuenta/NIT, distinta dirección). Cada orden puede ir a una sede.
@@ -79,6 +81,9 @@ model Order {
   invoiceNumber  String?
   invoicedAt     DateTime?
   invoicedByName String?
+  // Venta a crédito (/credito, lib/credit.ts): plazo en días (15 | 30) copiado de la línea de crédito al elegir "Crédito";
+  // null = de contado. Vence (fecha de la factura o de registro) + creditDays.
+  creditDays     Int?
   notes          String?
   exams          OrderExam[]
   createdAt      DateTime      @default(now())
@@ -275,6 +280,38 @@ model ClinicDiscount {
   startDate     String
   endDate       String
   note          String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+
+  @@index([clinicId])
+}
+
+// Línea de crédito de un cliente (/credito: Michel, Guillermo y Germán — lib/permissions.ts: CREDIT_EMAILS). Cupo en pesos
+// (1 a 10 millones) y plazo de 15 o 30 días. Las órdenes a crédito copian el plazo (Order.creditDays). Cartera en /cartera.
+model CreditLine {
+  id            String   @id @default(cuid())
+  clinicId      String   @unique
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  limit         Int
+  termDays      Int
+  active        Boolean  @default(true)
+  createdByName String?
+  updatedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Abono de un cliente a su deuda a crédito (/cartera). Se reparte en las órdenes a crédito más antiguas (sube
+// OrderExam.amountPaid); allocations = [{examId, amount}] para poder anularlo.
+model CreditPayment {
+  id            String   @id @default(cuid())
+  clinicId      String
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  amount        Float
+  date          String // AAAA-MM-DD (Colombia)
+  method        String // EFECTIVO | TRANSFERENCIA
+  note          String?
+  allocations   Json
   createdByName String?
   createdAt     DateTime @default(now())
 

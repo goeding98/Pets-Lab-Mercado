@@ -51,6 +51,16 @@ export function canSeeFinance(role: string | undefined | null, email: string | u
   return role === "ADMIN" && !!email && FINANCE_EMAILS.includes(email.trim().toLowerCase())
 }
 
+// Líneas de crédito (/credito): Michel, Guillermo y Germán (comercial), por correo.
+// Cartera (/cartera, ver deudas y registrar abonos): ellos + Contabilidad (rol CONTADOR).
+export const CREDIT_EMAILS = ["michel@petspets.co", "guillermo@petspets.co", "tapiagerman56@gmail.com"]
+export function canManageCredit(role: string | undefined | null, email: string | undefined | null): boolean {
+  return (role === "ADMIN" || role === "COMERCIAL") && !!email && CREDIT_EMAILS.includes(email.trim().toLowerCase())
+}
+export function canSeeCartera(role: string | undefined | null, email: string | undefined | null): boolean {
+  return role === "CONTADOR" || canManageCredit(role, email)
+}
+
 export function can(role: string | undefined | null, permission: Permission): boolean {
   if (!role) return false
   return ROLE_PERMISSIONS[role]?.includes(permission) ?? false

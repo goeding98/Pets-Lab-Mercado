@@ -35,6 +35,7 @@ export default function OrderForm({
   pendingLabel = "Registrando…",
   paymentOption = false,
   discounts = [],
+  creditLines = [],
 }: {
   templates: (ExamTemplate & { clients?: { id: string }[] })[]
   clinics?: (Clinic & { branches: BranchOption[] })[]
@@ -44,7 +45,9 @@ export default function OrderForm({
   pendingLabel?: string
   paymentOption?: boolean
   discounts?: { clinicId: string; percent: number; areas: string[] }[] // vigentes hoy (solo para el total del staff)
+  creditLines?: { clinicId: string; termDays: number; limit: number; used: number; inMora: boolean }[] // líneas activas (/credito)
 }) {
+  const [payMode, setPayMode] = useState<"" | "paid" | "credit">("")
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState("")
   const [clinicId, setClinicId] = useState("")
@@ -59,6 +62,8 @@ export default function OrderForm({
   const total = offered.filter(t => selected.includes(t.id)).reduce((n, t) => n + Math.max((t.price ?? 0) * (1 - pctOf(t.area) / 100), 0), 0)
   const noCharge = clinics?.find(c => c.id === clinicId)?.noCharge ?? false
   const branchOptions = clinics ? clinics.find(c => c.id === clinicId)?.branches ?? [] : ownBranches ?? []
+  const creditLine = creditLines.find(l => l.clinicId === clinicId)
+  const mode = payMode === "credit" && !creditLine ? "" : payMode
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -209,15 +214,43 @@ export default function OrderForm({
                   {total < listTotal ? <>Con el descuento del cliente (lista {formatCOP(listTotal)}). Otros ajustes, en Caja.</> : "Precios de lista; descuentos se ajustan en Caja."}
                 </span>
               </p>
-              <label className="flex items-center gap-2 font-sans text-sm text-ink cursor-pointer">
-                <input type="checkbox" name="paid" value="1" className="w-4 h-4 accent-salvia-700" />
-                Ya pagó
-              </label>
-              <select name="paymentMethod" defaultValue={PAYMENT_METHODS[0].value} className={`${inputClass} w-auto`}>
-                {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
+              <div className="w-full flex flex-wrap items-center gap-x-5 gap-y-2">
+                <label className="flex items-center gap-2 font-sans text-sm text-ink cursor-pointer">
+                  <input type="radio" name="payMode" value="" checked={mode === ""} onChange={() => setPayMode("")} className="w-4 h-4 accent-salvia-700" />
+                  Pendiente de pago
+                </label>
+                <label className="flex items-center gap-2 font-sans text-sm text-ink cursor-pointer">
+                  <input type="radio" name="payMode" value="paid" checked={mode === "paid"} onChange={() => setPayMode("paid")} className="w-4 h-4 accent-salvia-700" />
+                  Ya pagó
+                </label>
+                {mode === "paid" && (
+                  <select name="paymentMethod" defaultValue={PAYMENT_METHODS[0].value} className={`${inputClass} w-auto`}>
+                    {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                )}
+                {creditLine && (
+                  <label className="flex items-center gap-2 font-sans text-sm text-ink cursor-pointer">
+                    <input type="radio" name="payMode" value="credit" checked={mode === "credit"} onChange={() => setPayMode("credit")} className="w-4 h-4 accent-salvia-700" />
+                    A crédito ({creditLine.termDays} días)
+                  </label>
+                )}
+              </div>
+              {creditLine && (
+                <p className="w-full font-sans text-[11px] text-ink-2">
+                  Línea de crédito: cupo {formatCOP(creditLine.limit)} · debe {formatCOP(creditLine.used)} · disponible{" "}
+                  {formatCOP(Math.max(creditLine.limit - creditLine.used, 0))}
+                  {mode === "credit" && creditLine.used + total > creditLine.limit && (
+                    <strong className="block text-red-700">Con esta orden queda sobre cupo ({formatCOP(creditLine.used + total)}). Se puede registrar igual.</strong>
+                  )}
+                  {creditLine.inMora && (
+                    <strong className="block text-red-700">El cliente tiene facturas vencidas: sus resultados a crédito quedan retenidos hasta que pague.</strong>
+                  )}
+                </p>
+              )}
               <p className="w-full font-sans text-[11px] text-ink-2">
-                Si no ha pagado, el resultado queda retenido (la clínica no lo ve) hasta marcar el pago en la muestra.
+                {mode === "credit"
+                  ? "A crédito: la clínica ve el resultado sin pagar mientras esté al día; la deuda queda en Cartera."
+                  : "Si no ha pagado, el resultado queda retenido (la clínica no lo ve) hasta marcar el pago en la muestra."}
               </p>
             </div>
           )}

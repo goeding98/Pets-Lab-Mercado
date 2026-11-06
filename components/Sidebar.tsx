@@ -29,10 +29,14 @@ function activeHref(path: string, hrefs: string[]) {
     .sort((a, b) => b.length - a.length)[0]
 }
 
-function NavContent({ userName, role, path, finance }: { userName: string; role: string; path: string; finance: boolean }) {
+type Flags = { finance: boolean; credit: boolean; cartera: boolean }
+
+function NavContent({ userName, role, path, flags }: { userName: string; role: string; path: string; flags: Flags }) {
   const items = [
-    ...(finance ? [{ href: "/finanzas", label: "Finanzas" }] : []),
+    ...(flags.finance ? [{ href: "/finanzas", label: "Finanzas" }] : []),
     ...NAV.filter(({ perm }) => can(role, perm)),
+    ...(flags.credit ? [{ href: "/credito", label: "Líneas de crédito" }] : []),
+    ...(flags.cartera ? [{ href: "/cartera", label: "Cartera" }] : []),
   ]
   const current = activeHref(path, items.map(i => i.href))
   return (
@@ -65,7 +69,8 @@ function NavContent({ userName, role, path, finance }: { userName: string; role:
   )
 }
 
-export default function Sidebar({ userName, role, finance = false }: { userName: string; role: string; finance?: boolean }) {
+export default function Sidebar({ userName, role, finance = false, credit = false, cartera = false }: { userName: string; role: string; finance?: boolean; credit?: boolean; cartera?: boolean }) {
+  const flags = { finance, credit, cartera }
   const path = usePathname()
   const [open, setOpen] = useState(false)
 
@@ -120,7 +125,7 @@ export default function Sidebar({ userName, role, finance = false }: { userName:
                 </svg>
               </button>
             </div>
-            <NavContent userName={userName} role={role} path={path} finance={finance} />
+            <NavContent userName={userName} role={role} path={path} flags={flags} />
           </aside>
         </div>
       )}
@@ -131,7 +136,7 @@ export default function Sidebar({ userName, role, finance = false }: { userName:
           <Image src="/logos/pets-lab-cream.png" alt="Pets & Lab" width={130} height={50} className="object-contain" />
           <p className="font-mono text-[8px] tracking-[0.18em] text-bone/50 mt-2 uppercase">LIMS</p>
         </div>
-        <NavContent userName={userName} role={role} path={path} finance={finance} />
+        <NavContent userName={userName} role={role} path={path} flags={flags} />
       </aside>
     </>
   )

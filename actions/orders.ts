@@ -41,11 +41,19 @@ export async function createOrder(formData: FormData) {
   const listed = await examsWithListPrice(templateIds, clinicId)
   // "Ya pagó" al registrar (solo el personal con permiso de pagos): se registra el pago completo en Caja
   const method = formData.get("paymentMethod")
-  const paidUpfront = formData.get("paid") === "1" && can(session.user.role, "pagos")
+  const payMode = formData.get("payMode") ?? (formData.get("paid") === "1" ? "paid" : "")
+  const paidUpfront = payMode === "paid" && can(session.user.role, "pagos")
     && PAYMENT_METHODS.some(m => m.value === method)
+  // "A crédito": solo con línea activa del cliente (/credito); copia su plazo
+  const creditLine = payMode === "credit" && clinicId && can(session.user.role, "pagos")
+    ? await prisma.creditLine.findUnique({ where: { clinicId } })
+    : null
+  const creditDays = creditLine?.active ? creditLine.termDays : null
   const exams = paidUpfront
     ? listed.map(e => ({ ...e, amountPaid: computeNetPrice(e.price, e.discountType, e.discountValue), paymentTerm: "CONTADO", paymentMethod: method as string }))
-    : listed
+    : creditDays != null
+      ? listed.map(e => ({ ...e, paymentTerm: "CREDITO" }))
+      : listed
 
   const order = await createWithOrderNumber(orderNumber => prisma.order.create({
     data: {
@@ -60,6 +68,7 @@ export async function createOrder(formData: FormData) {
       clinicId,
       branchId,
       processedById: session.user.id,
+      creditDays,
       notes: (formData.get("notes") as string) || null,
       exams: {
         create: exams,

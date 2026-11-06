@@ -30,8 +30,13 @@ export default function CajaTable({ initialRows }: { initialRows: CajaRow[] }) {
   }
 
   function commit(id: string, fields: Partial<CajaRow>) {
-    startTransition(() => {
-      updateBilling(id, fields)
+    const before = rows.find(r => r.id === id)
+    startTransition(async () => {
+      const res = await updateBilling(id, fields)
+      if (res?.error) {
+        alert(res.error)
+        if (before) patch(id, before)
+      }
     })
   }
 

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 import { get } from "@vercel/blob"
 import { buildOrderPdf } from "@/lib/reportPdf"
 import { getOrinaConfig } from "@/lib/settings"
-import { orderPayment } from "@/lib/payment"
+import { orderReleased } from "@/lib/credit"
 import { examParts } from "@/lib/reportParts"
 
 // Los encabezados HTTP no admiten caracteres como "–" o "₃": nombre de archivo solo en ASCII
@@ -42,7 +42,7 @@ export async function GET(
     return new NextResponse("No autorizado", { status: 403 })
   }
   // Sin pago no se entrega el resultado (ver lib/payment.ts)
-  if (session.user.role === "CLINIC" && !orderPayment(orderExam.order.exams, orderExam.order.clinic?.noCharge).released) {
+  if (session.user.role === "CLINIC" && !(await orderReleased(orderExam.order))) {
     return new NextResponse("Resultado pendiente de pago: se libera cuando el laboratorio registre el pago.", { status: 402 })
   }
 

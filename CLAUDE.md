@@ -266,6 +266,18 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   factura días anteriores; exige `CRON_SECRET` si existe. Resultado de la última corrida en `LabSetting "siigo-auto-log"`
   (banner de Facturación). Comprobante FV-13, producto LABORATORIO (99993), vendedor 437. Siigo envía el correo solo,
   unos minutos después de que la DIAN acepta.
+- Líneas de crédito y cartera (`lib/credit.ts`, `actions/credit.ts`, modelos `CreditLine` y `CreditPayment`, `Order.creditDays`):
+  `/credito` solo Michel, Guillermo y Germán (`lib/permissions.ts: CREDIT_EMAILS` + `canManageCredit`, en middleware, menú y
+  acciones): una línea por cliente, cupo 1–10 MM (saltos de 1 MM) y plazo 15 o 30 días; se cierra con `active = false`.
+  Con línea activa, "A crédito" aparece en Nueva muestra (`OrderForm` payMode), en el módulo de pago de la muestra y en
+  Caja (Plazo CREDITO); copia el plazo a `Order.creditDays` (null = contado) y pone `paymentTerm` CREDITO. Se elige cada vez
+  (no es automático). Vence = fecha de la factura (o del registro si aún no se factura) + creditDays. Se deja pasar sobre
+  cupo con aviso. Liberación: `orderPayment(exams, noCharge, { onCredit, inMora })` — a crédito se libera sin pago si el
+  cliente no está en mora (alguna orden a crédito con saldo vencida); las rutas de PDF/fotos/WhatsApp usan
+  `orderReleased`. `/cartera` (ellos + rol CONTADOR, `canSeeCartera`): quién debe, vencido, por vencer; abonos por cliente
+  que se reparten en las órdenes a crédito más antiguas (`allocations` para anular). La clínica ve su estado de cuenta en
+  el Portal Vet (`CreditStatement`). Siigo factura igual; lo no pagado va "por cobrar" con el plazo de la orden.
+  Las acciones nuevas devuelven `{ error }` (Next oculta el texto de los errores lanzados en producción).
 - Dashboard financiero (`app/(lab)/finanzas/`, `lib/finance.ts`, CSV en `/finanzas/csv`): solo Michel y Guillermo
   (`lib/permissions.ts: FINANCE_EMAILS` + `canSeeFinance`, revisado en middleware, menú y página; Marcelo es ADMIN
   pero no lo ve). Venta = precio neto de Caja el día que se registra la muestra (Bogotá); recaudado = `amountPaid`

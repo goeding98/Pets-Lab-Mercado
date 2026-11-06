@@ -2,19 +2,23 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { setOrderPaid } from "@/actions/payments"
+import { setOrderCredit } from "@/actions/credit"
 import { PAYMENT_METHODS, formatCOP, type OrderPayment } from "@/lib/payment"
 
 // Pago de la muestra (arriba en el detalle). Marcar "Pagado" registra el pago completo en Caja y
 // libera el resultado a la clínica; mientras no haya pago, el resultado queda retenido.
 export default function PaymentModule({
-  orderId, payment, hasResults, canMark, clinicName,
+  orderId, payment, hasResults, canMark, clinicName, credit,
 }: {
   orderId: string
   payment: OrderPayment
   hasResults: boolean // algún examen completado
   canMark: boolean
   clinicName: string | null
+  // Línea de crédito activa del cliente (/credito), si está en mora y el plazo/vencimiento de esta orden si va a crédito
+  credit?: { line: { termDays: number; limit: number; used: number } | null; inMora: boolean; days: number | null; due: string | null }
 }) {
+  const [notice, setNotice] = useState<string | null>(null)
   const router = useRouter()
   const [method, setMethod] = useState<string>(PAYMENT_METHODS[0].value)
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +45,21 @@ export default function PaymentModule({
       }
     })
   }
+
+  function toggleCredit(on: boolean) {
+    if (!on && !confirm("¿Quitar el crédito? La orden queda de contado y, sin pago, el resultado se retiene.")) return
+    setError(null)
+    setNotice(null)
+    startTransition(async () => {
+      const res = await setOrderCredit(orderId, on)
+      if (res.error) setError(res.error)
+      else {
+        if (res.warning) setNotice(res.warning)
+        router.refresh()
+      }
+    })
+  }
+  const fmtDay = (d: string) => d.split("-").reverse().join("/")
 
   const retained = !payment.released && hasResults
   const box = retained ? "border-red-300 bg-red-50" : payment.released ? "border-azul-200 bg-azul-50/60" : "border-amber-300 bg-amber-50"
@@ -83,9 +102,38 @@ export default function PaymentModule({
         )}
       </div>
 
+      {payment.onCredit && (
+        <div className="flex flex-wrap items-center gap-3 mt-3">
+          <span className="font-mono text-[9px] tracking-[0.18em] uppercase bg-azul-700 text-bone px-2 py-1">
+            A crédito · {credit?.days} días{credit?.due ? ` · vence ${fmtDay(credit.due)}` : ""}
+          </span>
+          {canMark && !payment.fullyPaid && (
+            <button type="button" onClick={() => toggleCredit(false)} disabled={pending} className="font-mono text-[9px] tracking-[0.15em] uppercase text-ink-2 hover:text-red-700 underline">
+              Quitar crédito
+            </button>
+          )}
+        </div>
+      )}
+      {!payment.onCredit && canMark && credit?.line && !payment.fullyPaid && payment.total > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mt-3">
+          <button type="button" onClick={() => toggleCredit(true)} disabled={pending}
+            className="border border-azul-700 text-azul-700 bg-white font-mono text-[9px] tracking-[0.15em] uppercase px-3 py-1.5 hover:bg-azul-50">
+            {pending ? "Guardando…" : `Pasar a crédito (${credit.line.termDays} días)`}
+          </button>
+          <span className="font-sans text-[11px] text-ink-2">
+            Cupo {formatCOP(credit.line.limit)} · debe {formatCOP(credit.line.used)}
+            {credit.line.used + payment.balance > credit.line.limit && <strong className="text-red-700"> · con esta orden queda sobre cupo</strong>}
+          </span>
+        </div>
+      )}
+
       <p className="font-sans text-[13px] mt-3 text-ink">
         {payment.total <= 0 ? (
           <>Esta muestra no tiene precio: el resultado se entrega sin cobro. Si se debe cobrar, ponle precio en Caja.</>
+        ) : payment.onCredit && !payment.fullyPaid && payment.paid === 0 ? (
+          credit?.inMora
+            ? <><strong className="text-red-700">Cliente en mora:</strong> tiene facturas a crédito vencidas, así que este resultado queda retenido hasta que se ponga al día (Cartera).</>
+            : <>A crédito: la clínica recibe el resultado sin pagar. Saldo {formatCOP(payment.balance)} en Cartera.</>
         ) : retained ? (
           <><strong className="text-red-700">Resultado retenido:</strong> el cliente no ha pagado. La clínica no lo ve hasta que se marque el pago ({formatCOP(payment.balance)}).</>
         ) : !payment.released ? (
@@ -96,6 +144,7 @@ export default function PaymentModule({
           <>Pago parcial: la clínica ya puede ver el resultado. Saldo pendiente {formatCOP(payment.balance)}.</>
         )}
       </p>
+      {notice && <p className="font-sans text-xs text-red-700 font-medium mt-2">{notice}</p>}
       {error && <p className="font-sans text-xs text-red-600 mt-2">{error}</p>}
     </div>
   )

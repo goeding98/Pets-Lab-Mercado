@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { buildOrderPdf } from "@/lib/reportPdf"
 import { getOrinaConfig } from "@/lib/settings"
-import { orderPayment } from "@/lib/payment"
+import { orderReleased } from "@/lib/credit"
 import { readShareToken } from "@/lib/shareLink"
 import { examParts } from "@/lib/reportParts"
 
@@ -46,7 +46,7 @@ export async function GET(_req: Request, { params }: { params: { token: string }
     },
   })
   if (!order) return message("No encontramos este resultado.", 404)
-  if (!orderPayment(order.exams, order.clinic?.noCharge).released) {
+  if (!(await orderReleased(order))) {
     return message("El resultado estará disponible cuando se registre el pago. Comunícate con el laboratorio.", 402)
   }
 

@@ -12,20 +12,25 @@ export type OrderPayment = {
   balance: number
   noCharge: boolean // cliente sin cobro (Clinic.noCharge, ej. Pets & Pets)
   fullyPaid: boolean
-  // ¿La clínica puede ver el resultado? Cliente sin cobro, algún pago (parcial basta) o nada que cobrar.
+  // ¿La clínica puede ver el resultado? Cliente sin cobro, algún pago (parcial basta), nada que cobrar o
+  // venta a crédito con el cliente al día (sin mora, lib/credit.ts).
   released: boolean
+  onCredit: boolean
 }
 
-export function orderPayment(exams: PayableExam[], noCharge = false): OrderPayment {
+// credit: la orden está a crédito (Order.creditDays) y si su cliente está en mora (lib/credit.ts: moraClinics)
+export function orderPayment(exams: PayableExam[], noCharge = false, credit?: { onCredit: boolean; inMora: boolean }): OrderPayment {
   const total = exams.reduce((n, e) => n + computeNetPrice(e.price, e.discountType, e.discountValue), 0)
   const paid = exams.reduce((n, e) => n + e.amountPaid, 0)
+  const onCredit = !!credit?.onCredit
   return {
     total,
     paid,
     balance: Math.max(total - paid, 0),
     noCharge,
     fullyPaid: paid >= total,
-    released: noCharge || paid > 0 || total <= 0,
+    released: noCharge || paid > 0 || total <= 0 || (onCredit && !credit!.inMora),
+    onCredit,
   }
 }
 

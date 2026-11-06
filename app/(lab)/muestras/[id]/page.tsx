@@ -28,6 +28,7 @@ import { headers } from "next/headers"
 import { makeShareToken } from "@/lib/shareLink"
 import { formatCOP } from "@/lib/payment"
 import { formatDateTime } from "@/lib/dates"
+import { dueDateOf, getClinicCredit } from "@/lib/credit"
 
 export const metadata: Metadata = { title: "Detalle de muestra" }
 
@@ -67,7 +68,15 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
 
   const session = await getServerSession(authOptions)
   const canEdit = can(session?.user.role, "resultados.editar")
-  const payment = orderPayment(order.exams, order.clinic?.noCharge ?? false)
+  // Línea de crédito del cliente (/credito) y si está en mora: una orden a crédito se libera sin pago si está al día
+  const credit = order.clinicId && !order.clinic?.noCharge ? await getClinicCredit(order.clinicId) : null
+  const payment = orderPayment(order.exams, order.clinic?.noCharge ?? false, { onCredit: order.creditDays != null, inMora: !!credit?.inMora })
+  const creditInfo = {
+    line: credit?.line?.active ? { termDays: credit.line.termDays, limit: credit.line.limit, used: credit.used } : null,
+    inMora: !!credit?.inMora,
+    days: order.creditDays,
+    due: dueDateOf(order),
+  }
   // Corregir exámenes de la muestra (personal): catálogo disponible para la clínica de la orden
   const canChangeExams = can(session?.user.role, "muestras.crear")
   // Botón del equipo de química A15: si algún examen tiene parámetros que mide el equipo
@@ -201,6 +210,7 @@ export default async function MuestraDetailPage({ params }: { params: { id: stri
         hasResults={order.exams.some(e => e.status === "COMPLETADO")}
         canMark={can(session?.user.role, "pagos")}
         clinicName={order.clinic?.name ?? null}
+        credit={creditInfo}
       />
 
       {order.notes && (

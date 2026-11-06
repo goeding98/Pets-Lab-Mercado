@@ -206,14 +206,15 @@ export type SiigoLine = { description: string; price: number }
 export type SiigoPaymentSplit = { cash: number; transfer: number; credit: number }
 
 // client = null → se factura a consumidor final
-export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient | null, lines: SiigoLine[], split: SiigoPaymentSplit, observations: string) {
+// dueDays: plazo de la parte por cobrar (las órdenes a crédito traen el suyo, lib/credit.ts); si no, el de la configuración
+export async function createSiigoInvoice(s: SiigoSettings, client: SiigoClient | null, lines: SiigoLine[], split: SiigoPaymentSplit, observations: string, dueDays?: number) {
   if (!siigoReady(s)) throw new SiigoError("Falta configurar Siigo (comprobante, producto, vendedor y las formas de pago de efectivo, transferencia y por cobrar).")
   const missing = client ? missingForSiigo(client) : []
   if (missing.length) throw new SiigoError(`Al cliente le falta: ${missing.join(", ")}.`)
   const t = await token(s)
   const identification = client ? await ensureCustomer(t, client) : CONSUMIDOR_FINAL
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" })
-  const due = new Date(Date.now() + s.dueDays * 86400000).toLocaleDateString("en-CA", { timeZone: "America/Bogota" })
+  const due = new Date(Date.now() + (dueDays ?? s.dueDays) * 86400000).toLocaleDateString("en-CA", { timeZone: "America/Bogota" })
   const items = lines.map(l => ({
     code: s.productCode,
     description: l.description.slice(0, 200),

@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { formatDateTime } from "@/lib/dates"
+import { moraClinics } from "@/lib/credit"
 
 export const metadata: Metadata = { title: "Muestras" }
 
@@ -77,13 +78,22 @@ export default async function MuestrasPage({
   })
 
   const canSeeDeleted = can((await getServerSession(authOptions))?.user.role, "muestras.eliminar")
-  const rows = orders.map(order => ({
-    order,
-    s: STATUS_LABELS[order.status] ?? { label: order.status, className: "bg-black/10 text-ink" },
-    p: order.clinic?.noCharge ? { label: "Sin cobro", className: "bg-salvia-50 text-salvia-700" } : getOrderPaymentStatus(order.exams),
-    // Resultado listo pero sin pago: la clínica no lo ve (lib/payment.ts)
-    retenido: order.exams.some(e => e.status === "COMPLETADO") && !orderPayment(order.exams, order.clinic?.noCharge).released,
-  }))
+  // Clientes en mora (lib/credit.ts): sus órdenes a crédito sin pagar quedan retenidas
+  const mora = await moraClinics(orders.filter(o => o.creditDays != null).map(o => o.clinicId))
+  const rows = orders.map(order => {
+    const pay = orderPayment(order.exams, order.clinic?.noCharge, { onCredit: order.creditDays != null, inMora: mora.has(order.clinicId ?? "") })
+    return {
+      order,
+      s: STATUS_LABELS[order.status] ?? { label: order.status, className: "bg-black/10 text-ink" },
+      p: order.clinic?.noCharge
+        ? { label: "Sin cobro", className: "bg-salvia-50 text-salvia-700" }
+        : pay.onCredit && !pay.fullyPaid
+          ? { label: `Crédito ${order.creditDays}d`, className: "bg-azul-100 text-azul-800" }
+          : getOrderPaymentStatus(order.exams),
+      // Resultado listo pero sin pago: la clínica no lo ve (lib/payment.ts)
+      retenido: order.exams.some(e => e.status === "COMPLETADO") && !pay.released,
+    }
+  })
   const badge = "font-mono text-[8px] tracking-[0.15em] uppercase px-2 py-0.5"
 
   return (

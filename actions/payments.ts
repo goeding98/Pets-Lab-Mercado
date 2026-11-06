@@ -23,7 +23,7 @@ export async function setOrderPaid(orderId: string, paid: boolean, method?: stri
       prisma.orderExam.update({
         where: { id: e.id },
         data: paid
-          ? { amountPaid: computeNetPrice(e.price, e.discountType, e.discountValue), paymentTerm: "CONTADO", paymentMethod: method }
+          ? { amountPaid: computeNetPrice(e.price, e.discountType, e.discountValue), paymentMethod: method }
           : { amountPaid: 0 },
       }),
     ),

@@ -62,12 +62,15 @@ export async function invoiceOrders(settings: SiigoSettings, orderIds: string[],
       split.credit += net - paid
     }
     const who = orders[0].clinic?.name ?? (orders.map(o => o.ownerName).filter(Boolean).join(", ") || "particular")
+    // Órdenes a crédito: lo por cobrar vence a su plazo (15 o 30 días)
+    const creditDays = orders.map(o => o.creditDays).filter((d): d is number => d != null)
     const inv = await createSiigoInvoice(
       settings,
       consumidorFinal ? null : client,
       lines,
       split,
-      `Pets & Lab · Órdenes ${orders.map(o => o.orderNumber).join(", ")}${consumidorFinal ? ` · Cliente: ${who}` : ""}`,
+      `Pets & Lab · Órdenes ${orders.map(o => o.orderNumber).join(", ")}${consumidorFinal ? ` · Cliente: ${who}` : ""}${creditDays.length ? ` · Crédito ${Math.max(...creditDays)} días` : ""}`,
+      creditDays.length ? Math.max(...creditDays) : undefined,
     )
     await prisma.order.updateMany({
       where: { invoiceNumber: claim },

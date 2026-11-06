@@ -8,6 +8,8 @@ import LogoutButton from "./LogoutButton"
 import BillingEmail from "./BillingEmail"
 import { formatCOP, orderPayment } from "@/lib/payment"
 import { formatDateTime } from "@/lib/dates"
+import { getClinicCredit } from "@/lib/credit"
+import CreditStatement from "./CreditStatement"
 
 export const metadata: Metadata = { title: "Portal Vet" }
 
@@ -63,7 +65,10 @@ export default async function PortalVetDashboardPage({
 
   const totalExams = orders.reduce((n, o) => n + o.exams.length, 0)
   // Un resultado sin pago no se entrega (lib/payment.ts): se ve como "pendiente de pago", sin PDF
-  const held = (o: (typeof orders)[number]) => !orderPayment(o.exams, noCharge).released
+  // Estado de cuenta a crédito (lib/credit.ts): con mora, sus órdenes a crédito sin pagar quedan retenidas
+  const credit = noCharge ? null : await getClinicCredit(session.user.clinicId)
+  const payOf = (o: (typeof orders)[number]) => orderPayment(o.exams, noCharge, { onCredit: o.creditDays != null, inMora: !!credit?.inMora })
+  const held = (o: (typeof orders)[number]) => !payOf(o).released
   const ready = orders.filter(o => o.status === "COMPLETADA" && !held(o)).length
 
   return (
@@ -93,6 +98,8 @@ export default async function PortalVetDashboardPage({
           <LogoutButton />
         </div>
       </div>
+
+      {credit && (credit.line?.active || credit.used > 0) && <CreditStatement credit={credit} />}
 
       {searchParams.enviada && (
         <div className="bg-salvia-50 border border-salvia-700/20 px-4 py-3 mb-6 font-sans text-[13px] text-salvia-800">
@@ -151,7 +158,7 @@ export default async function PortalVetDashboardPage({
 
               <div className="divide-y divide-black/[0.06]">
                 {p.orders.map(o => {
-                  const pay = orderPayment(o.exams, noCharge)
+                  const pay = payOf(o)
                   const isHeld = !pay.released
                   const s = isHeld && o.exams.some(e => e.status === "COMPLETADO")
                     ? { label: "Pendiente de pago", className: "bg-amber-100 text-amber-900" }
