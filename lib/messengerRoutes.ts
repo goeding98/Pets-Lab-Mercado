@@ -5,6 +5,17 @@
 
 export const SUPUESTOS = { FACTOR_CALLE: 1.4, KMH: 22, MIN_PARADA: 6, HORAS: 8, MAX_KM_LAB: 12 }
 
+// Cada mensajero se identifica por un color (mapa, lista y PDF de instrucciones): Mensajero Rojo, Mensajero Azul…
+export const MENSAJEROS = [
+  { nombre: "Rojo", color: "#dc2626" },
+  { nombre: "Azul", color: "#1d4ed8" },
+  { nombre: "Morado", color: "#7c3aed" },
+  { nombre: "Verde", color: "#0f766e" },
+]
+// Horario de las vueltas fijas y beneficio (pesos) por paquete de muestras no agendado
+export const HORARIO = { vuelta1: "8:30 a. m.", vuelta2: "2:00 p. m.", unaVuelta: "9:00 a. m." }
+export const BONO_PAQUETE = 1500
+
 export type Punto = { id: string; lat: number; lng: number; m: number; own: boolean }
 export type Ruta<P extends Punto> = {
   orden: P[]        // paradas de la ruta fija, en orden

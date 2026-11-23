@@ -30,6 +30,10 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   rutas fijas que salen y vuelven al laboratorio (sede Pets & Pets de Colseguros) para las sedes con N+ muestras en 30 días
   (órdenes sin SOLICITADA), 1–4 mensajeros, base sugerida y clínicas "por pedido". Cálculo en el navegador con
   `lib/messengerRoutes.ts` (barrido por ángulo + 2-opt; supuestos en `SUPUESTOS`). Solo lectura: no guarda nada.
+  Los mensajeros se llaman por color (`MENSAJEROS`: Rojo, Azul, Morado, Verde). Datos en `lib/messengerData.ts` (página y PDF).
+  Botón "Instrucciones para mensajeros" → `clientes/mensajeros/instrucciones` (route, mismo permiso) descarga el PDF
+  `components/MessengerInstructionsPdf.tsx`: reglas de la ruta, beneficio `BONO_PAQUETE` ($1.500 por paquete NO agendado;
+  paquete = todo lo de una clínica en una visita), la ruta de cada mensajero y hoja de registro a firmar (pago manual por ahora).
 - Solicitudes del portal: crean un `Order` con `source = "PORTAL"` y `status = "SOLICITADA"`
   (el lab aún no tiene la muestra); el staff la ve en `/muestras` y la pasa a `RECIBIDA`. El
   formulario de ingreso es el mismo componente para staff y clínicas

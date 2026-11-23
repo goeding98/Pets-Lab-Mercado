@@ -1,11 +1,11 @@
 "use client"
 import { useEffect, useMemo, useRef, useState } from "react"
 import "leaflet/dist/leaflet.css"
-import { calcular, SUPUESTOS } from "@/lib/messengerRoutes"
+import { calcular, HORARIO, MENSAJEROS, SUPUESTOS } from "@/lib/messengerRoutes"
+import type { SedePunto } from "@/lib/messengerData"
 
-export type SedePunto = { id: string; name: string; address: string; lat: number; lng: number; m: number; own: boolean }
-
-const COLORES = ["#c2410c", "#1d4ed8", "#7c3aed", "#0f766e"]
+const COLORES = MENSAJEROS.map(x => x.color)
+const nombreM = (i: number) => `Mensajero ${MENSAJEROS[i % MENSAJEROS.length].nombre}`
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
 const hm = (min: number) => {
   const h = Math.floor(min / 60), m = Math.round(min % 60)
@@ -66,7 +66,7 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
         L.polyline([[lab.lat, lab.lng], ...r.orden.map(p => [p.lat, p.lng] as [number, number]), [lab.lat, lab.lng]], { color: c, weight: 3, opacity: 0.85 }).addTo(map!)
         r.pedido.forEach(p => {
           L.circleMarker([p.lat, p.lng], { radius: 6, color: c, weight: 2, dashArray: "2 2", fillColor: "#fff", fillOpacity: 0.9 })
-            .bindPopup(`<b>${esc(p.name)}</b><br>Mensajero ${i + 1} · por pedido desde la base<br>${p.m} muestras en 30 días`)
+            .bindPopup(`<b>${esc(p.name)}</b><br>${nombreM(i)} · por pedido desde la base<br>${p.m} muestras en 30 días`)
             .addTo(map!)
           bounds.push([p.lat, p.lng])
         })
@@ -79,7 +79,7 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
               html: `<div style="width:22px;height:22px;border-radius:50%;background:${c};color:#fff;font:700 11px system-ui,sans-serif;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)">${j + 1}</div>`,
             }),
           })
-            .bindPopup(`<b>${esc(p.name)}</b><br>Mensajero ${i + 1} · parada ${j + 1} de la ruta fija<br>${p.m} muestras en 30 días`)
+            .bindPopup(`<b>${esc(p.name)}</b><br>${nombreM(i)} · parada ${j + 1} de la ruta fija<br>${p.m} muestras en 30 días`)
             .bindTooltip(esc(p.name), { direction: "right", offset: [10, 0] })
             .addTo(map!)
           bounds.push([p.lat, p.lng])
@@ -89,10 +89,10 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
             className: "",
             iconSize: [64, 22],
             iconAnchor: [32, 11],
-            html: `<div style="padding:2px 6px;background:${c};color:#fff;font:700 11px ui-monospace,monospace;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap;text-align:center">Base M${i + 1}</div>`,
+            html: `<div style="padding:2px 6px;background:${c};color:#fff;font:700 11px ui-monospace,monospace;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap;text-align:center">Base ${MENSAJEROS[i % MENSAJEROS.length].nombre}</div>`,
           }),
         })
-          .bindPopup(`<b>Base del mensajero ${i + 1}</b><br>Aquí espera entre vueltas para salir rápido a los pedidos.<br>Llega a cualquier clínica de su zona en ${hm(r.respuesta)} como máximo.`)
+          .bindPopup(`<b>Base del ${nombreM(i)}</b><br>Aquí espera entre vueltas para salir rápido a los pedidos.<br>Llega a cualquier clínica de su zona en ${hm(r.respuesta)} como máximo.`)
           .addTo(map!)
       })
 
@@ -137,6 +137,13 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
           <input type="checkbox" checked={conPP} onChange={e => setConPP(e.target.checked)} />
           Recoger también en las sedes Pets &amp; Pets
         </label>
+        <a
+          href={`/clientes/mensajeros/instrucciones?n=${n}&u=${umbral}&pp=${conPP ? 1 : 0}`}
+          download
+          className="ml-auto bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.18em] uppercase px-4 py-2.5 hover:bg-salvia-800 transition-colors"
+        >
+          Instrucciones para mensajeros (PDF)
+        </a>
       </div>
 
       {error && <p className="font-sans text-xs text-red-700 mb-2">{error}</p>}
@@ -152,7 +159,7 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
             <div key={i} className="px-4 py-4">
               <h2 className="font-serif text-lg font-medium flex items-center gap-2">
                 <span className="w-3.5 h-3.5 inline-block" style={{ background: COLORES[i % COLORES.length] }} />
-                Mensajero {i + 1}
+                {nombreM(i)}
               </h2>
               <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2 font-sans text-[13px]">
                 <dt className="text-ink-2">Por vuelta</dt><dd className="font-mono">{r.km.toFixed(0)} km · {hm(r.min)}</dd>
@@ -163,7 +170,7 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
                 <dt className="text-ink-2">Muestras/mes zona</dt><dd className="font-mono">{r.muestras}</dd>
               </dl>
               <p className="font-sans text-xs text-ink-2 mt-2">
-                {r.vueltas === 2 ? "Vuelta 1: 8:30 a. m. · Vuelta 2: 2:00 p. m." : "Una vuelta: 9:00 a. m."} Sale y vuelve al laboratorio.
+                {r.vueltas === 2 ? `Vuelta 1: ${HORARIO.vuelta1} · Vuelta 2: ${HORARIO.vuelta2}` : `Una vuelta: ${HORARIO.unaVuelta}`} · Sale y vuelve al laboratorio.
               </p>
               <ol className="list-decimal pl-5 mt-2 font-sans text-sm space-y-0.5">
                 {r.orden.map(p => <li key={p.id}>{p.name} <span className="text-ink-2">({p.m})</span></li>)}
