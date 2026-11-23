@@ -26,7 +26,8 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Calle 10 con Carrera 31) en Overpass, y si no, Nominatim solo si cae en la ciudad (mejor sin ubicar que mal ubicada).
   Se ubica al crear/cambiar la dirección de una sede (`actions/branches.ts`) y con "Ubicar las que faltan"; arrastrar un
   punto la guarda a mano (`geoManual = true`, `actions/geo.ts`, `clientes.editar`) y ya no se recalcula sola.
-- Plan de mensajeros (`app/(lab)/clientes/mensajeros/`, permiso `mensajeros`: solo ADMIN; botón en el Mapa de clientes):
+- Plan de mensajeros (`app/(lab)/clientes/mensajeros/`, permiso `mensajeros`: ADMIN, STAFF, COMERCIAL y DOMICILIARIO —
+  no CONTADOR; en el menú lateral y con botón en el Mapa de clientes):
   rutas fijas que salen y vuelven al laboratorio (sede Pets & Pets de Colseguros) para las sedes con N+ muestras en 30 días
   (órdenes sin SOLICITADA), 1–4 mensajeros, base sugerida y clínicas "por pedido". Cálculo en el navegador con
   `lib/messengerRoutes.ts` (barrido por ángulo + 2-opt; supuestos en `SUPUESTOS`). Solo lectura: no guarda nada.
