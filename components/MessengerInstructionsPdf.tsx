@@ -5,7 +5,7 @@ import React from "react"
 import path from "path"
 import fs from "fs"
 import { Document, Page, View, Text, Image, StyleSheet, Font } from "@react-pdf/renderer"
-import { BONO_PAQUETE, HORARIO, MENSAJEROS, type Ruta } from "@/lib/messengerRoutes"
+import { BONO_PAQUETE, hora, JORNADA, MENSAJEROS, type Ruta } from "@/lib/messengerRoutes"
 import type { SedePunto } from "@/lib/messengerData"
 
 const LOGO = `data:image/png;base64,${fs.readFileSync(path.join(process.cwd(), "public", "logos", "pets-lab-cream.png")).toString("base64")}`
@@ -70,7 +70,7 @@ export function MessengerInstructionsPdf({ rutas, fecha }: { rutas: Ruta<SedePun
   const nombres = rutas.map((_, i) => `Mensajero ${MENSAJEROS[i % MENSAJEROS.length].nombre}`)
   const listaNombres = nombres.length > 1 ? nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1] : nombres[0] ?? "Mensajero Rojo"
   const ej = nombres[0] ?? "Mensajero Rojo"
-  const dosVueltas = rutas.some(r => r.vueltas === 2)
+  const variasVueltas = rutas.some(r => r.vueltas >= 2)
 
   return (
     <Document title="Instrucciones para mensajeros" author="Pets & Lab">
@@ -113,19 +113,18 @@ export function MessengerInstructionsPdf({ rutas, fecha }: { rutas: Ruta<SedePun
             estamos sacando unas, espéranos 20 minuticos&quot;, <Text style={s.b}>no puedes esperar: te vas</Text>. Responde con amabilidad:
           </Text>
           <Text style={s.say}>
-            &quot;Qué pena, no puedo esperar porque me están esperando en las otras clínicas.{dosVueltas ? " Las recojo en mi próxima vuelta." : ""} Si es urgente, llamen al laboratorio.&quot;
+            &quot;Qué pena, no puedo esperar porque me están esperando en las otras clínicas.{variasVueltas ? " Las recojo en mi próxima vuelta." : ""} Si es urgente, llamen al laboratorio.&quot;
           </Text>
           <Text style={s.why}>Por qué: 20 minutos esperando en una clínica son 20 minutos de retraso para todas las clínicas que siguen en tu ruta.</Text>
         </Regla>
 
-        <Regla n={4} titulo="Sales del laboratorio y terminas en el laboratorio">
+        <Regla n={4} titulo="Cumples tu horario: sales y vuelves al laboratorio en cada vuelta">
           <Text>
-            {dosVueltas
-              ? `Haces dos vueltas al día: la primera sale a las ${HORARIO.vuelta1} y la segunda, a las ${HORARIO.vuelta2}`
-              : `Tu vuelta sale a las ${HORARIO.unaVuelta}`}{" "}
-            Cada vuelta termina entregando las muestras en el laboratorio. Entre vuelta y vuelta esperas en tu base (la zona
-            indicada en tu hoja) para salir rápido si una clínica pide recogida.
+            En tu hoja está tu horario: a qué hora sale cada vuelta. Cada vuelta termina entregando las muestras en el
+            laboratorio. Entre una vuelta y la siguiente tienes una pausa corta de {JORNADA.PAUSA} minutos; a la hora de la
+            siguiente vuelta, sales otra vez. No hay tiempo de espera: el día está armado para que siempre estés en ruta.
           </Text>
+          <Text style={s.why}>Por qué: cada vuelta es otra oportunidad de traer muestras. Las clínicas que saben que vuelves en un par de horas te guardan las muestras en vez de mandarlas a otro laboratorio.</Text>
         </Regla>
       </Page>
 
@@ -184,10 +183,25 @@ export function MessengerInstructionsPdf({ rutas, fecha }: { rutas: Ruta<SedePun
             <View style={[s.mBand, { backgroundColor: m.color }]}>
               <Text style={s.mName}>Mensajero {m.nombre}</Text>
               <Text style={s.mSub}>
-                {r.vueltas === 2 ? `Vuelta 1: ${HORARIO.vuelta1} · Vuelta 2: ${HORARIO.vuelta2}` : `Una vuelta: ${HORARIO.unaVuelta}`} · Sales y vuelves al
-                laboratorio · {r.orden.length} clínicas · unos {r.km.toFixed(0)} km por vuelta
+                {r.vueltas} {r.vueltas === 1 ? "vuelta" : "vueltas"} al día · {r.orden.length} clínicas · unos {r.km.toFixed(0)} km por vuelta
               </Text>
             </View>
+            <Text style={[s.h2, { marginTop: 4 }]}>Tu horario</Text>
+            <View style={s.rowHead}>
+              <Text style={[s.th, { flex: 1 }]}>Vuelta</Text>
+              <Text style={[s.th, { flex: 1 }]}>Sales del laboratorio</Text>
+              <Text style={[s.th, { flex: 1 }]}>Vuelves (aprox.)</Text>
+            </View>
+            {r.horario.map((v, j) => (
+              <View key={j} style={s.row} wrap={false}>
+                <Text style={{ flex: 1, fontFamily: "Helvetica-Bold" }}>Vuelta {j + 1}</Text>
+                <Text style={{ flex: 1, fontFamily: "Helvetica-Bold" }}>{hora(v.sale)}</Text>
+                <Text style={{ flex: 1 }}>{hora(v.vuelve)}</Text>
+              </View>
+            ))}
+            <Text style={{ fontSize: 9, color: C.ink2, marginTop: 4 }}>
+              Almuerzo: 1 hora, entre la vuelta de la mañana y la de la tarde. Si un día terminas antes, avisa en el laboratorio.
+            </Text>
             <Text style={s.h2}>Tu ruta, en este orden</Text>
             <View style={s.row} wrap={false}>
               <Text style={[s.stopNum, { backgroundColor: C.ink }]}>L</Text>
@@ -215,7 +229,8 @@ export function MessengerInstructionsPdf({ rutas, fecha }: { rutas: Ruta<SedePun
               <>
                 <Text style={s.h2}>Clínicas de tu zona que se recogen solo si llaman</Text>
                 <Text style={[s.p, { color: C.ink2, fontSize: 9.5 }]}>
-                  No están en tu ruta fija. Si piden recogida, sales a buscarlas desde tu base entre vueltas, sin dejar de hacer tu ruta.
+                  No están en tu ruta fija. Si el laboratorio te avisa que una de ellas pidió recogida, la incluyes en la vuelta que
+                  estés haciendo, en el punto del recorrido que te quede más cerca, sin saltarte ninguna de tus clínicas.
                 </Text>
                 {r.pedido.map(p => (
                   <Text key={p.id} style={{ marginBottom: 2 }}>

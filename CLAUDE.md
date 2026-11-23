@@ -31,6 +31,9 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   rutas fijas que salen y vuelven al laboratorio (sede Pets & Pets de Colseguros) para las sedes con N+ muestras en 30 días
   (órdenes sin SOLICITADA), 1–4 mensajeros, base sugerida y clínicas "por pedido". Cálculo en el navegador con
   `lib/messengerRoutes.ts` (barrido por ángulo + 2-opt; supuestos en `SUPUESTOS`). Solo lectura: no guarda nada.
+  Horario (`agenda`, constantes `JORNADA`): todas las vueltas que caben entre 8:00 y 17:00 (máx. 4), cada una = ruta + 15 min
+  de entrega en el laboratorio, 20 min de pausa entre vueltas y 1 h de almuerzo; sin "base" de espera. Las clínicas "solo si
+  llaman" se meten en la vuelta en curso. Si a un mensajero le sobran más de 2 h, la página avisa qué ajustar.
   Los mensajeros se llaman por color (`MENSAJEROS`: Rojo, Azul, Morado, Verde). Datos en `lib/messengerData.ts` (página y PDF).
   Botón "Instrucciones para mensajeros" → `clientes/mensajeros/instrucciones` (route, mismo permiso) descarga el PDF
   `components/MessengerInstructionsPdf.tsx`: reglas de la ruta, beneficio `BONO_PAQUETE` ($1.500 por paquete NO agendado;

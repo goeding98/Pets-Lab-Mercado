@@ -1,9 +1,13 @@
 // Plan de mensajeros (/clientes/mensajeros): reparte las sedes que más muestras mandan en rutas fijas que salen y
-// vuelven al laboratorio, y sugiere una base por mensajero para los pedidos. Sin dependencias: corre en el navegador.
+// vuelven al laboratorio, y arma el horario del día con todas las vueltas que caben (sin tiempo muerto esperando).
+// Sin dependencias: corre en el navegador.
 // Supuestos: distancia por calle = línea recta × 1,4; moto a 22 km/h en Cali; 6 min por parada; jornada 8:00–17:00
-// con 1 h de almuerzo = 8 h de calle; más de 12 km (en línea recta) del laboratorio queda fuera de ruta.
+// con 1 h de almuerzo; más de 12 km (en línea recta) del laboratorio queda fuera de ruta.
 
-export const SUPUESTOS = { FACTOR_CALLE: 1.4, KMH: 22, MIN_PARADA: 6, HORAS: 8, MAX_KM_LAB: 12 }
+export const SUPUESTOS = { FACTOR_CALLE: 1.4, KMH: 22, MIN_PARADA: 6, MAX_KM_LAB: 12 }
+// Jornada (minutos desde medianoche). Cada vuelta = ruta + entrega en el laboratorio; entre vueltas una pausa corta
+// para imprevistos o un pedido; almuerzo antes de la primera vuelta que saldría después de las 11:45.
+export const JORNADA = { INICIO: 8 * 60, FIN: 17 * 60, ALMUERZO: 60, ALMUERZO_DESDE: 11 * 60 + 45, ENTREGA_LAB: 15, PAUSA: 20, MAX_VUELTAS: 4 }
 
 // Cada mensajero se identifica por un color (mapa, lista y PDF de instrucciones): Mensajero Rojo, Mensajero Azul…
 export const MENSAJEROS = [
@@ -12,25 +16,55 @@ export const MENSAJEROS = [
   { nombre: "Morado", color: "#7c3aed" },
   { nombre: "Verde", color: "#0f766e" },
 ]
-// Horario de las vueltas fijas y beneficio (pesos) por paquete de muestras no agendado
-export const HORARIO = { vuelta1: "8:30 a. m.", vuelta2: "2:00 p. m.", unaVuelta: "9:00 a. m." }
+// Beneficio (pesos) por paquete de muestras no agendado
 export const BONO_PAQUETE = 1500
 
 export type Punto = { id: string; lat: number; lng: number; m: number; own: boolean }
+export type Vuelta = { sale: number; vuelve: number } // minutos desde medianoche
 export type Ruta<P extends Punto> = {
   orden: P[]        // paradas de la ruta fija, en orden
-  pedido: P[]       // clínicas de la zona que se recogen por pedido desde la base
+  pedido: P[]       // clínicas de la zona que se recogen solo si llaman (se meten en la vuelta en curso)
   km: number        // por vuelta
-  min: number       // por vuelta (manejo + paradas)
-  base: { lat: number; lng: number }
-  respuesta: number // minutos de la base a la clínica más lejana de la zona
+  min: number       // por vuelta (manejo + paradas, sin la entrega en el laboratorio)
+  centro: { lat: number; lng: number } // centro de la zona (para repartir las de pedido)
   vueltas: number
-  libre: number     // minutos del día libres para pedidos
+  horario: Vuelta[]
+  holgura: number   // minutos de la jornada que no son vuelta (pausas + final del día): pedidos e imprevistos
   kmDia: number
   muestras: number  // muestras/mes de la zona
 }
 
-const { FACTOR_CALLE, KMH, MIN_PARADA, HORAS, MAX_KM_LAB } = SUPUESTOS
+const { FACTOR_CALLE, KMH, MIN_PARADA, MAX_KM_LAB } = SUPUESTOS
+
+// Hora legible redondeada a 5 min: 630 → "10:30 a. m."
+export function hora(min: number) {
+  const t = Math.round(min / 5) * 5
+  const h = Math.floor(t / 60), m = t % 60
+  const h12 = h > 12 ? h - 12 : h
+  return `${h12}:${String(m).padStart(2, "0")} ${h < 12 ? "a. m." : "p. m."}`
+}
+
+// Todas las vueltas que caben en la jornada (hasta MAX_VUELTAS), volviendo al laboratorio antes del fin.
+export function agenda(minRuta: number): Vuelta[] {
+  const { INICIO, FIN, ALMUERZO, ALMUERZO_DESDE, ENTREGA_LAB, PAUSA, MAX_VUELTAS } = JORNADA
+  const simular = (v: number) => {
+    const out: Vuelta[] = []
+    let t = INICIO, almorzo = false
+    for (let i = 0; i < v; i++) {
+      if (i > 0) t += PAUSA
+      if (!almorzo && t >= ALMUERZO_DESDE) { t += ALMUERZO; almorzo = true }
+      const sale = t
+      t += minRuta + ENTREGA_LAB
+      out.push({ sale, vuelve: t })
+    }
+    return out
+  }
+  for (let v = MAX_VUELTAS; v > 1; v--) {
+    const h = simular(v)
+    if (h[h.length - 1].vuelve <= FIN) return h
+  }
+  return simular(1)
+}
 
 type LL = { lat: number; lng: number }
 export function km(a: LL, b: LL) {
@@ -125,29 +159,28 @@ export function calcular<P extends Punto>(lab: LL, puntos: P[], k: number, umbra
     }
   }
 
-  // Base sugerida: centro ponderado por muestras de las clínicas de la ruta fija.
+  // Centro de cada zona: ponderado por muestras de las clínicas de la ruta fija.
   const rutas: Ruta<P>[] = mejor.map(r => {
     const w = r.orden.reduce((s, p) => s + Math.max(1, p.m), 0)
-    const base = {
+    const centro = {
       lat: r.orden.reduce((s, p) => s + p.lat * Math.max(1, p.m), 0) / w,
       lng: r.orden.reduce((s, p) => s + p.lng * Math.max(1, p.m), 0) / w,
     }
-    return { orden: r.orden, km: r.km, min: r.min, base, pedido: [], respuesta: 0, vueltas: 1, libre: 0, kmDia: 0, muestras: 0 }
+    return { orden: r.orden, km: r.km, min: r.min, centro, pedido: [], vueltas: 1, horario: [], holgura: 0, kmDia: 0, muestras: 0 }
   })
-  // Las de "por pedido" van a la zona cuya base les quede más cerca.
+  // Las de "por pedido" van a la zona cuyo centro les quede más cerca.
   if (rutas.length) pedido.forEach(p => {
     let bi = 0, bd = Infinity
-    rutas.forEach((r, i) => { const d = km(r.base, p); if (d < bd) { bd = d; bi = i } })
+    rutas.forEach((r, i) => { const d = km(r.centro, p); if (d < bd) { bd = d; bi = i } })
     rutas[bi].pedido.push(p)
   })
+  const { INICIO, FIN, ALMUERZO, ENTREGA_LAB } = JORNADA
   for (const r of rutas) {
-    const todas = r.orden.concat(r.pedido)
-    r.respuesta = Math.max(0, ...todas.map(p => minutos(km(r.base, p))))
-    // 2 vueltas fijas al día (mañana y tarde) si quedan al menos 3 h libres para pedidos; si no, 1.
-    r.vueltas = HORAS * 60 - 2 * r.min >= 180 ? 2 : 1
-    r.libre = HORAS * 60 - r.vueltas * r.min
+    r.horario = agenda(r.min)
+    r.vueltas = r.horario.length
+    r.holgura = Math.max(0, FIN - INICIO - ALMUERZO - r.vueltas * (r.min + ENTREGA_LAB))
     r.kmDia = r.km * r.vueltas
-    r.muestras = todas.reduce((s, p) => s + p.m, 0)
+    r.muestras = r.orden.concat(r.pedido).reduce((s, p) => s + p.m, 0)
   }
   return { rutas, fuera, pedidoSinRuta: rutas.length ? [] : pedido }
 }

@@ -1,11 +1,18 @@
 "use client"
 import { useEffect, useMemo, useRef, useState } from "react"
 import "leaflet/dist/leaflet.css"
-import { calcular, HORARIO, MENSAJEROS, SUPUESTOS } from "@/lib/messengerRoutes"
+import { calcular, hora, JORNADA, MENSAJEROS, SUPUESTOS, type Ruta } from "@/lib/messengerRoutes"
 import type { SedePunto } from "@/lib/messengerData"
 
 const COLORES = MENSAJEROS.map(x => x.color)
 const nombreM = (i: number) => `Mensajero ${MENSAJEROS[i % MENSAJEROS.length].nombre}`
+// Avisos para no dejar a un mensajero con tiempo muerto ni con una ruta que no alcanza
+const aviso = (r: Ruta<SedePunto>) =>
+  r.vueltas === 1
+    ? "Ruta muy larga: solo alcanza una vuelta al día. Considera agregar un mensajero."
+    : r.holgura > 120
+      ? `Le sobran ${hm(r.holgura)} en el día. Para que no quede esperando: baja el mínimo de muestras (más clínicas en su ruta) o cambia el número de mensajeros.`
+      : ""
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
 const hm = (min: number) => {
   const h = Math.floor(min / 60), m = Math.round(min % 60)
@@ -61,12 +68,12 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
       plan.rutas.forEach((r, i) => {
         const c = COLORES[i % COLORES.length]
         const todas = r.orden.concat(r.pedido)
-        const z = zona([...todas, r.base])
+        const z = zona(todas)
         if (z) L.polygon(z, { color: c, weight: 2, fillColor: c, fillOpacity: 0.08, dashArray: "6 6", interactive: false }).addTo(map!)
         L.polyline([[lab.lat, lab.lng], ...r.orden.map(p => [p.lat, p.lng] as [number, number]), [lab.lat, lab.lng]], { color: c, weight: 3, opacity: 0.85 }).addTo(map!)
         r.pedido.forEach(p => {
           L.circleMarker([p.lat, p.lng], { radius: 6, color: c, weight: 2, dashArray: "2 2", fillColor: "#fff", fillOpacity: 0.9 })
-            .bindPopup(`<b>${esc(p.name)}</b><br>${nombreM(i)} · por pedido desde la base<br>${p.m} muestras en 30 días`)
+            .bindPopup(`<b>${esc(p.name)}</b><br>${nombreM(i)} · solo si llaman: se incluye en la vuelta en curso<br>${p.m} muestras en 30 días`)
             .addTo(map!)
           bounds.push([p.lat, p.lng])
         })
@@ -84,16 +91,6 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
             .addTo(map!)
           bounds.push([p.lat, p.lng])
         })
-        L.marker([r.base.lat, r.base.lng], {
-          icon: L.divIcon({
-            className: "",
-            iconSize: [64, 22],
-            iconAnchor: [32, 11],
-            html: `<div style="padding:2px 6px;background:${c};color:#fff;font:700 11px ui-monospace,monospace;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap;text-align:center">Base ${MENSAJEROS[i % MENSAJEROS.length].nombre}</div>`,
-          }),
-        })
-          .bindPopup(`<b>Base del ${nombreM(i)}</b><br>Aquí espera entre vueltas para salir rápido a los pedidos.<br>Llega a cualquier clínica de su zona en ${hm(r.respuesta)} como máximo.`)
-          .addTo(map!)
       })
 
       L.marker([lab.lat, lab.lng], {
@@ -165,19 +162,21 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
                 <dt className="text-ink-2">Por vuelta</dt><dd className="font-mono">{r.km.toFixed(0)} km · {hm(r.min)}</dd>
                 <dt className="text-ink-2">Vueltas al día</dt><dd className="font-mono">{r.vueltas}</dd>
                 <dt className="text-ink-2">Km al día (ruta)</dt><dd className="font-mono">{r.kmDia.toFixed(0)} km</dd>
-                <dt className="text-ink-2">Libre para pedidos</dt><dd className="font-mono">{hm(r.libre)}</dd>
-                <dt className="text-ink-2">Respuesta máx.</dt><dd className="font-mono">{hm(r.respuesta)}</dd>
+                <dt className="text-ink-2">Holgura del día</dt><dd className="font-mono">{hm(r.holgura)}</dd>
                 <dt className="text-ink-2">Muestras/mes zona</dt><dd className="font-mono">{r.muestras}</dd>
               </dl>
-              <p className="font-sans text-xs text-ink-2 mt-2">
-                {r.vueltas === 2 ? `Vuelta 1: ${HORARIO.vuelta1} · Vuelta 2: ${HORARIO.vuelta2}` : `Una vuelta: ${HORARIO.unaVuelta}`} · Sale y vuelve al laboratorio.
-              </p>
+              <ul className="font-sans text-xs text-ink-2 mt-2 space-y-0.5">
+                {r.horario.map((v, j) => (
+                  <li key={j}>Vuelta {j + 1}: sale {hora(v.sale)} · vuelve {hora(v.vuelve)}</li>
+                ))}
+              </ul>
+              {aviso(r) && <p className="font-sans text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1.5 mt-2">{aviso(r)}</p>}
               <ol className="list-decimal pl-5 mt-2 font-sans text-sm space-y-0.5">
                 {r.orden.map(p => <li key={p.id}>{p.name} <span className="text-ink-2">({p.m})</span></li>)}
               </ol>
               {r.pedido.length > 0 && (
                 <p className="font-sans text-xs text-ink-2 mt-2">
-                  <b>Por pedido desde la base:</b> {r.pedido.map(p => `${p.name} (${p.m})`).join(", ")}
+                  <b>Solo si llaman (se incluyen en la vuelta en curso):</b> {r.pedido.map(p => `${p.name} (${p.m})`).join(", ")}
                 </p>
               )}
             </div>
@@ -196,8 +195,9 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
       <p className="font-sans text-[11px] text-ink-2 mt-3 max-w-4xl">
         Supuestos: jornada de 8:00 a 5:00 con 1 hora de almuerzo · moto a {SUPUESTOS.KMH} km/h promedio · {SUPUESTOS.MIN_PARADA} min por
         parada · distancia por calle = línea recta × {String(SUPUESTOS.FACTOR_CALLE).replace(".", ",")} · cada vuelta sale y vuelve al
-        laboratorio. Las demás clínicas con muestras se recogen por pedido desde la base de su zona. Solo salen las sedes ubicadas en el
-        mapa de clientes.
+        laboratorio, con {JORNADA.ENTREGA_LAB} min para entregar las muestras · {JORNADA.PAUSA} min de pausa entre vueltas para un pedido o
+        un imprevisto · todas las vueltas que quepan antes de las 5:00 (máximo {JORNADA.MAX_VUELTAS}). Las demás clínicas con muestras se
+        recogen solo si llaman, dentro de la vuelta en curso. Solo salen las sedes ubicadas en el mapa de clientes.
       </p>
     </>
   )
