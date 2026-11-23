@@ -52,9 +52,19 @@ export default async function ClientesMapaPage() {
             {missing.length > 0 && <> · {missing.length} sin ubicar</>}
           </p>
         </div>
-        <Link href="/clientes" className="font-mono text-[9px] tracking-[0.15em] text-salvia-700 hover:underline uppercase mt-2">
-          ← Lista de clientes
-        </Link>
+        <div className="flex items-center gap-4 mt-2">
+          {can(session?.user.role, "mensajeros") && (
+            <Link
+              href="/clientes/mensajeros"
+              className="border border-salvia-700 text-salvia-700 font-mono text-[10px] tracking-[0.22em] uppercase px-4 py-2 hover:bg-salvia-700 hover:text-bone transition-colors"
+            >
+              Plan de mensajeros
+            </Link>
+          )}
+          <Link href="/clientes" className="font-mono text-[9px] tracking-[0.15em] text-salvia-700 hover:underline uppercase">
+            ← Lista de clientes
+          </Link>
+        </div>
       </div>
 
       <ClientsMap points={located} canEdit={canEdit} />

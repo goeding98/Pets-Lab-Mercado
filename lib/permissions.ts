@@ -18,15 +18,17 @@ export type Permission =
   | "personalizados"    // exámenes personalizados por cliente (/personalizados): médicos, microbiólogos y comercial
   | "descuentos"        // descuentos por cliente, área de examen y fechas (/descuentos): ADMIN y COMERCIAL
   | "rangos"            // rangos de referencia de los exámenes maestros (solo ADMIN: jefe médico y administradores)
+  | "mensajeros"        // plan de rutas de mensajeros (/clientes/mensajeros): solo ADMIN
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "muestras.eliminar", "resultados.editar",
   "clientes.ver", "clientes.editar", "caja", "facturacion", "pagos", "inventario", "usuarios", "promociones", "personalizados", "descuentos", "rangos",
+  "mensajeros",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
-  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos"),
+  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos" && p !== "mensajeros"),
   COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones", "personalizados", "descuentos", "pagos"],
   DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos"],
   CONTADOR: ["facturacion"], // la contadora: solo Facturación
@@ -74,6 +76,7 @@ export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/pacientes", "muestras.ver"],
   ["/dashboard", "panel"],
   ["/clientes/nueva", "clientes.editar"],
+  ["/clientes/mensajeros", "mensajeros"],
   ["/clientes", "clientes.ver"],
   ["/caja", "caja"],
   ["/facturacion", "facturacion"],
