@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { portalAuthOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import OrderForm from "@/components/OrderForm"
+import QuickPickupForm from "@/components/QuickPickupForm"
 import { catalogWhere } from "@/lib/catalog"
 import { createPortalOrder } from "../actions"
 import LoyaltyCard from "@/components/LoyaltyCard"
@@ -42,6 +43,21 @@ export default async function NuevaSolicitudPage() {
     : null
   const wait = withPickup && !pending && branches.length <= 1 ? await nextAllowedAt(prisma, clinicId, mainBranch) : null
 
+  // Exámenes destacados (un toque): los personalizados de la clínica y los 10 más pedidos en 90 días
+  let featuredIds: string[] = []
+  if (withPickup) {
+    const offered = new Set(templates.map(t => t.id))
+    const top = await prisma.orderExam.groupBy({
+      by: ["templateId"],
+      where: { order: { createdAt: { gte: new Date(Date.now() - 90 * 86400_000) } } },
+      _count: true,
+      orderBy: { _count: { templateId: "desc" } },
+      take: 40,
+    })
+    const custom = templates.filter(t => t.isCustom).map(t => t.id)
+    featuredIds = [...custom, ...top.map(g => g.templateId).filter(id => offered.has(id) && !custom.includes(id)).slice(0, 10)]
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-6 lg:px-10 py-10">
       <Link href="/portal-vet/dashboard" className="font-mono text-[9px] tracking-[0.18em] text-ink-2 hover:text-ink uppercase">
@@ -65,14 +81,23 @@ export default async function NuevaSolicitudPage() {
         </p>
       )}
       {loyalty && <LoyaltyCard s={loyalty} compact />}
-      <OrderForm
-        templates={templates}
-        branches={branches}
-        action={createPortalOrder}
-        submitLabel={!withPickup ? "Enviar solicitud →" : pending ? "Sumar a la recogida →" : "Pedir recogida →"}
-        pendingLabel="Enviando…"
-        readyCheck={withPickup}
-      />
+      {withPickup ? (
+        <QuickPickupForm
+          templates={templates.map(t => ({ id: t.id, name: t.name, area: t.area, description: t.description, isCustom: t.isCustom }))}
+          featuredIds={featuredIds}
+          branches={branches}
+          action={createPortalOrder}
+          submitLabel={pending ? "Sumar a la recogida →" : "Pedir recogida →"}
+        />
+      ) : (
+        <OrderForm
+          templates={templates}
+          branches={branches}
+          action={createPortalOrder}
+          submitLabel="Enviar solicitud →"
+          pendingLabel="Enviando…"
+        />
+      )}
     </div>
   )
 }

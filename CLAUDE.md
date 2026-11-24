@@ -41,7 +41,10 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
 - Recogidas con garantía (`lib/pickups.ts`, modelo `Pickup`, `Order.pickupId`): cada solicitud del Portal Vet va en una
   recogida. Garantía = pedido + 1 h 30 (`deadline`, solo pidiendo en `HORARIO_GARANTIA`; fuera = null, sin garantía). Con una
   recogida PENDIENTE de esa sede, lo nuevo se suma a ella; si no, solo 1 h después de la última solicitud de esa sede
-  (`nextAllowedAt`). Casilla obligatoria "la muestra ya está lista" (`OrderForm readyCheck`). Laboratorio: panel arriba de
+  (`nextAllowedAt`). Con recogidas activas el portal usa `components/QuickPickupForm.tsx` (formulario corto: mascota,
+  especie en botones, edad, tutor, "Más datos" opcional; exámenes destacados en botones de un toque = personalizados de la
+  clínica + los 10 más pedidos en 90 días, el resto en "Ver todos" con buscador) con la casilla obligatoria "la muestra ya
+  está lista"; sin ellas, el `OrderForm` de siempre. Laboratorio: panel arriba de
   /muestras (`PendingPickups`, permiso `muestras.crear`) con "Recogida" / "No estaba lista" (`actions/pickups.ts`); marcar la
   orden RECIBIDA también la marca recogida. Tarde → `markPickedUp` pone 50 % (`DESCUENTO_TARDE`, PORCENTAJE) en todos los
   exámenes de sus órdenes y lo anota en `Order.notes`. NO_LISTA pierde la garantía; al volver a pedir, sus órdenes pasan a la
