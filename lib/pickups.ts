@@ -59,7 +59,7 @@ export async function pickupForNewRequest(
 
   const wait = await nextAllowedAt(tx, clinicId, branchId, now)
   if (wait) {
-    return { error: `Ya pediste una recogida a las ${formatTime(wait.last)}. Puedes pedir otra desde las ${formatTime(wait.allowedAt)}.` }
+    return { error: `Ya pediste una recogida a las ${formatTime(wait.last)}; puedes pedir otra desde las ${formatTime(wait.allowedAt)}` }
   }
   const deadline = guaranteeDeadline(now)
   const p = await tx.pickup.create({ data: { clinicId, branchId, deadline, createdAt: now } })

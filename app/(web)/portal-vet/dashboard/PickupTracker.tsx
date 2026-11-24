@@ -87,7 +87,7 @@ export default async function PickupTracker({ clinicId, sede }: { clinicId: stri
                 <div className="px-4 pb-4 grid gap-2">
                   <p className="font-sans text-[13px] text-ink-2">
                     El mensajero pasó y la muestra no estaba lista. Cuando la tengas, pide la recogida de nuevo
-                    (desde las {formatTime(new Date(p.createdAt.getTime() + ESPERA_MIN * 60000))}).
+                    (desde las {formatTime(new Date(p.createdAt.getTime() + ESPERA_MIN * 60000))})
                   </p>
                   <RequestAgainButton branchId={p.branchId} />
                 </div>

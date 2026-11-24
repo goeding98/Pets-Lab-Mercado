@@ -52,16 +52,16 @@ export default async function NuevaSolicitudPage() {
       {!withPickup ? null : pending ? (
         <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-6 font-sans text-sm text-ink">
           Ya tienes una recogida pendiente ({pending._count.orders} {pending._count.orders === 1 ? "muestra" : "muestras"}). Esta muestra
-          se suma a la misma recogida{pending.deadline ? <> y mantiene su garantía: <b>antes de las {formatTime(pending.deadline)}</b></> : ""}.
+          se suma a la misma recogida{pending.deadline ? <> y mantiene su garantía: <b>antes de las {formatTime(pending.deadline)}</b></> : "."}
         </div>
       ) : wait ? (
         <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-6 font-sans text-sm text-ink">
-          Ya pediste una recogida a las {formatTime(wait.last)}. Puedes pedir otra desde las <b>{formatTime(wait.allowedAt)}</b>.
+          Ya pediste una recogida a las {formatTime(wait.last)}; puedes pedir otra desde las <b>{formatTime(wait.allowedAt)}</b>
         </div>
       ) : (
         <p className="font-sans text-sm text-ink-2 mb-6 max-w-xl">
           Pidiendo por aquí, <b className="text-ink">recogemos en máximo 1 h 30</b>. Si llegamos tarde, <b className="text-ink">50 % de descuento</b> en
-          lo que recojamos en ese pedido. Garantía para pedidos de {HORARIO_GARANTIA.texto}.
+          lo que recojamos en ese pedido. La garantía aplica a pedidos de {HORARIO_GARANTIA.texto}
         </p>
       )}
       {loyalty && <LoyaltyCard s={loyalty} compact />}
