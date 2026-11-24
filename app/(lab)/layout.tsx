@@ -14,8 +14,10 @@ export default async function LabLayout({ children }: { children: React.ReactNod
   // Usuario cerrado con una sesión que quedó abierta
   if (session.user.role === "INACTIVO") redirect("/api/auth/signout")
 
+  // translate="no": si Chrome traduce la página (celular en otro idioma), cambia el texto por debajo de React y la
+  // herramienta se cae con "Application error" al registrar o cambiar algo. El LIMS no se traduce.
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-bone">
+    <div translate="no" className="notranslate flex flex-col md:flex-row min-h-screen bg-bone">
       <Sidebar userName={session.user.name ?? ""} role={session.user.role} finance={canSeeFinance(session.user.role, session.user.email)}
         credit={canManageCredit(session.user.role, session.user.email)}
         cartera={canSeeCartera(session.user.role, session.user.email)}
