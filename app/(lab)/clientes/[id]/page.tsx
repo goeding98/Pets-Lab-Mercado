@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import BranchManager from "@/components/BranchManager"
 import PortalAccess from "./PortalAccess"
+import ClinicLogoPicker from "@/components/ClinicLogoPicker"
 import { can } from "@/lib/permissions"
 import { isInternalPortalEmail } from "@/lib/portalAccount"
 
@@ -41,6 +42,18 @@ export default async function EditarClinicaPage({ params }: { params: { id: stri
         <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-2">Acceso al Portal Vet</p>
         <PortalAccess clinicId={clinic.id} login={portalLogin} canReset={can(session?.user.role, "clientes.editar")} />
       </section>
+
+      {can(session?.user.role, "clientes.logo") && (
+        <section className="mb-8">
+          <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-2">Logo para reportes</p>
+          <ClinicLogoPicker
+            mode="edit"
+            clinicId={clinic.id}
+            clinicName={clinic.name}
+            initial={{ hasLogo: !!clinic.logoUrl, primary: clinic.brandPrimary, accent: clinic.brandAccent }}
+          />
+        </section>
+      )}
 
       <section className="mb-8">
         <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-1">Sedes ({branches.length})</p>

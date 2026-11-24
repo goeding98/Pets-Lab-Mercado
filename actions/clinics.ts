@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { DEFAULT_PORTAL_PASSWORD, isInternalPortalEmail, isValidEmail, normalizeEmail } from "@/lib/portalAccount"
+import { cleanColor, saveClinicLogo } from "@/lib/clinicLogo"
 
 async function requireEditor() {
   const session = await getServerSession(authOptions)
@@ -61,6 +62,12 @@ export async function createClinic(formData: FormData): Promise<{ error?: string
       clinicId: clinic.id,
     },
   })
+
+  // Logo para los reportes (opcional, permiso clientes.logo). Si falla, la clínica queda creada y se sube desde su ficha.
+  const logo = formData.get("logo")
+  if (logo instanceof File && logo.size > 0 && can(session.user.role, "clientes.logo")) {
+    await saveClinicLogo(clinic.id, logo, cleanColor(formData.get("brandPrimary")), cleanColor(formData.get("brandAccent"))).catch(() => null)
+  }
 
   revalidatePath("/clientes")
   redirect(`/clientes/${clinic.id}`)

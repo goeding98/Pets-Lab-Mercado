@@ -2,7 +2,8 @@ import React from "react"
 import { renderToBuffer } from "@react-pdf/renderer"
 import { get } from "@vercel/blob"
 import { PDFDocument } from "pdf-lib"
-import { PdfReport, type OrderData } from "@/components/PdfReport"
+import { PdfReport, type OrderData, type PdfBrand } from "@/components/PdfReport"
+import { pngSize } from "@/lib/clinicLogo"
 import { isCoproPhotoRole } from "@/lib/coprologico"
 import { applyAgeRanges } from "@/lib/ageRanges"
 import { templateForParts } from "@/lib/reportParts"
@@ -26,6 +27,23 @@ async function readBlob(url: string): Promise<Buffer | null> {
     return Buffer.concat(chunks)
   } catch {
     return null
+  }
+}
+
+// Marca de la clínica (logo + colores, ver /clientes/[id] "Logo para reportes"). Si el logo no se puede leer, el
+// reporte sale con el diseño de Pets & Lab en vez de fallar.
+async function clinicBrand(clinic: OrderData["clinic"]): Promise<PdfBrand | null> {
+  if (!clinic?.logoUrl || !clinic.brandPrimary) return null
+  const bytes = await readBlob(clinic.logoUrl)
+  const size = bytes && pngSize(bytes)
+  if (!bytes || !size) return null
+  return {
+    name: clinic.name,
+    logo: `data:image/png;base64,${bytes.toString("base64")}`,
+    logoW: size.w,
+    logoH: size.h,
+    primary: clinic.brandPrimary,
+    accent: clinic.brandAccent ?? clinic.brandPrimary,
   }
 }
 
@@ -80,7 +98,8 @@ export async function buildOrderPdf(
     )
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const render = renderToBuffer as (el: any) => Promise<Buffer>
-    const reportBuffer = await render(React.createElement(PdfReport, { order: { ...order, exams: reportExams } }))
+    const brand = await clinicBrand(order.clinic)
+    const reportBuffer = await render(React.createElement(PdfReport, { order: { ...order, exams: reportExams }, brand }))
     const reportDoc = await PDFDocument.load(reportBuffer)
     const pages = await merged.copyPages(reportDoc, reportDoc.getPageIndices())
     pages.forEach(p => merged.addPage(p))

@@ -1,4 +1,5 @@
 import { Fragment } from "react"
+import { reportPalette } from "@/lib/brandColors"
 import { RANGE_COLORS, getRangeStatus, refForSpecies, isFelineOnlyExam } from "@/lib/rangeStatus"
 import path from "path"
 import fs from "fs"
@@ -34,8 +35,12 @@ Font.registerHyphenationCallback(word => [word])
 const SIGNATURE = `data:image/png;base64,${fs.readFileSync(path.join(process.cwd(), "public", "firma-marcelo-valencia.png")).toString("base64")}`
 const SIGNATURE_ANDERSON = `data:image/png;base64,${fs.readFileSync(path.join(process.cwd(), "public", "firma-anderson-angulo.png")).toString("base64")}`
 
-// Colors
-const C = {
+// Logo de Pets & Lab en verde salvia: va como "aliado" en el encabezado de los reportes con la marca de la clínica
+const LAB_LOGO_SALVIA = `data:image/png;base64,${fs.readFileSync(path.join(process.cwd(), "public", "logos", "pets-lab-salvia.png")).toString("base64")}`
+
+// Colores del reporte. Sin marca: los de Pets & Lab. Con la marca de la clínica (Clinic.logoUrl + brandPrimary/brandAccent,
+// ver lib/brandColors.ts) se reemplazan principal, fondos claros y acentos; los rojos/azules de fuera de rango no cambian.
+const C_DEFAULT = {
   salvia700: "#3a4a3f",
   salvia50: "#f2f5f2",
   bone: "#faf6ee",
@@ -43,21 +48,36 @@ const C = {
   ink2: "#4a4a44",
   red: "#b91c1c",
   borderLight: "#e4ebe4",
+  muted: "#a3b8a4",       // texto secundario sobre el color principal (área del examen)
+  headerMuted: "#a3b8a4", // número y fecha en el encabezado
+  accent: "#3a4a3f",      // borde de la ficha del paciente y línea del encabezado con marca
 }
+type Palette = typeof C_DEFAULT
 
-const styles = StyleSheet.create({
+// Marca de la clínica para el reporte (la arma lib/reportPdf.ts con el logo leído del Blob)
+export type PdfBrand = { name: string; logo: string; logoW: number; logoH: number; primary: string; accent: string }
+
+const makeStyles = (C: Palette, branded: boolean) => StyleSheet.create({
   // paddingBottom reserva el espacio del pie fijo (si no, las filas quedan debajo del pie y el
   // relleno inferior del cuerpo puede pasar solo a una página en blanco)
-  page: { backgroundColor: C.bone, padding: 0, paddingTop: 71, paddingBottom: 54, fontFamily: "Helvetica" },
+  page: { backgroundColor: C.bone, padding: 0, paddingTop: branded ? 98 : 71, paddingBottom: 54, fontFamily: "Helvetica" },
   header: { position: "absolute", top: 0, left: 0, right: 0, backgroundColor: C.salvia700, paddingHorizontal: 32, paddingVertical: 18, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerLogo: { width: 90, height: 35, objectFit: "contain" },
   headerRight: { alignItems: "flex-end" },
   headerTitle: { color: C.bone, fontSize: 7, letterSpacing: 2, textTransform: "uppercase" },
-  headerMono: { color: "#a3b8a4", fontSize: 6, letterSpacing: 2, marginTop: 2 },
+  headerMono: { color: C.headerMuted, fontSize: 6, letterSpacing: 2, marginTop: 2 },
+  // Encabezado con la marca de la clínica: su logo + Pets & Lab como aliado, fondo blanco y línea de su color
+  brandHeader: { position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "#ffffff", paddingHorizontal: 32, paddingTop: 12, paddingBottom: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: 3, borderBottomColor: C.accent },
+  brandLeft: { flexDirection: "row", alignItems: "center" },
+  allyBox: { marginLeft: 16, paddingLeft: 16, borderLeftWidth: 1, borderLeftColor: C.borderLight, justifyContent: "center" },
+  allyLabel: { fontSize: 6, color: "#3a4a3f", letterSpacing: 1.8, textTransform: "uppercase", marginBottom: 4, fontFamily: "Helvetica-Bold" },
+  allyLogo: { width: 112, height: 40, objectFit: "contain", objectPosition: "left" },
+  brandTitle: { color: C.salvia700, fontSize: 9, letterSpacing: 2, textTransform: "uppercase", fontFamily: "Helvetica-Bold" },
+  brandMono: { color: C.ink2, fontSize: 6.5, letterSpacing: 1.5, marginTop: 2 },
   body: { paddingHorizontal: 32, paddingTop: 20 },
 
   // Patient bar
-  patientBar: { backgroundColor: C.salvia50, borderLeftWidth: 3, borderLeftColor: C.salvia700, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16, flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  patientBar: { backgroundColor: C.salvia50, borderLeftWidth: 3, borderLeftColor: C.accent, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16, flexDirection: "row", flexWrap: "wrap", gap: 12 },
   patientLabel: { fontSize: 6, color: C.ink2, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 2 },
   patientValue: { fontSize: 9, color: C.ink, fontFamily: "Helvetica-Bold" },
 
@@ -65,7 +85,7 @@ const styles = StyleSheet.create({
   examBlock: { marginBottom: 18 },
   examHeader: { backgroundColor: C.salvia700, paddingHorizontal: 10, paddingVertical: 7, flexDirection: "row", justifyContent: "space-between" },
   examTitle: { color: C.bone, fontSize: 9, fontFamily: "Helvetica-Bold" },
-  examArea: { color: "#a3b8a4", fontSize: 7, letterSpacing: 1.5, textTransform: "uppercase" },
+  examArea: { color: C.muted, fontSize: 7, letterSpacing: 1.5, textTransform: "uppercase" },
 
   sectionLabel: { fontSize: 6.5, color: C.ink2, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 8, marginBottom: 4, paddingBottom: 2, borderBottomWidth: 0.5, borderBottomColor: C.borderLight },
 
@@ -127,7 +147,7 @@ export type OrderData = {
   ownerName?: string | null
   requestingVet?: string | null
   createdAt: Date
-  clinic?: { name: string } | null
+  clinic?: { name: string; logoUrl?: string | null; brandPrimary?: string | null; brandAccent?: string | null } | null
   branch?: { name: string; address: string } | null
   processedBy?: { name: string } | null
   orinaConfig?: OrinaConfig // valores de referencia del Parcial de Orina (LabSetting)
@@ -162,7 +182,7 @@ export type OrderData = {
 }
 
 // ── Coprológico (resultado estructurado, ver lib/coprologico.ts) ───────────────────────────────
-const copro = StyleSheet.create({
+const makeCopro = (C: Palette) => StyleSheet.create({
   block: { marginTop: 8 },
   title: { fontSize: 6.5, color: C.ink2, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4, paddingBottom: 2, borderBottomWidth: 0.5, borderBottomColor: C.borderLight },
   macro: { flexDirection: "row", alignItems: "flex-start" },
@@ -196,7 +216,8 @@ function RichText({ text, style }: { text: string; style: Style }) {
   )
 }
 
-function CoproRow({ label, value }: { label: string; value: string }) {
+function CoproRow({ label, value, s }: { label: string; value: string; s: StyleSet }) {
+  const { copro } = s
   return (
     <View style={copro.row}>
       <Text style={copro.label}>{label}</Text>
@@ -205,7 +226,8 @@ function CoproRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function PairCell({ title, children, left = false, keepCase = false }: { title: string; children: React.ReactNode; left?: boolean; keepCase?: boolean }) {
+function PairCell({ title, children, left = false, keepCase = false, s }: { title: string; children: React.ReactNode; left?: boolean; keepCase?: boolean; s: StyleSet }) {
+  const { copro } = s
   return (
     <View style={left ? [copro.cell, copro.cellLeft] : copro.cell}>
       <Text style={keepCase ? [copro.cellLabel, { textTransform: "none" }] : copro.cellLabel}>{title}</Text>
@@ -215,23 +237,24 @@ function PairCell({ title, children, left = false, keepCase = false }: { title: 
 }
 
 // Tabla propia del Coproscópico (el Examen microscópico va en CoproPdf, igual que en el Coprológico)
-function CoproscopicoPdf({ d }: { d: CoproscopicoData }) {
+function CoproscopicoPdf({ d, s }: { d: CoproscopicoData; s: StyleSet }) {
+  const { copro } = s
   const gram = [gramPhrase(d), d.gramOtros.trim()].filter(Boolean).join(" ")
   return (
     <View style={copro.block} wrap={false}>
       <Text style={copro.title}>Coproscópico</Text>
       <View style={copro.pairRow}>
-        <PairCell title="pH" left keepCase><Text style={copro.cellValue}>{phLabel(d.ph) || "—"}</Text></PairCell>
-        <PairCell title="Almidones"><Text style={copro.cellValue}>{d.almidones}</Text></PairCell>
+        <PairCell s={s} title="pH" left keepCase><Text style={copro.cellValue}>{phLabel(d.ph) || "—"}</Text></PairCell>
+        <PairCell s={s} title="Almidones"><Text style={copro.cellValue}>{d.almidones}</Text></PairCell>
       </View>
       <View style={copro.pairRow}>
-        <PairCell title="Grasa fecal" left><Text style={copro.cellValue}>{d.grasa}</Text></PairCell>
-        <PairCell title="Sangre oculta">
+        <PairCell s={s} title="Grasa fecal" left><Text style={copro.cellValue}>{d.grasa}</Text></PairCell>
+        <PairCell s={s} title="Sangre oculta">
           <Text style={d.sangreOculta === "Positivo" ? [copro.cellValue, { fontFamily: "Helvetica-Bold" }] : copro.cellValue}>{d.sangreOculta}</Text>
         </PairCell>
       </View>
       <View style={copro.pairRow}>
-        <PairCell title="Tinción Wright / Gram">
+        <PairCell s={s} title="Tinción Wright / Gram">
           <RichText text={gram || "No se observan bacterias."} style={copro.cellValue} />
         </PairCell>
       </View>
@@ -240,7 +263,7 @@ function CoproscopicoPdf({ d }: { d: CoproscopicoData }) {
 }
 
 // ── Parcial de Orina (resultado estructurado, ver lib/orina.ts) ──────────────────────────────────
-const orina = StyleSheet.create({
+const makeOrina = (C: Palette) => StyleSheet.create({
   metodo: { fontSize: 8.5, color: C.ink, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: C.salvia50, marginBottom: 2 },
   head: { flexDirection: "row", backgroundColor: C.salvia50, paddingHorizontal: 8, paddingVertical: 4 },
   row: { flexDirection: "row", paddingHorizontal: 8, paddingVertical: 3.5, borderBottomWidth: 0.5, borderBottomColor: C.borderLight },
@@ -252,7 +275,28 @@ const orina = StyleSheet.create({
 })
 const bold = { fontFamily: "Helvetica-Bold" }
 
-function OrinaTable({ rows }: { rows: { label: string; value: string; ref: string; abnormal: boolean }[] }) {
+// Estilos del reporte según la marca (sin marca = Pets & Lab). PdfReport los arma y los pasa a cada parte con la prop `s`
+// (createContext no existe en el servidor de Next, donde se genera el PDF).
+type StyleSet = { styles: ReturnType<typeof makeStyles>; copro: ReturnType<typeof makeCopro>; orina: ReturnType<typeof makeOrina> }
+const styleCache = new Map<string, StyleSet>()
+function styleSetFor(brand?: PdfBrand | null): StyleSet {
+  const key = brand ? `${brand.primary}|${brand.accent}` : ""
+  let set = styleCache.get(key)
+  if (!set) {
+    let C: Palette = C_DEFAULT
+    if (brand) {
+      const p = reportPalette(brand.primary, brand.accent)
+      C = { ...C_DEFAULT, salvia700: p.primary, salvia50: p.light, bone: "#ffffff", borderLight: p.border, muted: p.onPrimaryMuted, headerMuted: C_DEFAULT.ink2, accent: p.accent }
+    }
+    set = { styles: makeStyles(C, !!brand), copro: makeCopro(C), orina: makeOrina(C) }
+    if (styleCache.size > 100) styleCache.clear()
+    styleCache.set(key, set)
+  }
+  return set
+}
+
+function OrinaTable({ rows, s }: { rows: { label: string; value: string; ref: string; abnormal: boolean }[]; s: StyleSet }) {
+  const { orina, styles } = s
   return (
     <>
       <View style={orina.head}>
@@ -271,7 +315,8 @@ function OrinaTable({ rows }: { rows: { label: string; value: string; ref: strin
   )
 }
 
-function OrinaPdf({ d, species, config, lead }: { d: OrinaData; species: string; config: OrinaConfig; lead: React.ReactNode }) {
+function OrinaPdf({ d, species, config, lead, st }: { d: OrinaData; species: string; config: OrinaConfig; lead: React.ReactNode; st: StyleSet }) {
+  const { copro, orina } = st
   const sp = speciesKey(species)
   const refs = config.ref[sp]
   const row = (p: CatParam | NumParam, value: string, shown = value) =>
@@ -313,7 +358,7 @@ function OrinaPdf({ d, species, config, lead }: { d: OrinaData; species: string;
         </View>
         <View style={copro.block}>
           <Text style={copro.title}>Examen físico</Text>
-          <OrinaTable rows={[
+          <OrinaTable s={st} rows={[
             row("color", d.color, colorOrinaLabel(d)),
             row("aspecto", d.aspecto),
             row("densidad", d.densidad, densidadLabel(d.densidad)),
@@ -324,7 +369,7 @@ function OrinaPdf({ d, species, config, lead }: { d: OrinaData; species: string;
 
       <View style={copro.block} wrap={false}>
         <Text style={copro.title}>Examen químico</Text>
-        <OrinaTable rows={[
+        <OrinaTable s={st} rows={[
           row("glucosa", d.glucosa), row("bilirrubina", d.bilirrubina), row("cetonas", d.cetonas),
           row("sangre", d.sangre), row("nitritos", d.nitritos), row("leucocitos", d.leucocitos),
           row("ph", d.ph, phOrinaLabel(d.ph)), row("proteinas", d.proteinas),
@@ -339,15 +384,15 @@ function OrinaPdf({ d, species, config, lead }: { d: OrinaData; species: string;
       <View style={copro.block} wrap={false}>
         <Text style={copro.title}>Pruebas complementarias</Text>
         <View style={copro.pairRow}>
-          <PairCell title="Test de Héller (proteínas)" left>
+          <PairCell s={st} title="Test de Héller (proteínas)" left>
             <Text style={d.heller !== "Negativo" ? [copro.cellValue, bold] : copro.cellValue}>{d.heller}</Text>
           </PairCell>
-          <PairCell title="Anillo de Héller (bilirrubina)">
+          <PairCell s={st} title="Anillo de Héller (bilirrubina)">
             <Text style={d.anilloHeller !== "Negativo" ? [copro.cellValue, bold] : copro.cellValue}>{d.anilloHeller}</Text>
           </PairCell>
         </View>
         <View style={copro.pairRow}>
-          <PairCell title="Ratio proteína / creatinina (UPC)">
+          <PairCell s={st} title="Ratio proteína / creatinina (UPC)">
             <Text style={copro.cellValue}>
               {upc === null ? "—" : <Text style={upcInterp !== "No proteinúrico" ? bold : {}}>{upc.toFixed(2)} · {upcInterp}</Text>}
             </Text>
@@ -364,7 +409,7 @@ function OrinaPdf({ d, species, config, lead }: { d: OrinaData; species: string;
         {pairs.map((pair, i) => (
           <View key={i} style={copro.pairRow}>
             {pair.map(([t, v, b], j) => (
-              <PairCell key={t} title={t} left={j === 0 && pair.length === 2}>
+              <PairCell s={st} key={t} title={t} left={j === 0 && pair.length === 2}>
                 <Text style={b ? [copro.cellValue, bold] : copro.cellValue}>{v}</Text>
               </PairCell>
             ))}
@@ -391,7 +436,8 @@ function OrinaPdf({ d, species, config, lead }: { d: OrinaData; species: string;
 const coproIndex = (sections: { id: string; name: string }[], section: { id: string }) =>
   sections.filter(s => isCoproSection(s.name) || isCoproscopicoSection(s.name)).findIndex(s => s.id === section.id)
 
-function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string | null; lead: React.ReactNode; extra?: React.ReactNode }) {
+function CoproPdf({ data, photo, lead, extra, s }: { data: CoproData; photo: string | null; lead: React.ReactNode; extra?: React.ReactNode; s: StyleSet }) {
+  const { copro } = s
   const fecha = data.fecha ? data.fecha.split("-").reverse().join("/") : ""
   const protozoos = data.protozoos.items.filter(i => i.hallazgo.trim())
   const huevos = data.flotacion.items.filter(i => i.parasito.trim())
@@ -405,12 +451,12 @@ function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string
           <Text style={copro.title}>Análisis macroscópico</Text>
           <View style={copro.macro}>
             <View style={copro.rows}>
-              <CoproRow label="Consistencia" value={data.consistencia} />
-              <CoproRow label="Color" value={colorLabel(data)} />
-              <CoproRow label="Sangre macroscópica" value={data.sangre} />
-              <CoproRow label="Moco" value={data.moco} />
-              <CoproRow label="Parásitos adultos" value={data.parasitosAdultos} />
-              {!!data.otros.trim() && <CoproRow label="Otros" value={data.otros} />}
+              <CoproRow s={s} label="Consistencia" value={data.consistencia} />
+              <CoproRow s={s} label="Color" value={colorLabel(data)} />
+              <CoproRow s={s} label="Sangre macroscópica" value={data.sangre} />
+              <CoproRow s={s} label="Moco" value={data.moco} />
+              <CoproRow s={s} label="Parásitos adultos" value={data.parasitosAdultos} />
+              {!!data.otros.trim() && <CoproRow s={s} label="Otros" value={data.otros} />}
             </View>
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             {photo && <Image src={photo} style={copro.photo} />}
@@ -421,24 +467,24 @@ function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string
       <View style={copro.block} wrap={false}>
         <Text style={copro.title}>Examen microscópico</Text>
         <View style={copro.pairRow}>
-          <PairCell title="Microbiota" left><Text style={copro.cellValue}>{data.microbiota}</Text></PairCell>
-          <PairCell title="Glóbulos rojos"><Text style={copro.cellValue}>{data.globulosRojos}</Text></PairCell>
+          <PairCell s={s} title="Microbiota" left><Text style={copro.cellValue}>{data.microbiota}</Text></PairCell>
+          <PairCell s={s} title="Glóbulos rojos"><Text style={copro.cellValue}>{data.globulosRojos}</Text></PairCell>
         </View>
         <View style={copro.pairRow}>
-          <PairCell title="Restos alimenticios" left><Text style={copro.cellValue}>{data.restos}</Text></PairCell>
-          <PairCell title="Leucocitos"><Text style={copro.cellValue}>{data.leucocitos.trim() || "—"}</Text></PairCell>
+          <PairCell s={s} title="Restos alimenticios" left><Text style={copro.cellValue}>{data.restos}</Text></PairCell>
+          <PairCell s={s} title="Leucocitos"><Text style={copro.cellValue}>{data.leucocitos.trim() || "—"}</Text></PairCell>
         </View>
         <View style={copro.pairRow}>
-          <PairCell title="Levaduras" left><Text style={copro.cellValue}>{data.levaduras}</Text></PairCell>
-          <PairCell title="Protozoarios">
+          <PairCell s={s} title="Levaduras" left><Text style={copro.cellValue}>{data.levaduras}</Text></PairCell>
+          <PairCell s={s} title="Protozoarios">
             {data.protozoos.ninguno || protozoos.length === 0
               ? <Text style={copro.cellValue}>No se observan</Text>
               : protozoos.map((p, i) => <RichText key={i} text={`${p.hallazgo}${p.cantidad ? ` ${p.cantidad}` : ""}`} style={copro.cellValue} />)}
           </PairCell>
         </View>
         <View style={copro.pairRow}>
-          <PairCell title="Otros" left><RichText text={data.microOtros.trim() || "—"} style={copro.cellValue} /></PairCell>
-          <PairCell title="Técnica de flotación">
+          <PairCell s={s} title="Otros" left><RichText text={data.microOtros.trim() || "—"} style={copro.cellValue} /></PairCell>
+          <PairCell s={s} title="Técnica de flotación">
             {data.flotacion.ninguno || huevos.length === 0
               ? <Text style={copro.cellValue}>No se observan huevos</Text>
               : huevos.map((h, i) => (
@@ -468,7 +514,8 @@ function CoproPdf({ data, photo, lead, extra }: { data: CoproData; photo: string
   )
 }
 
-function PatientInfo({ label, value }: { label: string; value: string }) {
+function PatientInfo({ label, value, s }: { label: string; value: string; s: StyleSet }) {
+  const { styles } = s
   return (
     <View style={{ minWidth: 80, marginRight: 12 }}>
       <Text style={styles.patientLabel}>{label}</Text>
@@ -477,34 +524,57 @@ function PatientInfo({ label, value }: { label: string; value: string }) {
   )
 }
 
-export function PdfReport({ order }: { order: OrderData }) {
+export function PdfReport({ order, brand }: { order: OrderData; brand?: PdfBrand | null }) {
   const dateStr = formatLongDateTime(order.createdAt)
+  const s = styleSetFor(brand)
+  const { styles } = s
+  // Logo de la clínica dentro de una caja de 120 × 64 sin deformarse (se respeta su proporción)
+  const logoScale = brand ? Math.min(120 / brand.logoW, 64 / brand.logoH) : 1
 
   return (
-    <Document title={`Reporte ${order.orderNumber} — Pets & Lab`}>
+    <Document title={`Reporte ${order.orderNumber} — ${brand ? `${brand.name} · ` : ""}Pets & Lab`}>
       <Page size="A4" style={styles.page}>
         {/* Header — fixed so it appears on every page */}
-        <View style={styles.header} fixed>
-          <Image src={LOGO} style={styles.headerLogo} />
-          <View style={styles.headerRight}>
-            <Text style={styles.headerTitle}>Reporte de Laboratorio</Text>
-            <Text style={styles.headerMono}>N° {order.orderNumber}</Text>
-            <Text style={styles.headerMono}>{dateStr}</Text>
+        {brand ? (
+          <View style={styles.brandHeader} fixed>
+            <View style={styles.brandLeft}>
+              {/* eslint-disable-next-line jsx-a11y/alt-text */}
+              <Image src={brand.logo} style={{ width: brand.logoW * logoScale, height: brand.logoH * logoScale }} />
+              <View style={styles.allyBox}>
+                <Text style={styles.allyLabel}>Aliado estratégico en diagnóstico</Text>
+                {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                <Image src={LAB_LOGO_SALVIA} style={styles.allyLogo} />
+              </View>
+            </View>
+            <View style={styles.headerRight}>
+              <Text style={styles.brandTitle}>Reporte de Laboratorio</Text>
+              <Text style={styles.brandMono}>N° {order.orderNumber}</Text>
+              <Text style={styles.brandMono}>{dateStr}</Text>
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={styles.header} fixed>
+            <Image src={LOGO} style={styles.headerLogo} />
+            <View style={styles.headerRight}>
+              <Text style={styles.headerTitle}>Reporte de Laboratorio</Text>
+              <Text style={styles.headerMono}>N° {order.orderNumber}</Text>
+              <Text style={styles.headerMono}>{dateStr}</Text>
+            </View>
+          </View>
+        )}
 
         <View style={styles.body}>
           {/* Patient info */}
           <View style={styles.patientBar}>
-            <PatientInfo label="Paciente" value={order.patientName} />
-            <PatientInfo label="Especie" value={order.species} />
-            {order.breed && <PatientInfo label="Raza" value={order.breed} />}
-            {order.age && <PatientInfo label="Edad" value={order.age} />}
-            {order.sex && <PatientInfo label="Sexo" value={order.sex === "M" ? "Macho" : "Hembra"} />}
-            {order.ownerName && <PatientInfo label="Propietario" value={order.ownerName} />}
-            {order.clinic && <PatientInfo label="Clínica" value={order.clinic.name} />}
-            {order.branch && <PatientInfo label="Sede" value={`${order.branch.name} · ${order.branch.address}`} />}
-            {order.requestingVet && <PatientInfo label="Veterinario" value={order.requestingVet} />}
+            <PatientInfo s={s} label="Paciente" value={order.patientName} />
+            <PatientInfo s={s} label="Especie" value={order.species} />
+            {order.breed && <PatientInfo s={s} label="Raza" value={order.breed} />}
+            {order.age && <PatientInfo s={s} label="Edad" value={order.age} />}
+            {order.sex && <PatientInfo s={s} label="Sexo" value={order.sex === "M" ? "Macho" : "Hembra"} />}
+            {order.ownerName && <PatientInfo s={s} label="Propietario" value={order.ownerName} />}
+            {order.clinic && <PatientInfo s={s} label="Clínica" value={order.clinic.name} />}
+            {order.branch && <PatientInfo s={s} label="Sede" value={`${order.branch.name} · ${order.branch.address}`} />}
+            {order.requestingVet && <PatientInfo s={s} label="Veterinario" value={order.requestingVet} />}
           </View>
 
           {!!order.ageNote && <Text style={[styles.attachedNote, { marginTop: 0, marginBottom: 8 }]}>{order.ageNote}.</Text>}
@@ -536,6 +606,7 @@ export function PdfReport({ order }: { order: OrderData }) {
 
                 {hasSections && exam.template.sections.map((section, si) => isOrinaSection(section.name) ? (
                   <OrinaPdf
+                    st={s}
                     key={section.id}
                     d={readOrina(exam.structured)}
                     species={order.species}
@@ -547,10 +618,11 @@ export function PdfReport({ order }: { order: OrderData }) {
                   />
                 ) : isCoproSection(section.name) || isCoproscopicoSection(section.name) ? (
                   <CoproPdf
+                    s={s}
                     key={section.id}
                     data={readCoproAt(exam.structured, coproIndex(exam.template.sections, section))}
                     photo={exam.macroPhotos?.[coproPhotoRole(coproIndex(exam.template.sections, section))] ?? null}
-                    extra={isCoproscopicoSection(section.name) ? <CoproscopicoPdf d={readCoproscopico(exam.structured)} /> : undefined}
+                    extra={isCoproscopicoSection(section.name) ? <CoproscopicoPdf s={s} d={readCoproscopico(exam.structured)} /> : undefined}
                     lead={<>
                       {si === 0 && header}
                       {exam.template.sections.length > 1 && <Text style={styles.sectionLabel}>{section.name}</Text>}
@@ -710,12 +782,21 @@ export function PdfReport({ order }: { order: OrderData }) {
 
         {/* Page footer */}
         <View style={styles.footer} fixed>
-          <View>
-            <Text style={styles.footerText}>
-              <Text style={styles.footerBold}>Pets &amp; Lab</Text> · {SITE.address} · {SITE.domain}
-            </Text>
-            <Text style={[styles.footerText, { marginTop: 3 }]}>WhatsApp +57 {SITE.phone}</Text>
-          </View>
+          {brand ? (
+            <View>
+              <Text style={styles.footerText}>
+                Procesado por <Text style={styles.footerBold}>Pets &amp; Lab · Laboratorio Clínico Veterinario</Text> · {SITE.address}
+              </Text>
+              <Text style={[styles.footerText, { marginTop: 3 }]}>{SITE.domain} · WhatsApp +57 {SITE.phone}</Text>
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.footerText}>
+                <Text style={styles.footerBold}>Pets &amp; Lab</Text> · {SITE.address} · {SITE.domain}
+              </Text>
+              <Text style={[styles.footerText, { marginTop: 3 }]}>WhatsApp +57 {SITE.phone}</Text>
+            </View>
+          )}
           <Text style={styles.footerText}>Los resultados son válidos únicamente para esta muestra.</Text>
         </View>
       </Page>

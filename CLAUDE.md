@@ -230,6 +230,17 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
 - Tablas de referencia fijas al final de un examen (ej. Ácidos Biliares: preprandial/postprandial
   por especie; SDMA: Normal / Elevado / Probabilidad de enfermedad renal + nota de hemólisis), en formulario y
   PDF: `lib/referenceTables.ts`, por nombre de examen (con `note` opcional). SDMA creado con `scripts/agregar-sdma.ts`.
+- Logo de la clínica en sus reportes (`Clinic.logoUrl` + `brandPrimary`/`brandAccent`; permiso `clientes.logo`: ADMIN y
+  COMERCIAL): en `/clientes/[id]` ("Logo para reportes") y opcional en Nueva clínica, con `components/ClinicLogoPicker.tsx`.
+  El navegador recorta los márgenes blancos, reduce a ≤600 px PNG (≤850 KB, límite de 1 MB de las server actions), detecta
+  los colores (`lib/brandColors.ts: detectBrandColors`: principal = el más oscuro de los dos tonos dominantes, se oscurece
+  hasta leerse con texto blanco; acento = el otro) y avisa si el fondo tiene color o dibujos. Se guarda con
+  `actions/clinicLogo.ts` / `lib/clinicLogo.ts` en Blob privado (`logos/`); se ve en la ficha por `api/clinics/[id]/logo`.
+  PDF: `lib/reportPdf.ts: clinicBrand` lee el logo y pasa `brand` a `PdfReport`; con marca, encabezado blanco con el logo de
+  la clínica + "Aliado estratégico en diagnóstico" con el logo de Pets & Lab, sus colores en títulos/fondos/bordes y pie
+  "Procesado por Pets & Lab". Firmas y colores de fuera de rango no cambian. Sin logo (o si no se puede leer) = diseño de
+  siempre. Los estilos del PDF salen de `makeStyles/makeCopro/makeOrina(paleta)` vía `usePdfStyles()`: un componente nuevo
+  del PDF debe tomarlos de ahí, no de una constante del módulo.
 - Al final de cada examen de una orden hay "Comentarios y fotos" (`ExamNotes.tsx`):
   `OrderExam.comments` y `ExamPhoto` (blob privado, subida en `api/upload/[examId]/photos`, se
   sirve por `api/photos/[photoId]`). Se pueden editar aunque el examen esté completado. El

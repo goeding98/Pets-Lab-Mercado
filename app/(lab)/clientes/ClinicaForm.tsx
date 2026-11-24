@@ -2,15 +2,23 @@
 import { useState, useTransition } from "react"
 import { createClinic, updateClinic } from "@/actions/clinics"
 import type { Clinic } from "@prisma/client"
+import ClinicLogoPicker, { type LogoValue } from "@/components/ClinicLogoPicker"
 
-export default function ClinicaForm({ clinic, canSetNoCharge = false }: { clinic?: Clinic; canSetNoCharge?: boolean }) {
+export default function ClinicaForm({ clinic, canSetNoCharge = false, canLogo = false }: { clinic?: Clinic; canSetNoCharge?: boolean; canLogo?: boolean }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState("")
+  const [logo, setLogo] = useState<LogoValue | null>(null)
   const isEdit = !!clinic
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
+    // Logo para reportes (solo al crear; en la ficha se cambia con su propio botón)
+    if (!isEdit && logo) {
+      fd.set("logo", logo.file, "logo.png")
+      fd.set("brandPrimary", logo.primary)
+      fd.set("brandAccent", logo.accent)
+    }
     setError("")
     startTransition(async () => {
       const res = await (isEdit ? updateClinic(clinic.id, fd) : createClinic(fd))
@@ -78,6 +86,17 @@ export default function ClinicaForm({ clinic, canSetNoCharge = false }: { clinic
           )}
         </div>
       </fieldset>
+
+      {!isEdit && canLogo && (
+        <fieldset className="border border-black/10 p-5">
+          <legend className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase px-1">
+            Logo para reportes (opcional)
+          </legend>
+          <div className="mt-3">
+            <ClinicLogoPicker mode="create" onChange={setLogo} />
+          </div>
+        </fieldset>
+      )}
 
       {error && <p className="font-sans text-sm text-red-600">{error}</p>}
 

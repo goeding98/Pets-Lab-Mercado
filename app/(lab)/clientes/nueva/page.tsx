@@ -3,6 +3,7 @@ import Link from "next/link"
 import ClinicaForm from "../ClinicaForm"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { can } from "@/lib/permissions"
 
 export const metadata: Metadata = { title: "Nueva clínica" }
 
@@ -18,7 +19,7 @@ export default async function NuevaClinicaPage() {
         </div>
         <h1 className="font-serif text-[28px] font-medium tracking-[-0.02em] mt-1">Nueva clínica</h1>
       </div>
-      <ClinicaForm canSetNoCharge={session?.user.role === "ADMIN"} />
+      <ClinicaForm canSetNoCharge={session?.user.role === "ADMIN"} canLogo={can(session?.user.role, "clientes.logo")} />
     </div>
   )
 }

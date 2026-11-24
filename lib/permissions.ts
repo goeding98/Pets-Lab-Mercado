@@ -9,6 +9,7 @@ export type Permission =
   | "resultados.editar" // capturar resultados, subir/quitar PDF, cambiar estado de la orden
   | "clientes.ver"
   | "clientes.editar"   // crear/editar clínicas (y su usuario del portal)
+  | "clientes.logo"     // subir/cambiar el logo y los colores de la clínica en sus reportes: ADMIN y COMERCIAL
   | "caja"
   | "facturacion"       // /facturacion: órdenes por facturar (sin Pets & Pets), marcar facturadas — ADMIN y CONTADOR
   | "pagos"             // marcar una orden como pagada (libera el resultado a la clínica): todo el personal
@@ -22,14 +23,14 @@ export type Permission =
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "muestras.eliminar", "resultados.editar",
-  "clientes.ver", "clientes.editar", "caja", "facturacion", "pagos", "inventario", "usuarios", "promociones", "personalizados", "descuentos", "rangos",
+  "clientes.ver", "clientes.editar", "clientes.logo", "caja", "facturacion", "pagos", "inventario", "usuarios", "promociones", "personalizados", "descuentos", "rangos",
   "mensajeros",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
-  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos"),
-  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "promociones", "personalizados", "descuentos", "pagos", "mensajeros"],
+  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos" && p !== "clientes.logo"),
+  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "clientes.logo", "promociones", "personalizados", "descuentos", "pagos", "mensajeros"],
   DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos", "mensajeros"],
   CONTADOR: ["facturacion"], // la contadora: solo Facturación
   CLINIC: [],

@@ -32,6 +32,11 @@ model Clinic {
   neighborhood   String? // barrio
   city           String?
   noCharge       Boolean          @default(false) // cliente sin cobro (Pets & Pets): sus resultados nunca se retienen por pago
+  // Marca de la clínica en sus reportes (lib/brandColors.ts, components/ClinicLogoPicker.tsx): logo PNG en Blob privado y
+  // colores detectados del logo (hex). Sin logo, el reporte sale con el diseño de Pets & Lab.
+  logoUrl        String?
+  brandPrimary   String?
+  brandAccent    String?
   users          User[]
   orders         Order[]
   branches       ClinicBranch[]
