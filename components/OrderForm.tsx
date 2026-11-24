@@ -73,7 +73,21 @@ export default function OrderForm({
       return
     }
     setError("")
-    startTransition(() => action(fd))
+    startTransition(async () => {
+      try {
+        await action(fd)
+      } catch (err) {
+        // La redirección al detalle de la muestra (redirect()) llega como error: se deja pasar
+        const digest = (err as { digest?: unknown })?.digest
+        if (typeof digest === "string" && digest.startsWith("NEXT_")) throw err
+        // Sin señal (celular con datos móviles): antes se caía la página y se perdía lo digitado. Ahora se avisa y
+        // el formulario queda lleno para reintentar.
+        const offline = err instanceof TypeError || /fetch|network|load failed/i.test(String((err as Error)?.message ?? ""))
+        setError(offline
+          ? "No hubo conexión con el servidor y la muestra no se guardó. Revisa la señal y vuelve a tocar el botón: tus datos siguen aquí."
+          : "No se pudo registrar la muestra. Revisa los datos y vuelve a intentar; si sigue pasando, envía un pantallazo.")
+      }
+    })
   }
 
   // Áreas conocidas en su orden; cualquier área nueva del catálogo va al final
@@ -269,7 +283,7 @@ export default function OrderForm({
       </div>
 
       {error && (
-        <p className="font-mono text-[9px] tracking-[0.15em] text-red-600 uppercase">{error}</p>
+        <p role="alert" className="font-sans text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2">{error}</p>
       )}
 
       <button
