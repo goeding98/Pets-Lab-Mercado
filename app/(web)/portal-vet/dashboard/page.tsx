@@ -12,8 +12,11 @@ import { getClinicCredit } from "@/lib/credit"
 import CreditStatement from "./CreditStatement"
 import LoyaltyCard from "@/components/LoyaltyCard"
 import { getLoyaltyStatuses, loyaltyLeaders } from "@/lib/loyalty"
+import PickupTracker from "./PickupTracker"
+import { pickupsEnabled } from "@/lib/pickups"
 
 export const metadata: Metadata = { title: "Portal Vet" }
+export const dynamic = "force-dynamic"
 
 const ORDER_STATUS: Record<string, { label: string; className: string }> = {
   SOLICITADA: { label: "Solicitada", className: "bg-black/[0.06] text-ink" },
@@ -39,6 +42,7 @@ export default async function PortalVetDashboardPage({
   const sede = branches.some(b => b.id === searchParams.sede) ? searchParams.sede : undefined
   const clinic = await prisma.clinic.findUnique({ where: { id: session.user.clinicId }, select: { noCharge: true, billingEmail: true, email: true } })
   const noCharge = clinic?.noCharge ?? false
+  const pickups = pickupsEnabled(session.user.clinicId) // recogidas con garantía (interruptor en lib/pickups.ts)
   const orders = await prisma.order.findMany({
     where: {
       clinicId: session.user.clinicId,
@@ -98,7 +102,7 @@ export default async function PortalVetDashboardPage({
             href="/portal-vet/nueva"
             className="bg-salvia-700 text-bone font-mono text-[10px] tracking-[0.18em] uppercase px-5 py-2.5 hover:bg-salvia-800 transition-colors"
           >
-            Nueva solicitud +
+            {pickups ? "Pedir recogida +" : "Nueva solicitud +"}
           </Link>
           <LogoutButton />
         </div>
@@ -110,10 +114,15 @@ export default async function PortalVetDashboardPage({
 
       {searchParams.enviada && (
         <div className="bg-salvia-50 border border-salvia-700/20 px-4 py-3 mb-6 font-sans text-[13px] text-salvia-800">
-          Solicitud enviada. El laboratorio la verá de inmediato; el estado cambia a “Muestra recibida”
-          cuando llegue la muestra.
+          {!pickups
+            ? "Solicitud enviada. El laboratorio la verá de inmediato; el estado cambia a “Muestra recibida” cuando llegue la muestra."
+            : searchParams.enviada === "sumada"
+              ? "Listo: la muestra se sumó a tu recogida pendiente, con la misma garantía."
+              : "Recogida pedida. Aquí abajo ves la hora límite y cada paso hasta el resultado."}
         </div>
       )}
+
+      {pickups && <PickupTracker clinicId={session.user.clinicId} sede={sede} />}
 
       <form method="get" className="flex flex-wrap gap-2 mb-6 max-w-2xl">
         <input
@@ -144,7 +153,7 @@ export default async function PortalVetDashboardPage({
           </p>
           {!q && (
             <Link href="/portal-vet/nueva" className="font-mono text-[10px] tracking-[0.18em] uppercase text-salvia-700 underline">
-              Cargar la primera solicitud →
+              {pickups ? "Pedir la primera recogida →" : "Cargar la primera solicitud →"}
             </Link>
           )}
         </div>

@@ -8,6 +8,7 @@ import { authOptions } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { formatDateTime } from "@/lib/dates"
 import { moraClinics } from "@/lib/credit"
+import PendingPickups from "./PendingPickups"
 
 export const metadata: Metadata = { title: "Muestras" }
 
@@ -77,7 +78,8 @@ export default async function MuestrasPage({
     include: { clinic: true, branch: { select: { name: true } }, exams: { include: { template: true } } },
   })
 
-  const canSeeDeleted = can((await getServerSession(authOptions))?.user.role, "muestras.eliminar")
+  const role = (await getServerSession(authOptions))?.user.role
+  const canSeeDeleted = can(role, "muestras.eliminar")
   // Clientes en mora (lib/credit.ts): sus órdenes a crédito sin pagar quedan retenidas
   const mora = await moraClinics(orders.filter(o => o.creditDays != null).map(o => o.clinicId))
   const rows = orders.map(order => {
@@ -115,6 +117,8 @@ export default async function MuestrasPage({
           Nueva muestra +
         </Link>
       </div>
+
+      <PendingPickups canMark={can(role, "muestras.crear")} />
 
       {/* Sedes de Pets & Pets (el domiciliario recoge por sede) */}
       {ownBranches.length > 0 && (

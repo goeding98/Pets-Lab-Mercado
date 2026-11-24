@@ -36,16 +36,18 @@ export default function OrderForm({
   paymentOption = false,
   discounts = [],
   creditLines = [],
+  readyCheck = false,
 }: {
   templates: (ExamTemplate & { clients?: { id: string }[] })[]
   clinics?: (Clinic & { branches: BranchOption[] })[]
   branches?: BranchOption[]
-  action: (fd: FormData) => Promise<void>
+  action: (fd: FormData) => Promise<void | { error?: string }> // { error }: se muestra sin perder lo digitado
   submitLabel?: string
   pendingLabel?: string
   paymentOption?: boolean
   discounts?: { clinicId: string; percent: number; areas: string[] }[] // vigentes hoy (solo para el total del staff)
   creditLines?: { clinicId: string; termDays: number; limit: number; used: number; inMora: boolean }[] // líneas activas (/credito)
+  readyCheck?: boolean // Portal Vet: casilla "la muestra ya está lista" (recogidas con garantía, lib/pickups.ts)
 }) {
   const [payMode, setPayMode] = useState<"" | "paid" | "credit">("")
   const [pending, startTransition] = useTransition()
@@ -72,10 +74,15 @@ export default function OrderForm({
       setError("Selecciona al menos un examen.")
       return
     }
+    if (readyCheck && fd.get("sampleReady") !== "1") {
+      setError("Marca que la muestra ya está lista: el mensajero no puede esperar.")
+      return
+    }
     setError("")
     startTransition(async () => {
       try {
-        await action(fd)
+        const r = await action(fd)
+        if (r && r.error) setError(r.error)
       } catch (err) {
         // La redirección al detalle de la muestra (redirect()) llega como error: se deja pasar
         const digest = (err as { digest?: unknown })?.digest
@@ -281,6 +288,16 @@ export default function OrderForm({
           placeholder="Notas clínicas, indicaciones especiales…"
         />
       </div>
+
+      {readyCheck && (
+        <label className="flex items-start gap-2.5 bg-salvia-50 border border-salvia-700/20 px-4 py-3 font-sans text-sm text-ink cursor-pointer">
+          <input type="checkbox" name="sampleReady" value="1" className="mt-0.5 w-4 h-4 accent-salvia-700" />
+          <span>
+            La muestra ya está tomada y lista para entregar.
+            <span className="block text-[12px] text-ink-2">El mensajero no puede esperar: si no está lista cuando llegue, se pierde la garantía de esa recogida.</span>
+          </span>
+        </label>
+      )}
 
       {error && (
         <p role="alert" className="font-sans text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2">{error}</p>

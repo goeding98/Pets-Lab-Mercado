@@ -7,6 +7,7 @@ import { portalAuthOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
 import { assertOrderableTemplates } from "@/lib/catalog"
+import { pickupForNewRequest, pickupsEnabled } from "@/lib/pickups"
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "")
 
@@ -83,47 +84,85 @@ export async function registerClinic(formData: FormData): Promise<{ error?: stri
   return { success: true }
 }
 
-// Solicitud de exámenes creada por la clínica. Queda como SOLICITADA hasta que el laboratorio
-// recibe la muestra físicamente y la marca como RECIBIDA en /muestras.
-export async function createPortalOrder(formData: FormData) {
+// Solicitud de exámenes creada por la clínica: pide la recogida (lib/pickups.ts). Queda como SOLICITADA hasta que el
+// laboratorio recibe la muestra y la marca como RECIBIDA en /muestras. Si ya hay una recogida pendiente de esa sede, se
+// suma a ella; si no, crea una nueva (solo 1 h después de la anterior). Errores de la clínica vuelven como { error }.
+export async function createPortalOrder(formData: FormData): Promise<{ error?: string }> {
   const session = await getServerSession(portalAuthOptions)
-  if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) throw new Error("No autorizado")
+  if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) return { error: "Tu sesión se cerró. Vuelve a entrar al Portal Vet." }
+  const clinicId = session.user.clinicId
 
   const templateIds = formData.getAll("templateIds") as string[]
-  await assertOrderableTemplates(templateIds, session.user.clinicId)
-
   const get = (k: string) => ((formData.get(k) as string) ?? "").trim() || null
   const patientName = get("patientName")
   const species = get("species")
-  if (!patientName || !species) throw new Error("Faltan datos del paciente")
+  if (!patientName || !species) return { error: "Escribe el nombre y la especie de la mascota." }
+  if (templateIds.length === 0) return { error: "Elige al menos un examen." }
+  const withPickup = pickupsEnabled(clinicId)
+  if (withPickup && formData.get("sampleReady") !== "1") return { error: "Marca que la muestra ya está lista: el mensajero no puede esperar." }
 
-  const exams = await examsWithListPrice(templateIds, session.user.clinicId)
-  const branchId = await resolveBranch(session.user.clinicId, formData.get("branchId"))
-  await createWithOrderNumber(orderNumber => prisma.order.create({
-    data: {
-      orderNumber,
-      patientName,
-      species,
-      breed: get("breed"),
-      age: get("age"),
-      sex: get("sex"),
-      ownerName: get("ownerName"),
-      requestingVet: get("requestingVet"),
-      clinicId: session.user.clinicId,
-      branchId,
-      status: "SOLICITADA",
-      source: "PORTAL",
-      notes: get("notes"),
-      exams: {
-        create: exams,
+  let branchId: string | null
+  try {
+    await assertOrderableTemplates(templateIds, clinicId)
+    branchId = await resolveBranch(clinicId, formData.get("branchId"))
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Revisa los datos de la solicitud." }
+  }
+
+  // Sin recogidas para esta clínica (interruptor en lib/pickups.ts): la solicitud de siempre, sin recogida
+  const pickup = withPickup
+    ? await prisma.$transaction(tx => pickupForNewRequest(tx, clinicId, branchId))
+    : { pickupId: null as string | null, added: false, deadline: null }
+  if ("error" in pickup) return { error: pickup.error }
+
+  const exams = await examsWithListPrice(templateIds, clinicId)
+  try {
+    await createWithOrderNumber(orderNumber => prisma.order.create({
+      data: {
+        orderNumber,
+        patientName,
+        species,
+        breed: get("breed"),
+        age: get("age"),
+        sex: get("sex"),
+        ownerName: get("ownerName"),
+        requestingVet: get("requestingVet"),
+        clinicId,
+        branchId,
+        status: "SOLICITADA",
+        source: "PORTAL",
+        notes: get("notes"),
+        pickupId: pickup.pickupId,
+        exams: {
+          create: exams,
+        },
       },
-    },
-  }))
+    }))
+  } catch {
+    // Si la orden no se pudo crear, la recogida recién creada no debe bloquear la espera de 1 hora
+    if (pickup.pickupId && !pickup.added) await prisma.pickup.deleteMany({ where: { id: pickup.pickupId, orders: { none: {} } } })
+    return { error: "No se pudo enviar la solicitud. Intenta de nuevo." }
+  }
 
   revalidatePath("/portal-vet/dashboard")
   revalidatePath("/muestras")
   revalidatePath("/dashboard")
-  redirect("/portal-vet/dashboard?enviada=1")
+  redirect(`/portal-vet/dashboard?enviada=${!withPickup ? "si" : pickup.added ? "sumada" : "1"}`)
+}
+
+// "Ya está lista": la clínica vuelve a pedir la recogida de muestras que no estaban listas cuando pasó el mensajero
+export async function requestPickupAgain(branchId: string | null): Promise<{ error?: string }> {
+  const session = await getServerSession(portalAuthOptions)
+  if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) return { error: "Tu sesión se cerró. Vuelve a entrar al Portal Vet." }
+  const clinicId = session.user.clinicId
+  if (!pickupsEnabled(clinicId)) return { error: "Las recogidas por el portal todavía no están activas." }
+  const waiting = await prisma.order.count({ where: { clinicId, branchId, status: "SOLICITADA", pickup: { status: "NO_LISTA" } } })
+  if (!waiting) return { error: "No hay muestras pendientes de recoger." }
+  const r = await prisma.$transaction(tx => pickupForNewRequest(tx, clinicId, branchId))
+  if ("error" in r) return { error: r.error }
+  revalidatePath("/portal-vet/dashboard")
+  revalidatePath("/muestras")
+  return {}
 }
 
 // La clínica cambia su correo de facturación (a donde le llegan las facturas) desde su Portal Vet

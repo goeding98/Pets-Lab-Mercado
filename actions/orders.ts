@@ -27,6 +27,7 @@ import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/
 import { computeNetPrice } from "@/lib/billing"
 import { PAYMENT_METHODS } from "@/lib/payment"
 import { assertOrderableTemplates } from "@/lib/catalog"
+import { markPickedUp } from "@/lib/pickups"
 
 export async function createOrder(formData: FormData) {
   const session = await getServerSession(authOptions)
@@ -84,7 +85,10 @@ export async function updateOrderStatus(orderId: string, status: string) {
   const session = await getServerSession(authOptions)
   if (!session || !can(session.user.role, "resultados.editar")) throw new Error("No autorizado")
 
-  await prisma.order.update({ where: { id: orderId }, data: { status } })
+  const order = await prisma.order.update({ where: { id: orderId }, data: { status }, select: { pickup: { select: { id: true, status: true } } } })
+  // Recibir la muestra de una recogida que nadie marcó como "Recogida" cuenta como recogida en este momento
+  // (lib/pickups.ts: si ya pasó la garantía, aplica el 50 %)
+  if (status === "RECIBIDA" && order.pickup?.status === "PENDIENTE") await markPickedUp(order.pickup.id, session.user.name ?? "Laboratorio")
   revalidatePath(`/muestras/${orderId}`)
   revalidatePath("/muestras")
   revalidatePath("/dashboard")

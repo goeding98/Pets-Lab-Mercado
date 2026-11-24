@@ -38,6 +38,15 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Botón "Instrucciones para mensajeros" → `clientes/mensajeros/instrucciones` (route, mismo permiso) descarga el PDF
   `components/MessengerInstructionsPdf.tsx`: reglas de la ruta, beneficio `BONO_PAQUETE` ($1.500 por paquete NO agendado;
   paquete = todo lo de una clínica en una visita), la ruta de cada mensajero y hoja de registro a firmar (pago manual por ahora).
+- Recogidas con garantía (`lib/pickups.ts`, modelo `Pickup`, `Order.pickupId`): cada solicitud del Portal Vet va en una
+  recogida. Garantía = pedido + 1 h 30 (`deadline`, solo pidiendo en `HORARIO_GARANTIA`; fuera = null, sin garantía). Con una
+  recogida PENDIENTE de esa sede, lo nuevo se suma a ella; si no, solo 1 h después de la última solicitud de esa sede
+  (`nextAllowedAt`). Casilla obligatoria "la muestra ya está lista" (`OrderForm readyCheck`). Laboratorio: panel arriba de
+  /muestras (`PendingPickups`, permiso `muestras.crear`) con "Recogida" / "No estaba lista" (`actions/pickups.ts`); marcar la
+  orden RECIBIDA también la marca recogida. Tarde → `markPickedUp` pone 50 % (`DESCUENTO_TARDE`, PORCENTAJE) en todos los
+  exámenes de sus órdenes y lo anota en `Order.notes`. NO_LISTA pierde la garantía; al volver a pedir, sus órdenes pasan a la
+  recogida nueva. La clínica ve el seguimiento en el inicio del portal (`PickupTracker`). Interruptor: `RECOGIDAS_EN_VIVO`
+  (false = solo `CLINICAS_PILOTO`; las demás siguen con la solicitud de siempre, sin recogida). Tabla con RLS activo.
 - Solicitudes del portal: crean un `Order` con `source = "PORTAL"` y `status = "SOLICITADA"`
   (el lab aún no tiene la muestra); el staff la ve en `/muestras` y la pasa a `RECIBIDA`. El
   formulario de ingreso es el mismo componente para staff y clínicas

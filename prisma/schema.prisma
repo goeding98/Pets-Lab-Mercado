@@ -44,6 +44,7 @@ model Clinic {
   discounts      ClinicDiscount[]
   creditLine     CreditLine?
   creditPayments CreditPayment[]
+  pickups        Pickup[]
   createdAt      DateTime         @default(now())
 }
 
@@ -61,6 +62,7 @@ model ClinicBranch {
   lng          Float?
   geoManual    Boolean  @default(false) // true = ubicada a mano: no se vuelve a calcular sola
   orders       Order[]
+  pickups      Pickup[]
   createdAt    DateTime @default(now())
 }
 
@@ -90,9 +92,33 @@ model Order {
   // null = de contado. Vence (fecha de la factura o de registro) + creditDays.
   creditDays     Int?
   notes          String?
+  // Recogida pedida por la clínica en el Portal Vet (lib/pickups.ts): varias órdenes van en la misma visita
+  pickupId       String?
+  pickup         Pickup?       @relation(fields: [pickupId], references: [id], onDelete: SetNull)
   exams          OrderExam[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+}
+
+// Recogida pedida por una clínica desde el Portal Vet (lib/pickups.ts). Garantía: se recoge antes de `deadline`
+// (pedido + 1 h 30, solo dentro del horario de garantía; null = sin garantía). Si se recoge tarde, las órdenes de la
+// recogida quedan con 50 % de descuento. Una recogida nueva solo 1 h después de la anterior; mientras esté pendiente, las
+// solicitudes nuevas de la clínica se suman a ella.
+model Pickup {
+  id           String        @id @default(cuid())
+  clinicId     String
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  branchId     String?
+  branch       ClinicBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  status       String        @default("PENDIENTE") // PENDIENTE | RECOGIDA | NO_LISTA
+  deadline     DateTime?
+  pickedAt     DateTime?
+  pickedByName String?
+  late         Boolean       @default(false)
+  orders       Order[]
+  createdAt    DateTime      @default(now())
+
+  @@index([clinicId, createdAt])
 }
 
 model OrderExam {

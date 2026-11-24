@@ -8,6 +8,10 @@ const plain = (s: string) => s.replace(/[  ]/g, " ")
 export const formatDateTime = (d: Date | string) =>
   plain(new Date(d).toLocaleString("es-CO", { timeZone: TZ, day: "numeric", month: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }))
 
+// "3:25 p. m."
+export const formatTime = (d: Date | string) =>
+  plain(new Date(d).toLocaleTimeString("es-CO", { timeZone: TZ, hour: "numeric", minute: "2-digit" }))
+
 // "4 de noviembre de 2026, 3:25 p. m."
 export const formatLongDateTime = (d: Date | string) =>
   plain(new Date(d).toLocaleString("es-CO", { timeZone: TZ, day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" }))
