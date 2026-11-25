@@ -76,5 +76,6 @@ export const config = {
     "/finanzas/:path*",
     "/credito/:path*",
     "/cartera/:path*",
+    "/dia-a-dia/:path*",
   ],
 }

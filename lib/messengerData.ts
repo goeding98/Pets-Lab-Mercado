@@ -2,7 +2,7 @@
 // Lo usan la página y el PDF de instrucciones, para que los dos muestren exactamente el mismo plan.
 import { prisma } from "@/lib/db"
 
-export type SedePunto = { id: string; name: string; address: string; phone: string; lat: number; lng: number; m: number; own: boolean }
+export type SedePunto = { id: string; clinicId: string; name: string; address: string; phone: string; lat: number; lng: number; m: number; own: boolean }
 
 // Laboratorio: sede de Pets & Pets en Colseguros (Calle 10 #31-143). Si no se encuentra ubicada, estas coordenadas.
 const LAB_FALLBACK = { lat: 3.4307, lng: -76.5417 }
@@ -28,7 +28,11 @@ export async function loadMessengerData() {
     .filter(b => b.id !== labBranch?.id)
     .map(b => ({
       id: b.id,
-      name: b.clinic.noCharge ? `${b.clinic.name} · ${b.name}` : b.clinic.name + (b.name && !/principal/i.test(b.name) ? ` · ${b.name}` : ""),
+      clinicId: b.clinicId,
+      // Sin repetir la sede si se llama igual que la clínica ("Mi Amigo Fiel · Mi Amigo Fiel")
+      name: b.clinic.noCharge || (b.name && !/principal/i.test(b.name) && b.name.trim().toLowerCase() !== b.clinic.name.trim().toLowerCase())
+        ? `${b.clinic.name} · ${b.name}`
+        : b.clinic.name,
       address: [b.address, b.neighborhood].filter(Boolean).join(", "),
       phone: b.phone || b.clinic.phone || "",
       lat: b.lat!,

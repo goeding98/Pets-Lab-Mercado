@@ -16,8 +16,30 @@ model User {
   clinicId  String?
   clinic    Clinic?  @relation(fields: [clinicId], references: [id])
   orders    Order[]  @relation("ProcessedBy")
+  visits    RouteVisit[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// "Día a día" del mensajero (/dia-a-dia, lib/routeDay.ts): una fila por parada atendida en su vuelta, y una con
+// result = "LAB" al entregar en el laboratorio (cierra la vuelta). `unscheduled` = paquete NO agendado (la clínica no
+// había pedido recogida): da el beneficio por paquete al mensajero.
+model RouteVisit {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day         String // AAAA-MM-DD, hora de Colombia
+  vuelta      Int
+  color       String // Rojo | Azul | Morado | Verde (lib/messengerRoutes.ts: MENSAJEROS)
+  clinicId    String?
+  branchId    String?
+  name        String // nombre de la parada cuando se visitó
+  result      String // MUESTRAS | SIN_MUESTRAS | ESPERA | PEDIDO | NO_LISTA | LAB
+  unscheduled Boolean  @default(false)
+  orderIds    String[]
+  createdAt   DateTime @default(now())
+
+  @@index([day, userId])
 }
 
 model Clinic {

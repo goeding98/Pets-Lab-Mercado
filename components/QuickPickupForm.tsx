@@ -11,12 +11,19 @@ type Branch = { id: string; name: string; address: string }
 // "Coprológico (Microscopía y Miniflotac)" → "Coprológico"; "Parcial de Orina – Completo (Tirilla…)" → "Parcial de Orina – Completo"
 const short = (n: string) => n.replace(/\s*\(.*\)\s*$/, "")
 
-export default function QuickPickupForm({ templates, featuredIds, branches, action, submitLabel }: {
+// También lo usa el "Día a día" del mensajero (app/(lab)/dia-a-dia): sin casilla de "lista" (requireReady=false), con la
+// clínica y la sede de la parada en extraHidden, y onDone para registrar otra muestra sin salir de la parada.
+type Result = void | { error?: string; ok?: boolean; orderId?: string; orderNumber?: string; patientName?: string }
+
+export default function QuickPickupForm({ templates, featuredIds, branches = [], action, submitLabel, requireReady = true, extraHidden, onDone }: {
   templates: Tpl[]
   featuredIds: string[]
-  branches: Branch[]
-  action: (fd: FormData) => Promise<void | { error?: string }>
+  branches?: Branch[]
+  action: (fd: FormData) => Promise<Result>
   submitLabel: string
+  requireReady?: boolean
+  extraHidden?: Record<string, string>
+  onDone?: (r: { orderId?: string; orderNumber?: string; patientName?: string }) => void
 }) {
   const [species, setSpecies] = useState("")
   const [selected, setSelected] = useState<string[]>([])
@@ -38,17 +45,23 @@ export default function QuickPickupForm({ templates, featuredIds, branches, acti
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const fd = new FormData(form)
     const miss = !String(fd.get("patientName") ?? "").trim() ? "Escribe el nombre de la mascota."
       : !species ? "Elige la especie."
       : selected.length === 0 ? "Elige al menos un examen."
-      : fd.get("sampleReady") !== "1" ? "Marca que la muestra ya está lista: el mensajero no puede esperar." : ""
+      : requireReady && fd.get("sampleReady") !== "1" ? "Marca que la muestra ya está lista: el mensajero no puede esperar." : ""
     if (miss) { setError(miss); return }
     setError("")
     start(async () => {
       try {
         const r = await action(fd)
         if (r && r.error) setError(r.error)
+        else if (r && r.ok && onDone) {
+          // Registrada: se limpia para la siguiente muestra de la misma parada
+          form.reset(); setSelected([]); setSpecies(""); setShowAll(false); setQ("")
+          onDone({ orderId: r.orderId, orderNumber: r.orderNumber, patientName: r.patientName })
+        }
       } catch (err) {
         const digest = (err as { digest?: unknown })?.digest
         if (typeof digest === "string" && digest.startsWith("NEXT_")) throw err // redirección al terminar
@@ -70,6 +83,7 @@ export default function QuickPickupForm({ templates, featuredIds, branches, acti
       {selected.map(id => <input key={id} type="hidden" name="templateIds" value={id} />)}
       <input type="hidden" name="species" value={species} />
       {branches.length === 1 && <input type="hidden" name="branchId" value={branches[0].id} />}
+      {Object.entries(extraHidden ?? {}).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
 
       {/* 1. Mascota */}
       <section className="border border-black/10 bg-white p-5 space-y-4">
@@ -181,13 +195,15 @@ export default function QuickPickupForm({ templates, featuredIds, branches, acti
 
       {/* 3. Listo */}
       <section className="space-y-3">
-        <label className="flex items-start gap-2.5 bg-salvia-50 border border-salvia-700/20 px-4 py-3 font-sans text-sm text-ink cursor-pointer">
-          <input type="checkbox" name="sampleReady" value="1" className="mt-0.5 w-4 h-4 accent-salvia-700" />
-          <span>
-            La muestra ya está tomada y lista para entregar.
-            <span className="block text-[12px] text-ink-2">El mensajero no puede esperar: si no está lista cuando llegue, se pierde la garantía.</span>
-          </span>
-        </label>
+        {requireReady && (
+          <label className="flex items-start gap-2.5 bg-salvia-50 border border-salvia-700/20 px-4 py-3 font-sans text-sm text-ink cursor-pointer">
+            <input type="checkbox" name="sampleReady" value="1" className="mt-0.5 w-4 h-4 accent-salvia-700" />
+            <span>
+              La muestra ya está tomada y lista para entregar.
+              <span className="block text-[12px] text-ink-2">El mensajero no puede esperar: si no está lista cuando llegue, se pierde la garantía.</span>
+            </span>
+          </label>
+        )}
         {error && <p role="alert" className="font-sans text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2">{error}</p>}
         <button type="submit" disabled={pending}
           className="w-full sm:w-auto bg-salvia-700 text-bone font-mono text-[11px] tracking-[0.2em] uppercase px-8 py-4 hover:bg-salvia-800 transition-colors disabled:opacity-60">

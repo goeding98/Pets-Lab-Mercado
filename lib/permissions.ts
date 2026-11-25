@@ -20,18 +20,19 @@ export type Permission =
   | "descuentos"        // descuentos por cliente, área de examen y fechas (/descuentos): ADMIN y COMERCIAL
   | "rangos"            // rangos de referencia de los exámenes maestros (solo ADMIN: jefe médico y administradores)
   | "mensajeros"        // plan de rutas de mensajeros (/clientes/mensajeros) y su PDF: todo el personal interno (no Contador)
+  | "diaadia"           // "Día a día" del mensajero (/dia-a-dia): su ruta con registro de cada parada — ADMIN y DOMICILIARIO
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "muestras.eliminar", "resultados.editar",
   "clientes.ver", "clientes.editar", "clientes.logo", "caja", "facturacion", "pagos", "inventario", "usuarios", "promociones", "personalizados", "descuentos", "rangos",
-  "mensajeros",
+  "mensajeros", "diaadia",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
-  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos" && p !== "clientes.logo"),
+  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos" && p !== "clientes.logo" && p !== "diaadia"),
   COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "clientes.logo", "promociones", "personalizados", "descuentos", "pagos", "mensajeros"],
-  DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos", "mensajeros"],
+  DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos", "mensajeros", "diaadia"],
   CONTADOR: ["facturacion"], // la contadora: solo Facturación
   CLINIC: [],
   INACTIVO: [], // usuario cerrado: no entra ni con una sesión ya abierta (lib/auth.ts); conserva su historial
@@ -78,6 +79,7 @@ export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/dashboard", "panel"],
   ["/clientes/nueva", "clientes.editar"],
   ["/clientes/mensajeros", "mensajeros"],
+  ["/dia-a-dia", "diaadia"],
   ["/clientes", "clientes.ver"],
   ["/caja", "caja"],
   ["/facturacion", "facturacion"],

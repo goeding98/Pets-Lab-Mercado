@@ -38,6 +38,15 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Botón "Instrucciones para mensajeros" → `clientes/mensajeros/instrucciones` (route, mismo permiso) descarga el PDF
   `components/MessengerInstructionsPdf.tsx`: reglas de la ruta, beneficio `BONO_PAQUETE` ($1.500 por paquete NO agendado;
   paquete = todo lo de una clínica en una visita), la ruta de cada mensajero y hoja de registro a firmar (pago manual por ahora).
+- "Día a día" del mensajero (`app/(lab)/dia-a-dia/`, `lib/routeDay.ts`, `actions/routeDay.ts`, modelo `RouteVisit`; permiso
+  `diaadia`: ADMIN y DOMICILIARIO; candado con código `DIA_CODIGO` guardado en cookie, y el color del mensajero en otra cookie):
+  su ruta de hoy sale del Plan de mensajeros con los valores por defecto (2 mensajeros, umbral 6) y su horario; los pedidos
+  del Portal Vet de su zona se ponen en la parada de esa clínica o como parada extra después de la actual. En cada parada:
+  "Llegué" → ruta fija: registrar muestras ahí mismo (`QuickPickupForm` con `registerVisitSample` → `lib/createLabOrder.ts`,
+  lo mismo que usa "Nueva muestra") / "No tenían" / "Me piden que espere"; pedido del portal: confirmar con el doctor cada
+  muestra ("Doc, ¿esta es la de Luna?") → `markPickedUp`, o "No estaba lista". La parada se cierra a mano ("Siguiente
+  parada") y queda en `RouteVisit` (`unscheduled` = muestras sin pedido previo = beneficio `BONO_PAQUETE`); "Entregué en el
+  laboratorio" (result LAB) cierra la vuelta. "Nueva muestra" sigue en el menú para registrar fuera de la ruta.
 - Recogidas con garantía (`lib/pickups.ts`, modelo `Pickup`, `Order.pickupId`): cada solicitud del Portal Vet va en una
   recogida. Garantía = pedido + 1 h 30 (`deadline`, solo pidiendo en `HORARIO_GARANTIA`; fuera = null, sin garantía). Con una
   recogida PENDIENTE de esa sede, lo nuevo se suma a ella; si no, solo 1 h después de la última solicitud de esa sede
