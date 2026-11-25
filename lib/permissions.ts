@@ -21,17 +21,18 @@ export type Permission =
   | "rangos"            // rangos de referencia de los exámenes maestros (solo ADMIN: jefe médico y administradores)
   | "mensajeros"        // plan de rutas de mensajeros (/clientes/mensajeros) y su PDF: todo el personal interno (no Contador)
   | "diaadia"           // "Día a día" del mensajero (/dia-a-dia): su ruta con registro de cada parada — ADMIN y DOMICILIARIO
+  | "rutas.editar"      // "Armar mapa": rutas de los mensajeros a mano (/clientes/mensajeros/armar) — ADMIN y COMERCIAL
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "muestras.eliminar", "resultados.editar",
   "clientes.ver", "clientes.editar", "clientes.logo", "caja", "facturacion", "pagos", "inventario", "usuarios", "promociones", "personalizados", "descuentos", "rangos",
-  "mensajeros", "diaadia",
+  "mensajeros", "diaadia", "rutas.editar",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
-  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos" && p !== "clientes.logo" && p !== "diaadia"),
-  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "clientes.logo", "promociones", "personalizados", "descuentos", "pagos", "mensajeros"],
+  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos" && p !== "clientes.logo" && p !== "diaadia" && p !== "rutas.editar"),
+  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "clientes.logo", "promociones", "personalizados", "descuentos", "pagos", "mensajeros", "rutas.editar"],
   DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos", "mensajeros", "diaadia"],
   CONTADOR: ["facturacion"], // la contadora: solo Facturación
   CLINIC: [],
@@ -78,6 +79,7 @@ export const ROUTE_PERMISSIONS: [string, Permission][] = [
   ["/pacientes", "muestras.ver"],
   ["/dashboard", "panel"],
   ["/clientes/nueva", "clientes.editar"],
+  ["/clientes/mensajeros/armar", "rutas.editar"],
   ["/clientes/mensajeros", "mensajeros"],
   ["/dia-a-dia", "diaadia"],
   ["/clientes", "clientes.ver"],

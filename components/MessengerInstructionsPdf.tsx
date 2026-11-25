@@ -67,7 +67,8 @@ function Regla({ n, titulo, children }: { n: number; titulo: string; children: R
 }
 
 export function MessengerInstructionsPdf({ rutas, fecha }: { rutas: Ruta<SedePunto>[]; fecha: string }) {
-  const nombres = rutas.map((_, i) => `Mensajero ${MENSAJEROS[i % MENSAJEROS.length].nombre}`)
+  // Un mensajero sin paradas (mapa armado a mano) no sale; los colores siguen su posición (Rojo = 0, Azul = 1…)
+  const nombres = rutas.map((r, i) => (r.orden.length ? `Mensajero ${MENSAJEROS[i % MENSAJEROS.length].nombre}` : "")).filter(Boolean)
   const listaNombres = nombres.length > 1 ? nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1] : nombres[0] ?? "Mensajero Rojo"
   const ej = nombres[0] ?? "Mensajero Rojo"
   const variasVueltas = rutas.some(r => r.vueltas >= 2)
@@ -177,6 +178,7 @@ export function MessengerInstructionsPdf({ rutas, fecha }: { rutas: Ruta<SedePun
       {/* ── Una página por mensajero: su ruta ── */}
       {rutas.map((r, i) => {
         const m = MENSAJEROS[i % MENSAJEROS.length]
+        if (!r.orden.length) return null
         return (
           <Page key={i} size="LETTER" style={s.page}>
             <Header fecha={fecha} />

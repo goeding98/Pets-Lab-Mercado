@@ -3,7 +3,8 @@
 // metidos en la ruta (lib/pickups.ts) y lo que ya hizo en la vuelta actual (RouteVisit).
 import { prisma } from "@/lib/db"
 import { loadMessengerData, type SedePunto } from "@/lib/messengerData"
-import { calcular, km, MENSAJEROS, type Vuelta } from "@/lib/messengerRoutes"
+import { km, MENSAJEROS, type Vuelta } from "@/lib/messengerRoutes"
+import { getManualRoutes, planFor } from "@/lib/manualRoutes"
 import { bogotaDay } from "@/lib/discounts"
 
 export const DIA_CODIGO = "12345" // candado mientras se prueba la sección
@@ -22,10 +23,11 @@ export type DayStop = { key: string; clinicId: string; branchId: string | null; 
 export type DoneStop = { id: string; name: string; result: string; unscheduled: boolean; at: string; orders: number }
 
 export async function loadDay(userId: string, color: string) {
-  const { lab, points } = await loadMessengerData()
-  const plan = calcular(lab, points.filter(p => p.m > 0), PLAN_MENSAJEROS, PLAN_UMBRAL)
+  const [{ lab, points }, manual] = await Promise.all([loadMessengerData(), getManualRoutes()])
+  // El mapa armado a mano (si existe) manda; si no, el automático con los valores por defecto
+  const plan = planFor(lab, points, manual, PLAN_MENSAJEROS, PLAN_UMBRAL)
   const idx = MENSAJEROS.findIndex(m => m.nombre === color)
-  const route = idx >= 0 ? plan.rutas[idx] ?? null : null
+  const route = idx >= 0 && plan.rutas[idx]?.orden.length ? plan.rutas[idx] : null
   const day = bogotaDay()
 
   const visits = await prisma.routeVisit.findMany({ where: { userId, day }, orderBy: { createdAt: "asc" } })
@@ -74,7 +76,8 @@ export async function loadDay(userId: string, color: string) {
       const ll = p.branch?.lat != null && p.branch?.lng != null ? { lat: p.branch.lat, lng: p.branch.lng } : null
       if (!ll) mine = true
       else {
-        const nearest = plan.rutas.reduce((b, r, i) => (km(r.centro, ll) < km(plan.rutas[b].centro, ll) ? i : b), 0)
+        let nearest = -1, bd = Infinity
+        plan.rutas.forEach((r, i) => { if (!r.orden.length) return; const dd = km(r.centro, ll); if (dd < bd) { bd = dd; nearest = i } })
         mine = nearest === idx
       }
     }

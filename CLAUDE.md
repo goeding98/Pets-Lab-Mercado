@@ -38,6 +38,13 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   Botón "Instrucciones para mensajeros" → `clientes/mensajeros/instrucciones` (route, mismo permiso) descarga el PDF
   `components/MessengerInstructionsPdf.tsx`: reglas de la ruta, beneficio `BONO_PAQUETE` ($1.500 por paquete NO agendado;
   paquete = todo lo de una clínica en una visita), la ruta de cada mensajero y hoja de registro a firmar (pago manual por ahora).
+- "Armar mapa" (`app/(lab)/clientes/mensajeros/armar/`, permiso `rutas.editar`: ADMIN y COMERCIAL): el comercial arma a mano la
+  ruta de cada mensajero (Rojo, Azul, +) tocando clínicas en orden (lista con todas las sedes, o el mapa); las sin ubicación se
+  ubican tocando el mapa (`actions/geo.ts: setBranchLocation`). Al confirmar ("¿Quieres eliminar el mapa anterior y dejar
+  este?") se guarda en `LabSetting "rutas-mensajeros"` (`lib/manualRoutes.ts`, `actions/manualRoutes.ts`) y reemplaza al
+  automático en el Plan, el PDF y el Día a día (`planFor`: manual si existe, si no `calcular`). Ruta en el orden dado, sin
+  reordenar (`rutaEnOrden`, `planManual`); las demás clínicas con muestras quedan "por pedido" de la zona más cercana.
+  "Volver al automático" borra el mapa armado. Una sede SIN ubicación no entra al plan (por eso Jeipets no salía).
 - "Día a día" del mensajero (`app/(lab)/dia-a-dia/`, `lib/routeDay.ts`, `actions/routeDay.ts`, modelo `RouteVisit`; permiso
   `diaadia`: ADMIN y DOMICILIARIO; candado con código `DIA_CODIGO` guardado en cookie, y el color del mensajero en otra cookie):
   su ruta de hoy sale del Plan de mensajeros con los valores por defecto (2 mensajeros, umbral 6) y su horario; los pedidos

@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useMemo, useRef, useState } from "react"
 import "leaflet/dist/leaflet.css"
-import { calcular, hora, JORNADA, MENSAJEROS, SUPUESTOS, type Ruta } from "@/lib/messengerRoutes"
+import { calcular, hora, JORNADA, MENSAJEROS, planManual, SUPUESTOS, type Ruta } from "@/lib/messengerRoutes"
 import type { SedePunto } from "@/lib/messengerData"
 
 const COLORES = MENSAJEROS.map(x => x.color)
@@ -33,17 +33,26 @@ function zona(pts: { lat: number; lng: number }[]): [number, number][] | null {
   return h.map(([x, y]) => { const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy) || 1; return [y + (dy / d) * 0.0045, x + (dx / d) * 0.0045] })
 }
 
-export default function MessengerMap({ lab, points }: { lab: { lat: number; lng: number }; points: SedePunto[] }) {
+export default function MessengerMap({ lab, points, manual = null }: {
+  lab: { lat: number; lng: number }
+  points: SedePunto[]
+  manual?: { color: string; stops: string[] }[] | null // mapa armado a mano ("Armar mapa"): reemplaza el automático
+}) {
   const box = useRef<HTMLDivElement>(null)
   const [n, setN] = useState(2)
   const [umbral, setUmbral] = useState(6)
   const [conPP, setConPP] = useState(true)
   const [error, setError] = useState("")
 
-  const plan = useMemo(
-    () => calcular(lab, points.filter(p => p.m > 0 && (conPP || !p.own)), n, umbral),
-    [lab, points, n, umbral, conPP],
-  )
+  const plan = useMemo(() => {
+    if (!manual) return calcular(lab, points.filter(p => p.m > 0 && (conPP || !p.own)), n, umbral)
+    // Mismas rutas que lib/manualRoutes.ts: manualOrdenes (alineadas con MENSAJEROS)
+    const byId = new Map(points.map(p => [p.id, p]))
+    const last = Math.max(...manual.map(r => MENSAJEROS.findIndex(m => m.nombre === r.color)))
+    const ordenes = Array.from({ length: last + 1 }, (_, i) =>
+      (manual.find(r => r.color === MENSAJEROS[i].nombre)?.stops ?? []).map(id => byId.get(id)).filter((p): p is SedePunto => !!p))
+    return planManual(lab, points, ordenes)
+  }, [lab, points, n, umbral, conPP, manual])
 
   useEffect(() => {
     let map: import("leaflet").Map | null = null
@@ -66,6 +75,7 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
 
       const bounds: [number, number][] = [[lab.lat, lab.lng]]
       plan.rutas.forEach((r, i) => {
+        if (!r.orden.length) return // mensajero sin paradas en el mapa armado a mano
         const c = COLORES[i % COLORES.length]
         const todas = r.orden.concat(r.pedido)
         const z = zona(todas)
@@ -117,6 +127,9 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
   return (
     <>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-salvia-50 border border-black/10 px-4 py-3 mb-3 font-sans text-sm">
+        {manual ? (
+          <span className="text-ink-2">Rutas armadas a mano. Las clínicas con muestras que no están en ninguna ruta se recogen solo si llaman.</span>
+        ) : (<>
         <label className="flex items-center gap-2">
           Mensajeros
           <select className={sel} value={n} onChange={e => setN(+e.target.value)}>
@@ -134,6 +147,7 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
           <input type="checkbox" checked={conPP} onChange={e => setConPP(e.target.checked)} />
           Recoger también en las sedes Pets &amp; Pets
         </label>
+        </>)}
         <a
           href={`/clientes/mensajeros/instrucciones?n=${n}&u=${umbral}&pp=${conPP ? 1 : 0}`}
           download
@@ -152,7 +166,7 @@ export default function MessengerMap({ lab, points }: { lab: { lat: number; lng:
           {plan.rutas.length === 0 && (
             <p className="px-4 py-4 font-sans text-sm text-ink-2">Ninguna sede llega al mínimo de muestras para una ruta fija.</p>
           )}
-          {plan.rutas.map((r, i) => (
+          {plan.rutas.map((r, i) => !r.orden.length ? null : (
             <div key={i} className="px-4 py-4">
               <h2 className="font-serif text-lg font-medium flex items-center gap-2">
                 <span className="w-3.5 h-3.5 inline-block" style={{ background: COLORES[i % COLORES.length] }} />

@@ -159,28 +159,51 @@ export function calcular<P extends Punto>(lab: LL, puntos: P[], k: number, umbra
     }
   }
 
-  // Centro de cada zona: ponderado por muestras de las clínicas de la ruta fija.
-  const rutas: Ruta<P>[] = mejor.map(r => {
+  return completar(mejor, pedido, fuera)
+}
+
+// Centro de cada zona (ponderado por muestras de la ruta fija), clínicas "por pedido" a la zona cuyo centro les quede
+// más cerca, y el horario del día. Una ruta vacía (mapa armado a mano sin paradas para ese mensajero) queda sin vueltas.
+function completar<P extends Punto>(base: { orden: P[]; km: number; min: number }[], pedido: P[], fuera: P[]) {
+  const rutas: Ruta<P>[] = base.map(r => {
     const w = r.orden.reduce((s, p) => s + Math.max(1, p.m), 0)
-    const centro = {
-      lat: r.orden.reduce((s, p) => s + p.lat * Math.max(1, p.m), 0) / w,
-      lng: r.orden.reduce((s, p) => s + p.lng * Math.max(1, p.m), 0) / w,
-    }
+    const centro = w
+      ? { lat: r.orden.reduce((s, p) => s + p.lat * Math.max(1, p.m), 0) / w, lng: r.orden.reduce((s, p) => s + p.lng * Math.max(1, p.m), 0) / w }
+      : { lat: NaN, lng: NaN }
     return { orden: r.orden, km: r.km, min: r.min, centro, pedido: [], vueltas: 1, horario: [], holgura: 0, kmDia: 0, muestras: 0 }
   })
-  // Las de "por pedido" van a la zona cuyo centro les quede más cerca.
-  if (rutas.length) pedido.forEach(p => {
-    let bi = 0, bd = Infinity
-    rutas.forEach((r, i) => { const d = km(r.centro, p); if (d < bd) { bd = d; bi = i } })
-    rutas[bi].pedido.push(p)
+  const conParadas = rutas.filter(r => r.orden.length)
+  if (conParadas.length) pedido.forEach(p => {
+    let best = conParadas[0], bd = Infinity
+    conParadas.forEach(r => { const d = km(r.centro, p); if (d < bd) { bd = d; best = r } })
+    best.pedido.push(p)
   })
   const { INICIO, FIN, ALMUERZO, ENTREGA_LAB } = JORNADA
   for (const r of rutas) {
-    r.horario = agenda(r.min)
+    r.horario = r.orden.length ? agenda(r.min) : []
     r.vueltas = r.horario.length
-    r.holgura = Math.max(0, FIN - INICIO - ALMUERZO - r.vueltas * (r.min + ENTREGA_LAB))
+    r.holgura = r.vueltas ? Math.max(0, FIN - INICIO - ALMUERZO - r.vueltas * (r.min + ENTREGA_LAB)) : 0
     r.kmDia = r.km * r.vueltas
     r.muestras = r.orden.concat(r.pedido).reduce((s, p) => s + p.m, 0)
   }
-  return { rutas, fuera, pedidoSinRuta: rutas.length ? [] : pedido }
+  return { rutas, fuera, pedidoSinRuta: conParadas.length ? [] : pedido }
+}
+
+// Ruta en el orden en que la armó el comercial (sin reordenar): laboratorio → paradas → laboratorio
+export function rutaEnOrden(lab: LL, orden: LL[]) {
+  let total = 0
+  let c: LL = lab
+  for (const p of orden) { total += km(c, p); c = p }
+  const k = orden.length ? total + km(c, lab) : 0
+  return { km: k, min: orden.length ? minutos(k) + orden.length * MIN_PARADA : 0 }
+}
+
+// Plan con las rutas armadas a mano ("Armar mapa"): `ordenes[i]` = paradas en orden del mensajero i (MENSAJEROS[i]).
+// Las demás clínicas con muestras quedan "por pedido" de la zona más cercana (o fuera de ruta si están lejos).
+export function planManual<P extends Punto>(lab: LL, puntos: P[], ordenes: P[][]) {
+  const enRuta = new Set(ordenes.flat().map(p => p.id))
+  const resto = puntos.filter(p => !enRuta.has(p.id) && p.m > 0)
+  const fuera = resto.filter(p => km(lab, p) / FACTOR_CALLE > MAX_KM_LAB)
+  const pedido = resto.filter(p => !fuera.includes(p))
+  return completar(ordenes.map(o => ({ orden: o, ...rutaEnOrden(lab, o) })), pedido, fuera)
 }
