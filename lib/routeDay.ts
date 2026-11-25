@@ -17,7 +17,8 @@ export type PickupInfo = {
   deadline: string | null
   orders: { id: string; orderNumber: string; patientName: string; species: string; age: string | null; ownerName: string | null; exams: string[] }[]
 }
-export type DayStop = { key: string; clinicId: string; branchId: string | null; name: string; address: string; phone: string; pickup: PickupInfo | null; extra: boolean }
+export type ReopenInfo = { reason: string; result: string; orders: { orderId: string; orderNumber: string; patientName: string }[] }
+export type DayStop = { key: string; clinicId: string; branchId: string | null; name: string; address: string; phone: string; pickup: PickupInfo | null; extra: boolean; reopen?: ReopenInfo }
 export type DoneStop = { id: string; name: string; result: string; unscheduled: boolean; at: string; orders: number }
 
 export async function loadDay(userId: string, color: string) {
@@ -29,9 +30,19 @@ export async function loadDay(userId: string, color: string) {
 
   const visits = await prisma.routeVisit.findMany({ where: { userId, day }, orderBy: { createdAt: "asc" } })
   const vuelta = visits.filter(v => v.result === "LAB").length + 1
-  const thisRound = visits.filter(v => v.vuelta === vuelta && v.result !== "LAB")
-  const visited = new Set(thisRound.map(v => v.branchId ?? `clinic:${v.clinicId}`))
-  const bonusToday = visits.filter(v => v.unscheduled).length
+  const keyOf = (v: { branchId: string | null; clinicId: string | null }) => v.branchId ?? `clinic:${v.clinicId}`
+  // Una parada reabierta ("devolverse") ya no cuenta como hecha ni para el beneficio
+  const thisRound = visits.filter(v => v.vuelta === vuelta && v.result !== "LAB" && !v.reopenedAt)
+  const visited = new Set(thisRound.map(keyOf))
+  const bonusToday = visits.filter(v => v.unscheduled && !v.reopenedAt).length
+  // Reabiertas en esta vuelta que todavía no se han vuelto a cerrar (la más reciente primero)
+  const reopened = visits
+    .filter(v => v.vuelta === vuelta && v.reopenedAt && !visited.has(keyOf(v)))
+    .sort((a, b) => b.reopenedAt!.getTime() - a.reopenedAt!.getTime())
+    .filter((v, i, arr) => arr.findIndex(x => keyOf(x) === keyOf(v)) === i)
+  const reopenOrders = reopened.length
+    ? await prisma.order.findMany({ where: { id: { in: reopened.flatMap(v => v.orderIds) } }, select: { id: true, orderNumber: true, patientName: true } })
+    : []
 
   // Pedidos del Portal Vet sin recoger: a la parada de la clínica si está en mi ruta; si no, como parada extra cuando la
   // clínica es de mi zona (o, sin plan para ella, cuando su sede queda más cerca del centro de mi zona)
@@ -82,7 +93,24 @@ export async function loadDay(userId: string, color: string) {
   const stop = (s: SedePunto): DayStop => ({ key: s.id, clinicId: s.clinicId, branchId: s.id, name: s.name, address: s.address, phone: s.phone, pickup: pickupAt.get(s.id) ?? null, extra: false })
   const remaining = (route?.orden ?? []).filter(s => !visited.has(s.id)).map(stop)
   // Los pedidos extra van justo después de la parada siguiente (el mensajero no se salta ninguna)
-  const todo = remaining.length ? [remaining[0], ...extras, ...remaining.slice(1)] : extras
+  let todo = remaining.length ? [remaining[0], ...extras, ...remaining.slice(1)] : extras
+
+  // "Devolverse": la parada reabierta vuelve a ser la actual, con el motivo y las muestras que ya había registrado
+  for (const v of [...reopened].reverse()) {
+    const key = keyOf(v)
+    const info: ReopenInfo = {
+      reason: v.reopenReason ?? "",
+      result: v.result,
+      orders: v.orderIds.map(id => reopenOrders.find(o => o.id === id)).filter((o): o is NonNullable<typeof o> => !!o)
+        .map(o => ({ orderId: o.id, orderNumber: o.orderNumber, patientName: o.patientName })),
+    }
+    const found = todo.find(s => s.key === key)
+    const p = points.find(x => x.id === v.branchId)
+    const s: DayStop = found ?? {
+      key, clinicId: v.clinicId ?? "", branchId: v.branchId, name: v.name, address: p?.address ?? "", phone: p?.phone ?? "", pickup: null, extra: !routeIds.has(key),
+    }
+    todo = [{ ...s, reopen: info }, ...todo.filter(x => x.key !== key)]
+  }
 
   const done: DoneStop[] = thisRound.map(v => ({ id: v.id, name: v.name, result: v.result, unscheduled: v.unscheduled, at: v.createdAt.toISOString(), orders: v.orderIds.length }))
   const horario: Vuelta[] = route?.horario ?? []

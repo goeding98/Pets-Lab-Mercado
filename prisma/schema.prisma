@@ -37,6 +37,10 @@ model RouteVisit {
   result      String // MUESTRAS | SIN_MUESTRAS | ESPERA | PEDIDO | NO_LISTA | LAB
   unscheduled Boolean  @default(false)
   orderIds    String[]
+  pickupId    String? // pedido del Portal Vet de esa parada (lib/pickups.ts), si lo había
+  // "Devolverse": el mensajero reabrió esta parada (ya no cuenta como hecha ni para el beneficio) y por qué
+  reopenedAt   DateTime?
+  reopenReason String?
   createdAt   DateTime @default(now())
 
   @@index([day, userId])

@@ -93,6 +93,11 @@ export async function markPickedUp(pickupId: string, byName: string, at = new Da
   }, { maxWait: 10000, timeout: 20000 })
 }
 
+// El mensajero se devolvió a una parada que había marcado "No estaba lista": el pedido vuelve a quedar por recoger
+export async function reopenNotReady(pickupId: string) {
+  await prisma.pickup.updateMany({ where: { id: pickupId, status: "NO_LISTA" }, data: { status: "PENDIENTE", pickedAt: null, pickedByName: null } })
+}
+
 export async function markNotReady(pickupId: string, byName: string, at = new Date()) {
   const r = await prisma.pickup.updateMany({
     where: { id: pickupId, status: "PENDIENTE" },

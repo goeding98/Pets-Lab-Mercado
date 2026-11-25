@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import QuickPickupForm from "@/components/QuickPickupForm"
 import Countdown from "@/app/(web)/portal-vet/dashboard/Countdown"
-import { confirmPickup, finishRound, finishStop, registerVisitSample } from "@/actions/routeDay"
+import { confirmPickup, finishRound, finishStop, registerVisitSample, reopenLastStop } from "@/actions/routeDay"
 import { hora, type Vuelta } from "@/lib/messengerRoutes"
 import type { DayStop, DoneStop } from "@/lib/routeDay"
 import { ColorPicker } from "./Gate"
@@ -40,12 +40,24 @@ export default function DayRoute({ d, templates, topIds, colors, bono }: {
   const [waitSheet, setWaitSheet] = useState(false)
   const [msg, setMsg] = useState("")
   const [changing, setChanging] = useState(false)
+  const [backSheet, setBackSheet] = useState(false)
+  const [backWhy, setBackWhy] = useState("")
+  const [backOther, setBackOther] = useState("")
 
   const cur = d.todo[0]
   const finishedDay = d.vueltas > 0 && d.vuelta > d.vueltas
   const sale = d.horario[d.vuelta - 1]
-  // Al cambiar de parada se limpia lo de la anterior
-  useEffect(() => { setPhase("go"); setRegistered([]); setChecked([]); setLate(false); setMsg("") }, [cur?.key, d.vuelta])
+  const lastDone = d.done[d.done.length - 1]
+  // Al cambiar de parada se limpia lo de la anterior. Si es una parada a la que se devolvió, sigue con lo que tenía:
+  // sus muestras ya registradas y, si era un pedido ya recogido, en "recogido".
+  const stopId = cur ? `${d.vuelta}|${cur.key}|${cur.reopen?.reason ?? ""}` : ""
+  useEffect(() => {
+    const r = cur?.reopen
+    setRegistered(r ? r.orders.map(o => ({ orderId: o.orderId, orderNumber: o.orderNumber, patientName: o.patientName })) : [])
+    setPhase(!r ? "go" : r.result === "PEDIDO" ? "picked" : r.orders.length ? "register" : "at")
+    setChecked([]); setLate(false); setMsg("")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stopId])
 
   const forClinic = useMemo(() => {
     if (!cur) return { list: [] as Tpl[], featured: [] as string[] }
@@ -122,6 +134,11 @@ export default function DayRoute({ d, templates, topIds, colors, bono }: {
                 <p className="font-sans text-sm text-ink-2">{[cur.address, cur.phone && `Tel. ${cur.phone}`].filter(Boolean).join(" · ")}</p>
               </div>
             </div>
+            {cur.reopen && (
+              <div className="mx-4 mt-1 px-3 py-2 bg-amber-50 border border-amber-200 font-sans text-[14px]">
+                <b>Te devolviste a esta parada.</b> Motivo: {cur.reopen.reason}
+              </div>
+            )}
             {cur.pickup?.deadline && phase !== "picked" && (
               <div className="mx-4 mt-1 px-3 py-2 bg-salvia-50 font-sans text-[14px] flex justify-between gap-2">
                 <span>Recoger antes de las <b>{time(cur.pickup.deadline)}</b></span>
@@ -218,6 +235,14 @@ export default function DayRoute({ d, templates, topIds, colors, bono }: {
           </section>
         )}
 
+        {/* Devolverse a la parada anterior (p. ej. iba saliendo y le dijeron que sí había muestras) */}
+        {d.hasRoute && !finishedDay && lastDone && (
+          <button type="button" onClick={() => { setBackWhy(""); setBackOther(""); setBackSheet(true) }}
+            className="w-full py-3 border border-black/20 bg-white font-sans text-[14.5px] text-ink hover:border-ink">
+            ↩ Devolverme a {lastDone.name}
+          </button>
+        )}
+
         {/* La ruta de la vuelta */}
         {d.hasRoute && !finishedDay && (
           <section>
@@ -262,6 +287,42 @@ export default function DayRoute({ d, templates, topIds, colors, bono }: {
           </ol>
         </details>
       </div>
+
+      {backSheet && lastDone && (
+        <div className="fixed inset-0 z-50 bg-black/45 grid items-end" onClick={e => { if (e.target === e.currentTarget) setBackSheet(false) }}>
+          <div className="bg-bone max-w-xl w-full mx-auto p-5 space-y-3">
+            <p className="font-serif text-[22px] font-semibold">¿Te devuelves a {lastDone.name}?</p>
+            <p className="font-sans text-sm text-ink-2">La parada vuelve a quedar abierta y queda anotado por qué te devolviste. Elige el motivo:</p>
+            <div className="grid gap-2">
+              {["Salieron a decirme que sí había muestras", "Me equivoqué al marcar"].map(r => (
+                <button key={r} type="button" onClick={() => setBackWhy(r)}
+                  className={`text-left px-3 py-3 border font-sans text-[15px] ${backWhy === r ? "border-ink bg-white font-semibold" : "border-black/15 bg-white"}`}>
+                  {r}
+                </button>
+              ))}
+              <button type="button" onClick={() => setBackWhy("otro")}
+                className={`text-left px-3 py-3 border font-sans text-[15px] ${backWhy === "otro" ? "border-ink bg-white font-semibold" : "border-black/15 bg-white"}`}>
+                Otro motivo
+              </button>
+              {backWhy === "otro" && (
+                <input autoFocus value={backOther} onChange={e => setBackOther(e.target.value)} placeholder="Escribe por qué te devuelves"
+                  className="w-full border border-black/20 bg-white px-3 py-2.5 font-sans text-[15px] focus:outline-2 focus:outline-salvia-700" aria-label="Motivo" />
+              )}
+            </div>
+            {msg && <p className="font-sans text-sm text-red-700">{msg}</p>}
+            <button type="button" disabled={pending || !backWhy || (backWhy === "otro" && backOther.trim().length < 4)}
+              onClick={() => start(async () => {
+                setMsg("")
+                const r = await reopenLastStop(backWhy === "otro" ? backOther : backWhy).catch(() => ({ error: "No hubo conexión. Vuelve a tocar el botón." }))
+                if (r.error) setMsg(r.error); else { setBackSheet(false); router.refresh() }
+              })}
+              className={`${big} bg-ink text-bone`}>
+              Devolverme
+            </button>
+            <button type="button" onClick={() => setBackSheet(false)} className="w-full py-2 font-mono text-[10px] tracking-[0.15em] uppercase text-ink-2 underline">Cancelar</button>
+          </div>
+        </div>
+      )}
 
       {waitSheet && (
         <div className="fixed inset-0 z-50 bg-black/45 grid items-end" onClick={e => { if (e.target === e.currentTarget) setWaitSheet(false) }}>

@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db"
 import { can } from "@/lib/permissions"
 import { bogotaDay } from "@/lib/discounts"
 import { createLabOrder } from "@/lib/createLabOrder"
-import { markNotReady, markPickedUp } from "@/lib/pickups"
+import { markNotReady, markPickedUp, reopenNotReady } from "@/lib/pickups"
 import { MENSAJEROS } from "@/lib/messengerRoutes"
 import { COLOR_COOKIE, DIA_CODIGO, DIA_COOKIE } from "@/lib/routeDay"
 
@@ -76,9 +76,33 @@ export async function finishStop(v: {
       data: {
         userId: s.user.id, day: bogotaDay(), vuelta: v.vuelta, color: v.color, clinicId: v.clinicId, branchId: v.branchId, name: v.name,
         result: v.result, unscheduled: v.result === "MUESTRAS" && v.orderIds.length > 0, orderIds: v.orderIds,
+        pickupId: v.pickupId ?? null,
       },
     })
     revalidatePath("/dia-a-dia")
+    return {}
+  } catch {
+    return { error: "No hubo conexión y no se guardó. Vuelve a tocar el botón." }
+  }
+}
+
+// "Devolverse": reabre la última parada cerrada en la vuelta actual (p. ej. iba saliendo y le dijeron que sí había
+// muestras). Queda el motivo; la parada vuelve a ser la actual y ya no cuenta como hecha ni para el beneficio.
+export async function reopenLastStop(reason: string): Promise<{ error?: string }> {
+  const s = await staff()
+  if (!s) return { error: "No tienes acceso a esta sección." }
+  const why = reason.trim().slice(0, 300)
+  if (why.length < 4) return { error: "Escribe por qué te devuelves." }
+  try {
+    const day = bogotaDay()
+    const visits = await prisma.routeVisit.findMany({ where: { userId: s.user.id, day }, orderBy: { createdAt: "asc" } })
+    const vuelta = visits.filter(v => v.result === "LAB").length + 1
+    const last = visits.filter(v => v.vuelta === vuelta && v.result !== "LAB" && !v.reopenedAt).pop()
+    if (!last) return { error: "No hay una parada anterior en esta vuelta." }
+    await prisma.routeVisit.update({ where: { id: last.id }, data: { reopenedAt: new Date(), reopenReason: why } })
+    if (last.result === "NO_LISTA" && last.pickupId) await reopenNotReady(last.pickupId)
+    revalidatePath("/dia-a-dia")
+    revalidatePath("/muestras")
     return {}
   } catch {
     return { error: "No hubo conexión y no se guardó. Vuelve a tocar el botón." }

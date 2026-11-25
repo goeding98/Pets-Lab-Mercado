@@ -47,6 +47,9 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   muestra ("Doc, ¿esta es la de Luna?") → `markPickedUp`, o "No estaba lista". La parada se cierra a mano ("Siguiente
   parada") y queda en `RouteVisit` (`unscheduled` = muestras sin pedido previo = beneficio `BONO_PAQUETE`); "Entregué en el
   laboratorio" (result LAB) cierra la vuelta. "Nueva muestra" sigue en el menú para registrar fuera de la ruta.
+  "Devolverme a…" (`reopenLastStop`): reabre la última parada cerrada de la vuelta con motivo obligatorio
+  (`RouteVisit.reopenedAt/reopenReason`); esa visita deja de contar (ni hecha ni beneficio), la parada vuelve a ser la actual
+  con sus muestras ya registradas, y si era "No estaba lista" el pedido vuelve a PENDIENTE (`reopenNotReady`).
 - Recogidas con garantía (`lib/pickups.ts`, modelo `Pickup`, `Order.pickupId`): cada solicitud del Portal Vet va en una
   recogida. Garantía = pedido + 1 h 30 (`deadline`, solo pidiendo en `HORARIO_GARANTIA`; fuera = null, sin garantía). Con una
   recogida PENDIENTE de esa sede, lo nuevo se suma a ella; si no, solo 1 h después de la última solicitud de esa sede
