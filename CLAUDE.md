@@ -46,7 +46,7 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   reordenar (`rutaEnOrden`, `planManual`); las demás clínicas con muestras quedan "por pedido" de la zona más cercana.
   "Volver al automático" borra el mapa armado. Una sede SIN ubicación no entra al plan (por eso Jeipets no salía).
 - "Día a día" del mensajero (`app/(lab)/dia-a-dia/`, `lib/routeDay.ts`, `actions/routeDay.ts`, modelo `RouteVisit`; permiso
-  `diaadia`: ADMIN y DOMICILIARIO; candado con código `DIA_CODIGO` guardado en cookie, y el color del mensajero en otra cookie):
+  `diaadia`: ADMIN y DOMICILIARIO; el color del mensajero se guarda en una cookie del celular):
   su ruta de hoy sale del Plan de mensajeros con los valores por defecto (2 mensajeros, umbral 6) y su horario; los pedidos
   del Portal Vet de su zona se ponen en la parada de esa clínica o como parada extra después de la actual. En cada parada:
   "Llegué" → ruta fija: registrar muestras ahí mismo (`QuickPickupForm` con `registerVisitSample` → `lib/createLabOrder.ts`,
@@ -67,8 +67,10 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   /muestras (`PendingPickups`, permiso `muestras.crear`) con "Recogida" / "No estaba lista" (`actions/pickups.ts`); marcar la
   orden RECIBIDA también la marca recogida. Tarde → `markPickedUp` pone 50 % (`DESCUENTO_TARDE`, PORCENTAJE) en todos los
   exámenes de sus órdenes y lo anota en `Order.notes`. NO_LISTA pierde la garantía; al volver a pedir, sus órdenes pasan a la
-  recogida nueva. La clínica ve el seguimiento en el inicio del portal (`PickupTracker`). Interruptor: `RECOGIDAS_EN_VIVO`
-  (false = solo `CLINICAS_PILOTO`; las demás siguen con la solicitud de siempre, sin recogida). Tabla con RLS activo.
+  recogida nueva. La clínica ve el seguimiento en el inicio del portal (`PickupTracker`). Se activa POR CLÍNICA: botón
+  "Activar plataforma de promoción" en `/clientes/[id]` (`PlatformToggle`, `actions/clinicPlatform.ts`, permiso
+  `clientes.plataforma`: ADMIN y COMERCIAL) → `Clinic.pickupsEnabled` (+ quién y cuándo); `pickupsEnabled()` lo lee. Sin
+  activar, la clínica sigue con la solicitud de siempre. `RECOGIDAS_PARA_TODAS = true` la activaría para todas. Tabla con RLS.
 - Solicitudes del portal: crean un `Order` con `source = "PORTAL"` y `status = "SOLICITADA"`
   (el lab aún no tiene la muestra); el staff la ve en `/muestras` y la pasa a `RECIBIDA`. El
   formulario de ingreso es el mismo componente para staff y clínicas

@@ -11,21 +11,13 @@ import { bogotaDay } from "@/lib/discounts"
 import { createLabOrder } from "@/lib/createLabOrder"
 import { markNotReady, markPickedUp, reopenNotReady } from "@/lib/pickups"
 import { MENSAJEROS } from "@/lib/messengerRoutes"
-import { COLOR_COOKIE, DIA_CODIGO, DIA_COOKIE } from "@/lib/routeDay"
+import { COLOR_COOKIE } from "@/lib/routeDay"
 
 async function staff() {
   const s = await getServerSession(authOptions)
   return s && can(s.user.role, "diaadia") ? s : null
 }
 const year = 60 * 60 * 24 * 365
-
-export async function unlockDayToDay(code: string): Promise<{ error?: string }> {
-  if (!(await staff())) return { error: "No tienes acceso a esta sección." }
-  if (code.trim() !== DIA_CODIGO) return { error: "Código incorrecto." }
-  cookies().set(DIA_COOKIE, "1", { httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: year })
-  revalidatePath("/dia-a-dia")
-  return {}
-}
 
 export async function setDayColor(color: string): Promise<{ error?: string }> {
   if (!(await staff())) return { error: "No tienes acceso a esta sección." }

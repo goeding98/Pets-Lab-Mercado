@@ -42,7 +42,7 @@ export default async function PortalVetDashboardPage({
   const sede = branches.some(b => b.id === searchParams.sede) ? searchParams.sede : undefined
   const clinic = await prisma.clinic.findUnique({ where: { id: session.user.clinicId }, select: { noCharge: true, billingEmail: true, email: true } })
   const noCharge = clinic?.noCharge ?? false
-  const pickups = pickupsEnabled(session.user.clinicId) // recogidas con garantía (interruptor en lib/pickups.ts)
+  const pickups = await pickupsEnabled(session.user.clinicId) // plataforma de promoción activada por el comercial
   const orders = await prisma.order.findMany({
     where: {
       clinicId: session.user.clinicId,

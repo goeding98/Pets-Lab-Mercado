@@ -36,7 +36,7 @@ export default async function NuevaSolicitudPage() {
   // Recogida (lib/pickups.ts): si hay una pendiente, lo nuevo se suma a ella; si no, cuándo puede pedir otra.
   // Con varias sedes se decide al enviar (por sede); aquí se muestra con la sede principal.
   const clinicId = session.user.clinicId ?? ""
-  const withPickup = pickupsEnabled(clinicId) // interruptor de las recogidas con garantía
+  const withPickup = await pickupsEnabled(clinicId) // plataforma de promoción activada por el comercial
   const mainBranch = branches.length === 1 ? branches[0].id : null
   const pending = withPickup
     ? await prisma.pickup.findFirst({ where: { clinicId, status: "PENDIENTE", ...(branches.length <= 1 ? { branchId: mainBranch } : {}) }, orderBy: { createdAt: "desc" }, include: { _count: { select: { orders: true } } } })

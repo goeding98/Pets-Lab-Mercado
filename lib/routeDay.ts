@@ -7,8 +7,6 @@ import { km, MENSAJEROS, type Vuelta } from "@/lib/messengerRoutes"
 import { getManualRoutes, planFor } from "@/lib/manualRoutes"
 import { bogotaDay } from "@/lib/discounts"
 
-export const DIA_CODIGO = "12345" // candado mientras se prueba la sección
-export const DIA_COOKIE = "diaadia_ok"
 export const COLOR_COOKIE = "diaadia_color"
 export const PLAN_MENSAJEROS = 2, PLAN_UMBRAL = 6
 export const BONO_PAQUETE = 1500

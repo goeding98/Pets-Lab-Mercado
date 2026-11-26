@@ -8,11 +8,16 @@ import type { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { formatTime } from "@/lib/dates"
 
-// Interruptor: mientras RECOGIDAS_EN_VIVO sea false, las recogidas con garantía solo funcionan para las clínicas piloto
-// (las demás siguen con la solicitud de siempre, sin recogida). Para ponerlo al aire: true y publicar.
-export const RECOGIDAS_EN_VIVO = false
-const CLINICAS_PILOTO: string[] = ["cmwwlr22e0000x9f9kwlq2bo1"] // Clínica Prueba123 (sin cobro, solo para probar)
-export const pickupsEnabled = (clinicId: string | null | undefined) => RECOGIDAS_EN_VIVO || (!!clinicId && CLINICAS_PILOTO.includes(clinicId))
+// Cada clínica la activa el comercial ("Activar plataforma de promoción" en /clientes/[id] → Clinic.pickupsEnabled).
+// Sin activar, la clínica sigue con la solicitud de siempre (sin recogida ni garantía). RECOGIDAS_PARA_TODAS = true la
+// activaría para todas sin tocar cada ficha.
+export const RECOGIDAS_PARA_TODAS = false
+export async function pickupsEnabled(clinicId: string | null | undefined): Promise<boolean> {
+  if (!clinicId) return false
+  if (RECOGIDAS_PARA_TODAS) return true
+  const c = await prisma.clinic.findUnique({ where: { id: clinicId }, select: { pickupsEnabled: true } })
+  return !!c?.pickupsEnabled
+}
 
 export const GARANTIA_MIN = 90
 export const ESPERA_MIN = 60

@@ -45,7 +45,12 @@ export default async function ClientesPage() {
           <tbody>
             {clinics.map((clinic, i) => (
               <tr key={clinic.id} className={`border-b border-black/[0.06] ${i % 2 !== 0 ? "bg-black/[0.015]" : ""}`}>
-                <td className="px-4 py-3 font-sans text-sm font-medium">{clinic.name}</td>
+                <td className="px-4 py-3 font-sans text-sm font-medium">
+                  {clinic.name}
+                  {clinic.pickupsEnabled && (
+                    <span className="block w-fit mt-1 font-mono text-[7px] tracking-[0.15em] uppercase bg-salvia-700 text-bone px-1.5 py-0.5">Plataforma activa</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 font-mono text-[11px] text-ink-2">{clinic.nit ?? "—"}</td>
                 <td className="px-4 py-3 font-sans text-xs text-ink-2">
                   {clinic.contactName ?? "—"}

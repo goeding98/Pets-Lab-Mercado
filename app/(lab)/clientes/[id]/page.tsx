@@ -8,6 +8,7 @@ import { authOptions } from "@/lib/auth"
 import BranchManager from "@/components/BranchManager"
 import PortalAccess from "./PortalAccess"
 import ClinicLogoPicker from "@/components/ClinicLogoPicker"
+import PlatformToggle from "./PlatformToggle"
 import { can } from "@/lib/permissions"
 import { isInternalPortalEmail } from "@/lib/portalAccount"
 
@@ -42,6 +43,18 @@ export default async function EditarClinicaPage({ params }: { params: { id: stri
         <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-2">Acceso al Portal Vet</p>
         <PortalAccess clinicId={clinic.id} login={portalLogin} canReset={can(session?.user.role, "clientes.editar")} />
       </section>
+
+      {can(session?.user.role, "clientes.plataforma") && (
+        <section className="mb-8">
+          <p className="font-mono text-[9px] tracking-[0.22em] text-salvia-700 uppercase mb-2">Plataforma de promoción</p>
+          <PlatformToggle
+            clinicId={clinic.id}
+            enabled={clinic.pickupsEnabled}
+            by={clinic.pickupsEnabledBy}
+            since={clinic.pickupsEnabledAt ? clinic.pickupsEnabledAt.toLocaleString("es-CO", { timeZone: "America/Bogota", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" }) : null}
+          />
+        </section>
+      )}
 
       {can(session?.user.role, "clientes.logo") && (
         <section className="mb-8">

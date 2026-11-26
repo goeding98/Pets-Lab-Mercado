@@ -63,6 +63,11 @@ model Clinic {
   logoUrl        String?
   brandPrimary   String?
   brandAccent    String?
+  // "Plataforma de promoción" (lib/pickups.ts): la activa el comercial al socializarla con la clínica. Con ella pide
+  // recogidas con garantía (1 h 30, 50 % si es tarde) y sus pedidos llegan al Día a día de los mensajeros.
+  pickupsEnabled   Boolean   @default(false)
+  pickupsEnabledAt DateTime?
+  pickupsEnabledBy String?
   users          User[]
   orders         Order[]
   branches       ClinicBranch[]

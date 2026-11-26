@@ -22,17 +22,18 @@ export type Permission =
   | "mensajeros"        // plan de rutas de mensajeros (/clientes/mensajeros) y su PDF: todo el personal interno (no Contador)
   | "diaadia"           // "Día a día" del mensajero (/dia-a-dia): su ruta con registro de cada parada — ADMIN y DOMICILIARIO
   | "rutas.editar"      // "Armar mapa": rutas de los mensajeros a mano (/clientes/mensajeros/armar) — ADMIN y COMERCIAL
+  | "clientes.plataforma" // activar la "plataforma de promoción" (recogidas con garantía) de una clínica — ADMIN y COMERCIAL
 
 const ALL: Permission[] = [
   "panel", "muestras.ver", "muestras.crear", "muestras.eliminar", "resultados.editar",
   "clientes.ver", "clientes.editar", "clientes.logo", "caja", "facturacion", "pagos", "inventario", "usuarios", "promociones", "personalizados", "descuentos", "rangos",
-  "mensajeros", "diaadia", "rutas.editar",
+  "mensajeros", "diaadia", "rutas.editar", "clientes.plataforma",
 ]
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: ALL,
-  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos" && p !== "clientes.logo" && p !== "diaadia" && p !== "rutas.editar"),
-  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "clientes.logo", "promociones", "personalizados", "descuentos", "pagos", "mensajeros", "rutas.editar"],
+  STAFF: ALL.filter(p => p !== "usuarios" && p !== "promociones" && p !== "rangos" && p !== "muestras.eliminar" && p !== "facturacion" && p !== "descuentos" && p !== "clientes.logo" && p !== "diaadia" && p !== "rutas.editar" && p !== "clientes.plataforma"),
+  COMERCIAL: ["panel", "muestras.ver", "muestras.crear", "clientes.ver", "clientes.editar", "clientes.logo", "promociones", "personalizados", "descuentos", "pagos", "mensajeros", "rutas.editar", "clientes.plataforma"],
   DOMICILIARIO: ["muestras.ver", "muestras.crear", "pagos", "mensajeros", "diaadia"],
   CONTADOR: ["facturacion"], // la contadora: solo Facturación
   CLINIC: [],

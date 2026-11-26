@@ -98,7 +98,7 @@ export async function createPortalOrder(formData: FormData): Promise<{ error?: s
   const species = get("species")
   if (!patientName || !species) return { error: "Escribe el nombre y la especie de la mascota." }
   if (templateIds.length === 0) return { error: "Elige al menos un examen." }
-  const withPickup = pickupsEnabled(clinicId)
+  const withPickup = await pickupsEnabled(clinicId)
   if (withPickup && formData.get("sampleReady") !== "1") return { error: "Marca que la muestra ya está lista: el mensajero no puede esperar." }
 
   let branchId: string | null
@@ -155,7 +155,7 @@ export async function requestPickupAgain(branchId: string | null): Promise<{ err
   const session = await getServerSession(portalAuthOptions)
   if (!session || session.user.role !== "CLINIC" || !session.user.clinicId) return { error: "Tu sesión se cerró. Vuelve a entrar al Portal Vet." }
   const clinicId = session.user.clinicId
-  if (!pickupsEnabled(clinicId)) return { error: "Las recogidas por el portal todavía no están activas." }
+  if (!(await pickupsEnabled(clinicId))) return { error: "Las recogidas por el portal todavía no están activas." }
   const waiting = await prisma.order.count({ where: { clinicId, branchId, status: "SOLICITADA", pickup: { status: "NO_LISTA" } } })
   if (!waiting) return { error: "No hay muestras pendientes de recoger." }
   const r = await prisma.$transaction(tx => pickupForNewRequest(tx, clinicId, branchId))
