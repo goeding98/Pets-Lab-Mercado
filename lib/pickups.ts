@@ -12,6 +12,9 @@ import { formatTime } from "@/lib/dates"
 // Sin activar, la clínica sigue con la solicitud de siempre (sin recogida ni garantía). RECOGIDAS_PARA_TODAS = true la
 // activaría para todas sin tocar cada ficha.
 export const RECOGIDAS_PARA_TODAS = false
+// Clínica de demostración (Clínica Prueba123, sin cobro): el comercial la usa para mostrar la plataforma. Su Portal Vet
+// tiene "Eliminar prueba", que borra todo lo de la demo (app/(web)/portal-vet/actions.ts: resetDemo).
+export const DEMO_CLINIC_ID = "cmwwlr22e0000x9f9kwlq2bo1"
 export async function pickupsEnabled(clinicId: string | null | undefined): Promise<boolean> {
   if (!clinicId) return false
   if (RECOGIDAS_PARA_TODAS) return true

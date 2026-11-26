@@ -71,6 +71,8 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   "Activar plataforma de promoción" en `/clientes/[id]` (`PlatformToggle`, `actions/clinicPlatform.ts`, permiso
   `clientes.plataforma`: ADMIN y COMERCIAL) → `Clinic.pickupsEnabled` (+ quién y cuándo); `pickupsEnabled()` lo lee. Sin
   activar, la clínica sigue con la solicitud de siempre. `RECOGIDAS_PARA_TODAS = true` la activaría para todas. Tabla con RLS.
+  Clínica de demostración (`DEMO_CLINIC_ID` = Clínica Prueba123, sin cobro): su portal tiene "Eliminar prueba" (`resetDemo`),
+  que borra sus órdenes, recogidas y las visitas de los mensajeros a ella.
 - Solicitudes del portal: crean un `Order` con `source = "PORTAL"` y `status = "SOLICITADA"`
   (el lab aún no tiene la muestra); el staff la ve en `/muestras` y la pasa a `RECIBIDA`. El
   formulario de ingreso es el mismo componente para staff y clínicas

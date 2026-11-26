@@ -7,7 +7,7 @@ import { portalAuthOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { createWithOrderNumber, examsWithListPrice, resolveBranch } from "@/lib/orders"
 import { assertOrderableTemplates } from "@/lib/catalog"
-import { pickupForNewRequest, pickupsEnabled } from "@/lib/pickups"
+import { DEMO_CLINIC_ID, pickupForNewRequest, pickupsEnabled } from "@/lib/pickups"
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "")
 
@@ -148,6 +148,27 @@ export async function createPortalOrder(formData: FormData): Promise<{ error?: s
   revalidatePath("/muestras")
   revalidatePath("/dashboard")
   redirect(`/portal-vet/dashboard?enviada=${!withPickup ? "si" : pickup.added ? "sumada" : "1"}`)
+}
+
+// "Eliminar prueba" (solo la clínica de demostración): borra sus muestras, recogidas y lo que los mensajeros
+// registraron de ella en el Día a día, para dejarla limpia para la siguiente demo
+export async function resetDemo(): Promise<{ error?: string; removed?: number }> {
+  const session = await getServerSession(portalAuthOptions)
+  const clinicId = session?.user.clinicId
+  if (!session || session.user.role !== "CLINIC" || clinicId !== DEMO_CLINIC_ID) return { error: "Esta opción es solo para la clínica de prueba." }
+  try {
+    const [visits, orders] = await prisma.$transaction([
+      prisma.routeVisit.deleteMany({ where: { clinicId } }),
+      prisma.order.deleteMany({ where: { clinicId } }),
+      prisma.pickup.deleteMany({ where: { clinicId } }),
+    ])
+    revalidatePath("/portal-vet/dashboard")
+    revalidatePath("/muestras")
+    revalidatePath("/dia-a-dia")
+    return { removed: orders.count + visits.count }
+  } catch {
+    return { error: "No se pudo borrar. Intenta de nuevo." }
+  }
 }
 
 // "Ya está lista": la clínica vuelve a pedir la recogida de muestras que no estaban listas cuando pasó el mensajero

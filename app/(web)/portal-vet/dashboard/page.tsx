@@ -13,7 +13,8 @@ import CreditStatement from "./CreditStatement"
 import LoyaltyCard from "@/components/LoyaltyCard"
 import { getLoyaltyStatuses, loyaltyLeaders } from "@/lib/loyalty"
 import PickupTracker from "./PickupTracker"
-import { pickupsEnabled } from "@/lib/pickups"
+import { DEMO_CLINIC_ID, pickupsEnabled } from "@/lib/pickups"
+import ResetDemoButton from "./ResetDemoButton"
 
 export const metadata: Metadata = { title: "Portal Vet" }
 export const dynamic = "force-dynamic"
@@ -107,6 +108,8 @@ export default async function PortalVetDashboardPage({
           <LogoutButton />
         </div>
       </div>
+
+      {session.user.clinicId === DEMO_CLINIC_ID && <ResetDemoButton />}
 
       {loyalty && <LoyaltyCard s={loyalty} leaders={leaders} />}
 
