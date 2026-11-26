@@ -17,8 +17,24 @@ model User {
   clinic    Clinic?  @relation(fields: [clinicId], references: [id])
   orders    Order[]  @relation("ProcessedBy")
   visits    RouteVisit[]
+  bonusPayments BonusPayment[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Pago mensual del beneficio por paquetes no agendados de un mensajero (/beneficio-mensajeros, lib/bonus.ts): lo que se
+// pagó ese mes (foto al momento de pagar), quién y cuándo. Un pago por mensajero y mes.
+model BonusPayment {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month      String // AAAA-MM
+  packages   Int
+  amount     Int
+  paidByName String
+  paidAt     DateTime @default(now())
+
+  @@unique([userId, month])
 }
 
 // "Día a día" del mensajero (/dia-a-dia, lib/routeDay.ts): una fila por parada atendida en su vuelta, y una con

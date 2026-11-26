@@ -32,7 +32,7 @@ function activeHref(path: string, hrefs: string[]) {
     .sort((a, b) => b.length - a.length)[0]
 }
 
-type Flags = { finance: boolean; credit: boolean; cartera: boolean }
+type Flags = { finance: boolean; credit: boolean; cartera: boolean; bonos: boolean }
 
 function NavContent({ userName, role, path, flags }: { userName: string; role: string; path: string; flags: Flags }) {
   const items = [
@@ -40,6 +40,7 @@ function NavContent({ userName, role, path, flags }: { userName: string; role: s
     ...NAV.filter(({ perm }) => can(role, perm)),
     ...(flags.credit ? [{ href: "/credito", label: "Líneas de crédito" }] : []),
     ...(flags.cartera ? [{ href: "/cartera", label: "Cartera" }] : []),
+    ...(flags.bonos ? [{ href: "/beneficio-mensajeros", label: "Beneficio mensajeros" }] : []),
   ]
   const current = activeHref(path, items.map(i => i.href))
   return (
@@ -72,8 +73,8 @@ function NavContent({ userName, role, path, flags }: { userName: string; role: s
   )
 }
 
-export default function Sidebar({ userName, role, finance = false, credit = false, cartera = false }: { userName: string; role: string; finance?: boolean; credit?: boolean; cartera?: boolean }) {
-  const flags = { finance, credit, cartera }
+export default function Sidebar({ userName, role, finance = false, credit = false, cartera = false, bonos = false }: { userName: string; role: string; finance?: boolean; credit?: boolean; cartera?: boolean; bonos?: boolean }) {
+  const flags = { finance, credit, cartera, bonos }
   const path = usePathname()
   const [open, setOpen] = useState(false)
 

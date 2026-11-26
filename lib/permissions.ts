@@ -67,6 +67,11 @@ export function canSeeCartera(role: string | undefined | null, email: string | u
   return role === "CONTADOR" || canManageCredit(role, email)
 }
 
+// Beneficio de los mensajeros (/beneficio-mensajeros, pago mensual de los $1.500 por paquete): Michel, Guillermo y Comercial
+export function canSeeBonos(role: string | undefined | null, email: string | undefined | null): boolean {
+  return role === "COMERCIAL" || canSeeFinance(role, email)
+}
+
 export function can(role: string | undefined | null, permission: Permission): boolean {
   if (!role) return false
   return ROLE_PERMISSIONS[role]?.includes(permission) ?? false

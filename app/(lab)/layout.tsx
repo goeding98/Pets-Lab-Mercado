@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
-import { canManageCredit, canSeeCartera, canSeeFinance } from "@/lib/permissions"
+import { canManageCredit, canSeeBonos, canSeeCartera, canSeeFinance } from "@/lib/permissions"
 import Sidebar from "@/components/Sidebar"
 import OpenSamplesBar from "@/components/OpenSamplesBar"
 
@@ -21,6 +21,7 @@ export default async function LabLayout({ children }: { children: React.ReactNod
       <Sidebar userName={session.user.name ?? ""} role={session.user.role} finance={canSeeFinance(session.user.role, session.user.email)}
         credit={canManageCredit(session.user.role, session.user.email)}
         cartera={canSeeCartera(session.user.role, session.user.email)}
+        bonos={canSeeBonos(session.user.role, session.user.email)}
       />
       <main className="flex-1 min-w-0 overflow-auto">
         <OpenSamplesBar />

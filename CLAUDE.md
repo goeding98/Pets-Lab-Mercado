@@ -57,6 +57,12 @@ Tailwind. Desplegado en Vercel, dominio `petslab.com.co`.
   "Devolverme a…" (`reopenLastStop`): reabre la última parada cerrada de la vuelta con motivo obligatorio
   (`RouteVisit.reopenedAt/reopenReason`); esa visita deja de contar (ni hecha ni beneficio), la parada vuelve a ser la actual
   con sus muestras ya registradas, y si era "No estaba lista" el pedido vuelve a PENDIENTE (`reopenNotReady`).
+- Beneficio de los mensajeros (`lib/bonus.ts: monthBonus`, `/beneficio-mensajeros`, `actions/bonus.ts`, modelo `BonusPayment`):
+  se paga por mes. Paquete = `RouteVisit` con `unscheduled` y sin `reopenedAt`. Estado según sus órdenes: CONFIRMADO (alguna
+  EN_PROCESO/COMPLETADA, se paga `BONO_PAQUETE`), POR_CONFIRMAR (todas RECIBIDA: el mensajero las registra como recibidas en la
+  calle), ANULADO (órdenes borradas). "Marcar como pagado" guarda la foto (paquetes, valor, quién) por mensajero y mes; si
+  después se confirman más se ve la diferencia y "Actualizar pago". CSV del mes. Lo ven Michel, Guillermo y rol COMERCIAL
+  (`canSeeBonos`: middleware, menú y página). El mensajero ve su acumulado del mes en la franja del Día a día.
 - Recogidas con garantía (`lib/pickups.ts`, modelo `Pickup`, `Order.pickupId`): cada solicitud del Portal Vet va en una
   recogida. Garantía = pedido + 1 h 30 (`deadline`, solo pidiendo en `HORARIO_GARANTIA`; fuera = null, sin garantía). Con una
   recogida PENDIENTE de esa sede, lo nuevo se suma a ella; si no, solo 1 h después de la última solicitud de esa sede

@@ -1,6 +1,6 @@
 import { getToken } from "next-auth/jwt"
 import { NextRequest, NextResponse } from "next/server"
-import { can, canManageCredit, canSeeCartera, canSeeFinance, homeFor, routePermission } from "@/lib/permissions"
+import { can, canManageCredit, canSeeBonos, canSeeCartera, canSeeFinance, homeFor, routePermission } from "@/lib/permissions"
 import { PORTAL_SESSION_COOKIE } from "@/lib/sessionCookies"
 
 export async function middleware(req: NextRequest) {
@@ -45,6 +45,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  // Beneficio de los mensajeros: Michel, Guillermo y Comercial (lib/permissions.ts: canSeeBonos)
+  if (pathname === "/beneficio-mensajeros" || pathname.startsWith("/beneficio-mensajeros/")) {
+    if (!token) return NextResponse.redirect(new URL("/login", req.url))
+    if (!canSeeBonos(token.role, token.email)) return NextResponse.redirect(new URL(homeFor(token.role), req.url))
+    return NextResponse.next()
+  }
+
   // Staff routes — each one requires the permission mapped in lib/permissions.ts
   const permission = routePermission(pathname)
   if (permission) {
@@ -77,5 +84,6 @@ export const config = {
     "/credito/:path*",
     "/cartera/:path*",
     "/dia-a-dia/:path*",
+    "/beneficio-mensajeros/:path*",
   ],
 }

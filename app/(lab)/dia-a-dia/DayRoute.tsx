@@ -24,12 +24,13 @@ const RESULT: Record<string, { label: string; cls: string }> = {
   NO_LISTA: { label: "No estaba listo", cls: "text-red-700" },
 }
 
-export default function DayRoute({ d, templates, topIds, colors, bono }: {
+export default function DayRoute({ d, templates, topIds, colors, bono, month }: {
   d: { color: string; hex: string; hasRoute: boolean; vuelta: number; vueltas: number; horario: Vuelta[]; todo: DayStop[]; done: DoneStop[]; bonusToday: number }
   templates: Tpl[]
   topIds: string[]
   colors: { nombre: string; color: string }[]
   bono: number
+  month: { confirmed: number; pending: number; amount: number; paid: boolean }
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -95,6 +96,9 @@ export default function DayRoute({ d, templates, topIds, colors, bono }: {
           <span>Paquetes no agendados hoy</span>
           <b className="font-mono">{d.bonusToday} · {peso(d.bonusToday * bono)}</b>
         </div>
+        <p className="mt-1 font-sans text-[12.5px] opacity-90">
+          Este mes: {month.confirmed} confirmados · {peso(month.amount)}{month.pending ? ` · ${month.pending} por confirmar` : ""}{month.paid ? " · pagado" : ""}
+        </p>
       </div>
       {changing && <div className="border border-black/10 bg-white p-4 mt-3"><ColorPicker options={colors} current={d.color} /></div>}
 

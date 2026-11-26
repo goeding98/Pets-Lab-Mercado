@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db"
 import { MENSAJEROS } from "@/lib/messengerRoutes"
 import { BONO_PAQUETE, COLOR_COOKIE, loadDay } from "@/lib/routeDay"
 import { getManualRoutes } from "@/lib/manualRoutes"
+import { monthBonus, thisMonth } from "@/lib/bonus"
 import { ColorPicker } from "./Gate"
 import DayRoute from "./DayRoute"
 
@@ -32,7 +33,7 @@ export default async function DiaADiaPage() {
   const color = jar.get(COLOR_COOKIE)?.value
   if (!color || !MENSAJEROS.some(m => m.nombre === color)) return <div className="px-4 py-6 md:px-8 md:py-8">{head}<ColorPicker options={colors} /></div>
 
-  const [d, templates, top] = await Promise.all([
+  const [d, templates, top, [mine]] = await Promise.all([
     loadDay(session.user.id, color),
     prisma.examTemplate.findMany({
       where: { active: true },
@@ -47,7 +48,10 @@ export default async function DiaADiaPage() {
       orderBy: { _count: { templateId: "desc" } },
       take: 40,
     }),
+    // Acumulado del mes (lib/bonus.ts): lo confirmado se paga a fin de mes
+    monthBonus(thisMonth(), session.user.id),
   ])
+  const month = { confirmed: mine?.confirmed ?? 0, pending: mine?.pending ?? 0, amount: mine?.amount ?? 0, paid: !!mine?.payment }
 
   return (
     <div className="px-4 py-4 md:px-8 md:py-6">
@@ -57,6 +61,7 @@ export default async function DiaADiaPage() {
         topIds={top.map(g => g.templateId)}
         colors={colors}
         bono={BONO_PAQUETE}
+        month={month}
       />
     </div>
   )
